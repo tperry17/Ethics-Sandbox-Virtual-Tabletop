@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from sandbox.db import init_db, session_scope
 from sandbox.games import EXERCISES, EXERCISES_BY_SLUG
-from sandbox.web.content import PRINCIPLES
+from sandbox.web.content import PRINCIPLES, SITE_COPY
 from sandbox.web.identity import (
     new_participant_id,
     read_participant_cookie,
@@ -70,6 +70,7 @@ async def home(request: Request) -> HTMLResponse:
         name="index.html",
         context={
             "project_name": "Ethics Sandbox",
+            "site_copy": SITE_COPY,
             "principles": PRINCIPLES,
             "exercises": EXERCISES,
         },

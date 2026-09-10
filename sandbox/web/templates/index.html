@@ -11,24 +11,13 @@
   <body>
     <main class="site">
       <header class="site__header">
-        <p class="eyebrow">Ethics Sandbox · scholarly edition</p>
+        <p class="eyebrow">Ethics Sandbox</p>
         <h1>{{ project_name }}</h1>
         <div class="prose site__lede">
-          <p>A virtual tabletop for structured exercises about values, ethics, and democratic decision-making. A small group joins by link, sits at a shared table, and works through a question together while talking on a separate call.</p>
+          <p>{{ site_copy.lede }}</p>
         </div>
         <p><a href="/styleguide">View the design system</a></p>
       </header>
-
-      <section class="site__section" id="principles">
-        {{ ui.section_rule("Principles of engagement") }}
-        <div class="principle-grid">
-          {% for principle in principles %}
-          {% call ui.card(principle.title) %}
-            <p class="prose">{{ principle.copy }}</p>
-          {% endcall %}
-          {% endfor %}
-        </div>
-      </section>
 
       <section class="site__section" id="exercises">
         {{ ui.section_rule("Exercises") }}
@@ -40,6 +29,17 @@
               {{ ui.tag("Facilitator " ~ exercise.facilitator) }}
             </div>
             <a class="exercise-card__link" href="/exercises/{{ exercise.slug }}">View exercise →</a>
+          {% endcall %}
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="site__section" id="principles">
+        {{ ui.section_rule("Principles of engagement") }}
+        <div class="principle-grid">
+          {% for principle in principles %}
+          {% call ui.card(principle.title) %}
+            <p class="prose">{{ principle.copy }}</p>
           {% endcall %}
           {% endfor %}
         </div>
