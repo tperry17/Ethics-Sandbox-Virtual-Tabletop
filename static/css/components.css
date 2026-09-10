@@ -239,3 +239,5 @@
 
   .button:not([disabled]):active { transform: translateY(1px); }
 }
+
+.zone-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--space-5); }

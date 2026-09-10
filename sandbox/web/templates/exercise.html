@@ -1,0 +1,99 @@
+{% import "_ui.html" as ui %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>{{ exercise.title }} · Ethics Sandbox</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
+  </head>
+  <body>
+    <main class="site">
+      <p class="site__back"><a href="/">← All exercises</a></p>
+
+      <header class="site__header">
+        <p class="eyebrow">Exercise</p>
+        <h1>{{ exercise.title }}</h1>
+        <div class="prose site__lede">
+          <p>{{ exercise.short_description }}</p>
+        </div>
+      </header>
+
+      <section class="site__section" id="details">
+        <div class="exercise-meta">
+          <div class="exercise-meta__item">
+            <span class="exercise-meta__label">Group size</span>
+            <span class="exercise-meta__value">{{ exercise.group_size }}</span>
+          </div>
+          <div class="exercise-meta__item">
+            <span class="exercise-meta__label">Running time</span>
+            <span class="exercise-meta__value">{{ exercise.running_time }}</span>
+          </div>
+          <div class="exercise-meta__item">
+            <span class="exercise-meta__label">Facilitator</span>
+            <span class="exercise-meta__value">{{ exercise.facilitator }}</span>
+          </div>
+          <div class="exercise-meta__item">
+            <span class="exercise-meta__label">Alongside</span>
+            <span class="exercise-meta__value">{{ exercise.alongside }}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="site__section" id="premise">
+        {{ ui.section_rule("Premise") }}
+        <div class="prose">
+          <p>{{ exercise.premise }}</p>
+        </div>
+      </section>
+
+      <section class="site__section" id="session-shape">
+        {{ ui.section_rule("How a session unfolds") }}
+        <ol class="reasoned-list">
+          {% for step in exercise.session_shape %}
+          <li>{{ step }}</li>
+          {% endfor %}
+        </ol>
+      </section>
+
+      <section class="site__section" id="tensions">
+        {{ ui.section_rule("Tensions worth sitting with") }}
+        <ul class="tension-list">
+          {% for tension in exercise.tensions %}
+          <li>{{ tension }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="site__section" id="facilitator-notes">
+        {% call ui.callout("Facilitator’s notes") %}
+        {% for note in exercise.facilitator_notes %}
+        <p>{{ note }}</p>
+        {% endfor %}
+        {% endcall %}
+      </section>
+
+      <section class="site__section" id="preview">
+        {{ ui.section_rule("How the table looks") }}
+        <p class="prose">{{ exercise.preview_label }}</p>
+        <div class="tabletop">
+          <div class="tabletop__pieces">
+            {% for card in exercise.preview_cards %}
+            <article class="piece piece--card" aria-label="Card: {{ card.title }}">
+              <h3 class="piece__title">{{ card.title }}</h3>
+              <p class="piece__copy">{{ card.copy }}</p>
+              <span class="piece__folio">{{ card.folio }}</span>
+            </article>
+            {% endfor %}
+          </div>
+          <div class="zone-grid">
+            {% for zone in exercise.preview_zones %}
+            <div class="zone"><span class="zone__label">{{ zone }}</span></div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

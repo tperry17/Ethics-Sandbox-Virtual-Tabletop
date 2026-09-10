@@ -1,18 +1,49 @@
+{% import "_ui.html" as ui %}
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
     <title>{{ project_name }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
   </head>
   <body>
-    <main>
-      <h1>{{ project_name }}</h1>
-      <div class="prose">
-        <p>A virtual tabletop for structured exercises about values, ethics, and democratic decision-making.</p>
+    <main class="site">
+      <header class="site__header">
+        <p class="eyebrow">Ethics Sandbox · scholarly edition</p>
+        <h1>{{ project_name }}</h1>
+        <div class="prose site__lede">
+          <p>A virtual tabletop for structured exercises about values, ethics, and democratic decision-making. A small group joins by link, sits at a shared table, and works through a question together while talking on a separate call.</p>
+        </div>
         <p><a href="/styleguide">View the design system</a></p>
-      </div>
+      </header>
+
+      <section class="site__section" id="principles">
+        {{ ui.section_rule("Principles of engagement") }}
+        <div class="principle-grid">
+          {% for principle in principles %}
+          {% call ui.card(principle.title) %}
+            <p class="prose">{{ principle.copy }}</p>
+          {% endcall %}
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="site__section" id="exercises">
+        {{ ui.section_rule("Exercises") }}
+        <div class="exercise-grid">
+          {% for exercise in exercises %}
+          {% call ui.card(exercise.title, exercise.group_size ~ " · " ~ exercise.running_time) %}
+            <p class="prose">{{ exercise.short_description }}</p>
+            <div class="exercise-card__meta">
+              {{ ui.tag("Facilitator " ~ exercise.facilitator) }}
+            </div>
+            <a class="exercise-card__link" href="/exercises/{{ exercise.slug }}">View exercise →</a>
+          {% endcall %}
+          {% endfor %}
+        </div>
+      </section>
     </main>
     <script type="module" src="{{ url_for('static', path='/table/table.js') }}"></script>
   </body>

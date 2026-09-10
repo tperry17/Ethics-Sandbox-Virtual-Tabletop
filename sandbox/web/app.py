@@ -2,10 +2,13 @@
 
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
+from sandbox.games import EXERCISES, EXERCISES_BY_SLUG
+from sandbox.web.content import PRINCIPLES
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -20,7 +23,24 @@ async def home(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"project_name": "Ethics Sandbox"},
+        context={
+            "project_name": "Ethics Sandbox",
+            "principles": PRINCIPLES,
+            "exercises": EXERCISES,
+        },
+    )
+
+
+@app.get("/exercises/{slug}", response_class=HTMLResponse)
+async def exercise_detail(request: Request, slug: str) -> HTMLResponse:
+    """Render the catalog page for a single exercise."""
+    exercise = EXERCISES_BY_SLUG.get(slug)
+    if exercise is None:
+        raise HTTPException(status_code=404, detail="No such exercise.")
+    return templates.TemplateResponse(
+        request=request,
+        name="exercise.html",
+        context={"exercise": exercise},
     )
 
 

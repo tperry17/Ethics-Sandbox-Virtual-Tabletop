@@ -80,7 +80,6 @@
 .dialog-demo { min-height: 19rem; padding: var(--space-5); background: var(--surface-sunken); }
 .tag-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
-.zone-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--space-5); }
 .zoom-test { width: fit-content; zoom: 0.6; }
 .zoom-caption { color: var(--text-inverse); font-family: var(--font-mono); font-size: var(--text-xs); }
 

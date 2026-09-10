@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 
+from sandbox.games import EXERCISES
 from sandbox.web.app import app
+from sandbox.web.content import PRINCIPLES
 
 
 def test_home_page() -> None:
@@ -8,6 +10,36 @@ def test_home_page() -> None:
 
     assert response.status_code == 200
     assert "Ethics Sandbox" in response.text
+
+
+def test_home_page_lists_exercises_and_principles() -> None:
+    response = TestClient(app).get("/")
+
+    assert response.status_code == 200
+    for exercise in EXERCISES:
+        assert exercise.title in response.text
+        assert f"/exercises/{exercise.slug}" in response.text
+    for principle in PRINCIPLES:
+        assert principle.title in response.text
+
+
+def test_exercise_detail_page_renders_each_exercise() -> None:
+    client = TestClient(app)
+
+    for exercise in EXERCISES:
+        response = client.get(f"/exercises/{exercise.slug}")
+
+        assert response.status_code == 200
+        assert exercise.title in response.text
+        assert exercise.premise in response.text
+        for step in exercise.session_shape:
+            assert step in response.text
+
+
+def test_exercise_detail_page_404s_for_unknown_slug() -> None:
+    response = TestClient(app).get("/exercises/not-a-real-exercise")
+
+    assert response.status_code == 404
 
 
 def test_styleguide_renders_design_system() -> None:
