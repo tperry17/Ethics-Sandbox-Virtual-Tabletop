@@ -1,0 +1,243 @@
+{% import "_ui.html" as ui %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Design system · Ethics Sandbox</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styleguide.css') }}">
+  </head>
+  <body>
+    <main class="styleguide">
+      <header class="styleguide__header">
+        <p class="eyebrow">Ethics Sandbox · scholarly edition</p>
+        <h1>A quiet room for consequential questions.</h1>
+        <div class="prose styleguide__lede">
+          <p>This page is the canonical visual reference for the Sandbox. Cool paper, firm ink, and a single rubric red keep the interface close to an annotated scholarly text; the table below is its deeper, quieter desk.</p>
+        </div>
+        <nav class="styleguide__nav" aria-label="Styleguide sections">
+          <a href="#tokens">Tokens</a>
+          <a href="#type">Type</a>
+          <a href="#components">Components</a>
+          <a href="#pieces">Tabletop pieces</a>
+        </nav>
+      </header>
+
+      <section class="styleguide__section" id="tokens">
+        {{ ui.section_rule("01 · Tokens") }}
+        {% for group in color_tokens %}
+        <div class="styleguide__subsection">
+          <h3>{{ group.label }}</h3>
+          <div class="swatch-grid">
+            {% for token in group.tokens %}
+            <div class="swatch" style="--swatch: var({{ token.name }});{% if token.inverse %} --swatch-ink: var(--text-inverse);{% endif %}">
+              <code class="swatch__name">{{ token.name }}</code>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+
+        <div class="styleguide__subsection">
+          <h3>Spacing</h3>
+          <div class="spacing-row">
+            {% for token in space_tokens %}
+            <div class="spacing-sample">
+              <span class="spacing-sample__block" style="--sample-size: var({{ token }})"></span>
+              <code class="token-chip">{{ token }}</code>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="styleguide__subsection">
+          <h3>Supporting foundations</h3>
+          <div class="tag-row">
+            {% for token in foundation_tokens %}<code class="token-chip">{{ token }}</code>{% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="styleguide__section" id="type">
+        {{ ui.section_rule("02 · Type") }}
+        <div class="type-specimens">
+          <div class="type-specimen type-specimen--reading">
+            <code class="token-chip">--font-reading · Spectral</code>
+            <p>Practical wisdom asks not only what rule applies, but what kind of attention this particular situation deserves.</p>
+          </div>
+          <div class="type-specimen type-specimen--ui">
+            <code class="token-chip">--font-ui · IBM Plex Sans</code>
+            <p class="ui-label">Participant controls</p>
+            <p>Choose a card, explain your reasoning, and invite a response.</p>
+          </div>
+          <div class="type-specimen type-specimen--mono">
+            <code class="token-chip">--font-mono · IBM Plex Mono</code>
+            <p>ROOM K7Q9 · 08:42 · 12 pieces</p>
+          </div>
+          <div class="type-scale">
+            <p class="type-scale__xs">--text-xs · Marginal note</p>
+            <p class="type-scale__sm">--text-sm · Small text</p>
+            <p class="type-scale__md">--text-md · Reading text</p>
+            <p class="type-scale__lg">--text-lg · Minor heading</p>
+            <p class="type-scale__xl">--text-xl · Section heading</p>
+            <p class="type-scale__2xl">--text-2xl · Page heading</p>
+            <p class="type-scale__3xl">--text-3xl · Display heading</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="styleguide__section" id="components">
+        {{ ui.section_rule("03 · Components") }}
+        <div class="component-grid">
+          <div class="component-demo">
+            <h3>Button</h3>
+            {% for size in ["sm", "md", "lg"] %}
+            <div class="button-row">
+              {{ ui.button("Primary", "primary", size) }}
+              {{ ui.button("Secondary", "secondary", size) }}
+              {{ ui.button("Quiet", "quiet", size) }}
+              {{ ui.button("Remove", "destructive", size) }}
+            </div>
+            {% endfor %}
+            <div class="button-row">
+              {{ ui.button("Active", "quiet", "md", pressed=true) }}
+              {{ ui.button("Unavailable", "primary", "md", disabled=true) }}
+            </div>
+          </div>
+
+          <div class="component-demo">
+            <h3>Card</h3>
+            {% call ui.card("A claim worth examining", "Reading 04") %}
+              <p class="prose">A surface for grouped interface content, with the same restraint as the page around it.</p>
+              {{ ui.tag("In discussion") }}
+            {% endcall %}
+          </div>
+
+          <div class="component-demo">
+            <h3>Field</h3>
+            {{ ui.field("display-name", "Display name", placeholder="Ada", hint="Shown to the people at your table.") }}
+            {{ ui.field("room", "Room code", value="K7", error="Enter the full four-character code.") }}
+          </div>
+
+          <div class="component-demo dialog-demo">
+            <h3>Dialog</h3>
+            {% call ui.dialog("Leave this room?") %}
+              <div class="dialog__body"><p>Your seat will remain available until the session ends.</p></div>
+              <div class="dialog__actions">{{ ui.button("Stay", "quiet") }}{{ ui.button("Leave room", "destructive") }}</div>
+            {% endcall %}
+          </div>
+
+          <div class="component-demo">
+            <h3>Tag · game state</h3>
+            <div class="tag-row">
+              {{ ui.tag("Reference") }}
+              {{ ui.tag("Agreed", "agreed") }}
+              {{ ui.tag("Contested", "contested") }}
+              {{ ui.tag("Time short", "time-short") }}
+            </div>
+          </div>
+
+          <div class="component-demo">
+            <h3>Callout</h3>
+            {% call ui.callout("Facilitator’s note") %}<p>Disagreement is useful evidence. Ask what each position makes visible.</p>{% endcall %}
+          </div>
+
+          <div class="component-demo">
+            <h3>Section rule</h3>
+            {{ ui.section_rule("A new inquiry") }}
+          </div>
+
+          <div class="component-demo">
+            <h3>Timer & room code</h3>
+            <div class="button-row">
+              {{ ui.timer("12:00") }}
+              {{ ui.timer("01:30", state="time-short") }}
+              {{ ui.room_code("K7Q9") }}
+            </div>
+          </div>
+
+          <div class="component-demo">
+            <h3>Avatar · deterministic seats</h3>
+            <div class="avatar-row">
+              {{ ui.avatar("AP", 1, "Ada") }}
+              {{ ui.avatar("JB", 2, "James") }}
+              {{ ui.avatar("RM", 3, "Rosa") }}
+              {{ ui.avatar("WI", 4, "W. E. B.") }}
+              {{ ui.avatar("HA", 5, "Hannah") }}
+              {{ ui.avatar("JD", 6, "John") }}
+            </div>
+          </div>
+
+          <div class="component-demo">
+            <h3>Empty state</h3>
+            {{ ui.empty_state("The table is clear", "Pieces will appear here when the facilitator begins the exercise.", "Review the prompt") }}
+          </div>
+
+          <div class="component-demo">
+            <h3>Toolbar</h3>
+            {% call ui.toolbar() %}
+              <div class="toolbar__group">{{ ui.button("Select", "quiet", "sm", pressed=true) }}{{ ui.button("Note", "quiet", "sm") }}</div>
+              <div class="toolbar__group">{{ ui.button("Arrange", "secondary", "sm") }}{{ ui.button("Reset", "destructive", "sm") }}</div>
+            {% endcall %}
+          </div>
+
+          <div class="component-demo">
+            <h3>Toast</h3>
+            {{ ui.toast("The table was arranged", "Six pieces moved to their opening positions.") }}
+          </div>
+        </div>
+      </section>
+
+      <section class="styleguide__section" id="pieces">
+        {{ ui.section_rule("04 · Tabletop pieces") }}
+        <div class="tabletop">
+          <div class="tabletop__pieces">
+            <article class="piece piece--card" aria-label="Card at rest">
+              <h3 class="piece__title">Freedom of inquiry</h3>
+              <p class="piece__copy">The liberty to ask difficult questions and follow evidence where it leads.</p>
+              <span class="piece__folio">CARD 12</span>
+            </article>
+            <article class="piece piece--card is-face-down" aria-label="Card back"></article>
+            <article class="piece piece--card is-lifted" aria-label="Lifted card">
+              <h3 class="piece__title">Mutual obligation</h3>
+              <p class="piece__copy">What do members of a community owe one another?</p>
+              <span class="piece__folio">CARD 19 · LIFTED</span>
+            </article>
+            <article class="piece piece--card is-held seat-4" aria-label="Card held by W. E. B.">
+              <span class="piece__holder" title="Held by W. E. B.">WI</span>
+              <h3 class="piece__title">Equal standing</h3>
+              <p class="piece__copy">Each voice enters the inquiry with equal claim to careful attention.</p>
+              <span class="piece__folio">CARD 07 · HELD</span>
+            </article>
+          </div>
+
+          <div class="tabletop__pieces">
+            <div class="piece piece--die" aria-label="Die showing four">4</div>
+            <div class="piece piece--cube seat-1" aria-label="Blue seat cube"></div>
+            <div class="piece piece--meeple seat-2" aria-label="Orange seat meeple"></div>
+            <div class="piece piece--token seat-3" aria-label="Teal seat token">3</div>
+            <div class="piece piece--note"><strong>Note</strong><span>What changes if the scarce resource is time?</span></div>
+          </div>
+
+          <div class="zone-grid">
+            <div class="zone"><span class="zone__label">Public claims</span></div>
+            <div class="zone is-drop-target"><span class="zone__label">Drop target</span></div>
+            <div class="zone zone--private"><span class="zone__label">Your hand</span></div>
+          </div>
+
+          <div class="styleguide__subsection">
+            <p class="zoom-caption">CARD READABILITY CHECK · RENDERED AT 60%</p>
+            <div class="zoom-test">
+              <article class="piece piece--card" data-testid="card-at-60-percent" aria-label="Card rendered at sixty percent">
+                <h3 class="piece__title">Reasoned dissent</h3>
+                <p class="piece__copy">A minority view can reveal assumptions that consensus leaves unexamined.</p>
+                <span class="piece__folio">CARD 24 · 60%</span>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

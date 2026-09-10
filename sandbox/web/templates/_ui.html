@@ -1,0 +1,89 @@
+{% macro button(label, variant="primary", size="md", type="button", disabled=false, pressed=none) -%}
+<button class="button button--{{ variant }} button--{{ size }}" type="{{ type }}"{% if disabled %} disabled{% endif %}{% if pressed is not none %} aria-pressed="{{ 'true' if pressed else 'false' }}"{% endif %}>{{ label }}</button>
+{%- endmacro %}
+
+{% macro card(title, eyebrow=none) -%}
+<article class="ui-card">
+  <header class="ui-card__header">
+    {% if eyebrow %}<p class="eyebrow">{{ eyebrow }}</p>{% endif %}
+    <h3 class="ui-card__title">{{ title }}</h3>
+  </header>
+  <div class="ui-card__body">{{ caller() }}</div>
+</article>
+{%- endmacro %}
+
+{% macro field(name, label, value="", placeholder="", hint="", error="", type="text") -%}
+<div class="field{% if error %} field--error{% endif %}">
+  <label class="field__label" for="{{ name }}">{{ label }}</label>
+  <input class="field__control" id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}" placeholder="{{ placeholder }}"{% if error %} aria-invalid="true" aria-describedby="{{ name }}-error"{% elif hint %} aria-describedby="{{ name }}-hint"{% endif %}>
+  {% if error %}<p class="field__error" id="{{ name }}-error">{{ error }}</p>{% elif hint %}<p class="field__hint" id="{{ name }}-hint">{{ hint }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro dialog(title, open=true) -%}
+<dialog class="dialog"{% if open %} open{% endif %} aria-labelledby="dialog-title">
+  <div class="dialog__inner">
+    <h3 id="dialog-title">{{ title }}</h3>
+    {{ caller() }}
+  </div>
+</dialog>
+{%- endmacro %}
+
+{% macro tag(label, state=none) -%}
+<span class="tag{% if state %} tag--{{ state }}{% endif %}">{{ label }}</span>
+{%- endmacro %}
+
+{% macro callout(title, mark="§") -%}
+<aside class="callout">
+  <span class="callout__mark" aria-hidden="true">{{ mark }}</span>
+  <div class="callout__content">
+    <strong>{{ title }}</strong>
+    {{ caller() }}
+  </div>
+</aside>
+{%- endmacro %}
+
+{% macro section_rule(label, mark="§") -%}
+<div class="section-rule" role="separator" aria-label="{{ label }}">
+  <span class="section-rule__mark" aria-hidden="true">{{ mark }}</span>
+  <h2 class="section-rule__label">{{ label }}</h2>
+</div>
+{%- endmacro %}
+
+{% macro timer(value, label="remaining", state=none) -%}
+<span class="timer{% if state %} timer--{{ state }}{% endif %}" role="timer" aria-label="{{ value }} {{ label }}">
+  <span class="timer__value">{{ value }}</span>
+  <span class="timer__label">{{ label }}</span>
+</span>
+{%- endmacro %}
+
+{% macro room_code(code) -%}
+<span class="room-code" aria-label="Room code {{ code }}">{{ code }}</span>
+{%- endmacro %}
+
+{% macro avatar(initials, seat=1, name="") -%}
+<span class="avatar seat-{{ seat }}"{% if name %} title="{{ name }}" aria-label="{{ name }}, seat {{ seat }}"{% else %} aria-label="Seat {{ seat }}"{% endif %}>{{ initials }}</span>
+{%- endmacro %}
+
+{% macro empty_state(title, copy, action_label=none) -%}
+<div class="empty-state">
+  <span class="empty-state__mark" aria-hidden="true">∅</span>
+  <h3>{{ title }}</h3>
+  <p class="empty-state__copy">{{ copy }}</p>
+  {% if action_label %}{{ button(action_label, "secondary", "md") }}{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro toolbar(label="Table controls") -%}
+<div class="toolbar" role="toolbar" aria-label="{{ label }}">{{ caller() }}</div>
+{%- endmacro %}
+
+{% macro toast(title, message) -%}
+<aside class="toast" role="status">
+  <div class="toast__content">
+    <strong class="toast__title">{{ title }}</strong>
+    <p class="toast__message">{{ message }}</p>
+  </div>
+  <button class="toast__dismiss" type="button" aria-label="Dismiss notification">×</button>
+</aside>
+{%- endmacro %}

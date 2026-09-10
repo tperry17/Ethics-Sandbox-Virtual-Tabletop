@@ -8,3 +8,13 @@ def test_home_page() -> None:
 
     assert response.status_code == 200
     assert "Ethics Sandbox" in response.text
+
+
+def test_styleguide_renders_design_system() -> None:
+    response = TestClient(app).get("/styleguide")
+
+    assert response.status_code == 200
+    assert "A quiet room for consequential questions" in response.text
+    assert "CARD READABILITY CHECK" in response.text
+    assert "button--destructive" in response.text
+    assert "zone--private" in response.text

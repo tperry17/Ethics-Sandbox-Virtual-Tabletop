@@ -4,11 +4,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ project_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/base.css') }}">
   </head>
   <body>
     <main>
       <h1>{{ project_name }}</h1>
-      <p>A virtual tabletop for structured exercises about values, ethics, and democratic decision-making.</p>
+      <div class="prose">
+        <p>A virtual tabletop for structured exercises about values, ethics, and democratic decision-making.</p>
+        <p><a href="/styleguide">View the design system</a></p>
+      </div>
     </main>
     <script type="module" src="{{ url_for('static', path='/table/table.js') }}"></script>
   </body>

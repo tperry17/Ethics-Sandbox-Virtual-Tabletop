@@ -64,3 +64,29 @@ Python is authoritative for all state and all rules. The TypeScript table client
 - Vite compiles and watches the TypeScript table client.
 - TypeScript provides static typing for the table client.
 - Playwright provides the required browser-level test runner.
+
+## Design tokens
+
+All colour literals live in `static/css/tokens.css`. Components consume only the
+custom properties below. The semantic colours are reserved for game state:
+assent/agreed, tension/contested, and caution/time short.
+
+- Surfaces: `--surface-page`, `--surface-raised`, `--surface-sunken`,
+  `--surface-border`, `--surface-border-strong`
+- Table: `--table-felt`, `--table-felt-edge`, `--table-zone-outline`,
+  `--table-zone-private`, `--table-drop-target`
+- Text: `--text-primary`, `--text-secondary`, `--text-muted`, `--text-inverse`
+- Accent: `--accent-rubric`, `--accent-rubric-soft`
+- Semantic: `--semantic-assent`, `--semantic-tension`, `--semantic-caution`
+- Seats: `--seat-1`, `--seat-2`, `--seat-3`, `--seat-4`, `--seat-5`,
+  `--seat-6`, `--seat-ink`
+- Supporting colour: `--overlay`, `--shadow-color`, `--shadow-color-strong`,
+  `--transparent`
+- Type: `--font-reading`, `--font-ui`, `--font-mono`, `--text-xs`, `--text-sm`,
+  `--text-md`, `--text-lg`, `--text-xl`, `--text-2xl`, `--text-3xl`,
+  `--leading-tight`, `--leading-reading`, `--tracking-label`,
+  `--measure-reading`
+- Space: `--space-1` through `--space-8`
+- Shape and depth: `--radius-sm`, `--radius-md`, `--radius-lg`,
+  `--line-hairline`, `--line-strong`, `--shadow-raised`, `--shadow-piece`,
+  `--focus-ring`
