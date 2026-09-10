@@ -1,0 +1,81 @@
+{% import "_ui.html" as ui %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>{{ exercise.title if exercise else "Table" }} · {{ room.code }} · Ethics Sandbox</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/tabletop.css') }}">
+  </head>
+  <body>
+    <div class="table-shell">
+      <header class="table-shell__header">
+        <div class="table-shell__identity">
+          <p class="eyebrow">{{ exercise.title if exercise else room.game_slug }}</p>
+          <div class="table-shell__code-row">
+            {{ ui.room_code(room.code) }}
+            <button class="button button--quiet button--sm" type="button" id="copy-room-link" data-room-code="{{ room.code }}">
+              Copy invite link
+            </button>
+          </div>
+        </div>
+
+        <div class="table-shell__roster" aria-label="Who is at the table">
+          {% for seat in seats %}
+          {% set occupant = participants_by_seat.get(seat.id) %}
+          <span class="table-shell__seat">
+            {% if occupant %}
+              {{ ui.avatar(occupant.display_name[:2]|upper, seat=seat.tint_index + 1, name=occupant.display_name) }}
+            {% else %}
+              {{ ui.avatar("··", seat=seat.tint_index + 1, name="Open seat") }}
+            {% endif %}
+            {% if seat.is_facilitator %}<span class="tag">Facilitator</span>{% endif %}
+          </span>
+          {% endfor %}
+          {% if observers %}
+          <span class="table-shell__observers">
+            {{ ui.tag(observers|length ~ " observing") }}
+          </span>
+          {% endif %}
+        </div>
+      </header>
+
+      {% call ui.toolbar("Table controls") %}
+        <p class="toolbar__empty prose">
+          Macro buttons for this exercise appear here once it defines them.
+        </p>
+      {% endcall %}
+
+      <main class="table-shell__surface">
+        <div
+          id="table-root"
+          class="tabletop"
+          data-room-code="{{ room.code }}"
+          data-participant-id="{{ participant.id }}"
+          data-seat-id="{{ participant.seat_id or '' }}"
+        >
+          {% if not seats %}
+          {{ ui.empty_state(
+            "The table is empty",
+            "This exercise has not been set up yet. Once a facilitator presses Set up, its pieces and zones will appear here."
+          ) }}
+          {% endif %}
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="{{ url_for('static', path='/table/table.js') }}"></script>
+    <script>
+      (function () {
+        var button = document.getElementById("copy-room-link");
+        if (!button) return;
+        button.addEventListener("click", function () {
+          var url = window.location.origin + "/join?code=" + button.dataset.roomCode;
+          navigator.clipboard.writeText(url).catch(function () {});
+        });
+      })();
+    </script>
+  </body>
+</html>

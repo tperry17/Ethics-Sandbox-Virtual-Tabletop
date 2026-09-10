@@ -241,3 +241,28 @@
 }
 
 .zone-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--space-5); }
+
+.ui-card--choice {
+  position: relative;
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.ui-card--choice input[type="radio"] {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--accent-rubric);
+}
+
+.ui-card--choice:has(input:checked) {
+  border-color: var(--accent-rubric);
+  box-shadow: 0 0 0 var(--line-strong) var(--accent-rubric-soft);
+}
+
+.ui-card--choice:has(input:focus-visible) {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}

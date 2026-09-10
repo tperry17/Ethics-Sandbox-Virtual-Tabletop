@@ -1,0 +1,39 @@
+{% import "_ui.html" as ui %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Join a table · Ethics Sandbox</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
+  </head>
+  <body>
+    <main class="site">
+      <p class="site__back"><a href="/">← Ethics Sandbox</a></p>
+
+      <header class="site__header">
+        <p class="eyebrow">Join a table</p>
+        <h1>Enter your room code</h1>
+        <div class="prose site__lede">
+          <p>Whoever is facilitating your session has a six-character code.
+          Type it below along with the name you want the table to see.</p>
+        </div>
+      </header>
+
+      {% if error %}
+      {% call ui.callout("Before you continue", mark="!") %}
+        <p class="prose">{{ error }}</p>
+      {% endcall %}
+      {% endif %}
+
+      <form class="site__section" method="post" action="/join">
+        {{ ui.field("room_code", "Room code", value=code, placeholder="ABC123") }}
+        {{ ui.field("display_name", "Your name", value=display_name, placeholder="Shown to the table") }}
+        <div class="toolbar" role="group" aria-label="Join actions">
+          {{ ui.button("Join table", variant="primary", size="lg", type="submit") }}
+        </div>
+      </form>
+    </main>
+  </body>
+</html>

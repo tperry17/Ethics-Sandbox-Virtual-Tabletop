@@ -38,6 +38,15 @@ Do not substitute the stack.
 - `static/` — compiled client output, CSS, and fonts
 - `tests/` — automated tests
 
+## Identity without sign-in
+
+A room is a URL with a code; a participant is a signed, http-only cookie holding a
+random id, issued on first visit and long-lived, plus whatever display name they
+typed when joining that room. That is the whole identity system: no email, no
+password, no account, no third-party auth. The same browser returning to the same
+room reclaims its seat and its hand because it still carries that cookie. No later
+prompt may add a login.
+
 ## The one architectural rule
 
 Python is authoritative for all state and all rules. The TypeScript table client renders what Python sends and reports what the human did. It holds no rules, knows nothing about deck contents, and is never sent the face of a card its viewer is not entitled to see. If a rule appears in TypeScript, that is a bug.
@@ -65,6 +74,8 @@ Python is authoritative for all state and all rules. The TypeScript table client
 - TypeScript provides static typing for the table client.
 - Playwright provides the required browser-level test runner.
 - Hypothesis provides property-based tests for `sandbox/model/`, required to check the security and integrity invariants of `project()` and the operations against far more tables and sequences than hand-written examples could cover.
+- Alembic manages the SQLAlchemy schema as versioned migrations, so production (Postgres) and local development (SQLite) are always brought to the same shape deliberately, never by `create_all` drift.
+- python-multipart is required by Starlette to parse the HTML form submissions on `/start` and `/join`.
 
 ## Design tokens
 

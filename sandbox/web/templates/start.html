@@ -1,0 +1,55 @@
+{% import "_ui.html" as ui %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Start a table · Ethics Sandbox</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
+  </head>
+  <body>
+    <main class="site">
+      <p class="site__back"><a href="/">← Ethics Sandbox</a></p>
+
+      <header class="site__header">
+        <p class="eyebrow">Start a table</p>
+        <h1>Choose an exercise and give it a room</h1>
+        <div class="prose site__lede">
+          <p>You will be the facilitator. Everyone else joins with the room
+          code this creates - no account, no sign-in, just a link.</p>
+        </div>
+      </header>
+
+      {% if error %}
+      {% call ui.callout("Before you continue", mark="!") %}
+        <p class="prose">{{ error }}</p>
+      {% endcall %}
+      {% endif %}
+
+      <form class="site__section" method="post" action="/start">
+        {{ ui.section_rule("Exercise") }}
+        <fieldset class="exercise-grid exercise-grid--choice">
+          <legend class="visually-hidden">Choose an exercise</legend>
+          {% for exercise in exercises %}
+          <label class="ui-card ui-card--choice">
+            <input type="radio" name="game_slug" value="{{ exercise.slug }}" required>
+            <span class="ui-card__header">
+              <span class="eyebrow">{{ exercise.group_size }} · {{ exercise.running_time }}</span>
+              <span class="ui-card__title">{{ exercise.title }}</span>
+            </span>
+            <span class="ui-card__body prose">{{ exercise.short_description }}</span>
+          </label>
+          {% endfor %}
+        </fieldset>
+
+        {{ ui.section_rule("Facilitator") }}
+        {{ ui.field("display_name", "Your name", placeholder="Shown to the table", hint="Only used for this room.") }}
+
+        <div class="toolbar" role="group" aria-label="Start actions">
+          {{ ui.button("Start a table", variant="primary", size="lg", type="submit") }}
+        </div>
+      </form>
+    </main>
+  </body>
+</html>

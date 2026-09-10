@@ -9,9 +9,11 @@ description = "A virtual tabletop for structured ethics and democracy exercises.
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "alembic>=1.19.2",
     "fastapi>=0.115,<1",
     "jinja2>=3.1,<4",
     "pydantic>=2.10,<3",
+    "python-multipart>=0.0.32",
     "sqlalchemy>=2.0,<3",
     "uvicorn[standard]>=0.34,<1",
 ]
@@ -45,3 +47,9 @@ line-length = 88
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's Depends()/Form()/Query() defaults are a documented idiom, not the
+# mutable-default-argument bug B008 is meant to catch.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Form", "fastapi.Query"]
+
