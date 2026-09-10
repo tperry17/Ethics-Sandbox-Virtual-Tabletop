@@ -36,6 +36,8 @@ def main() -> None:
                 "--reload",
                 "--reload-dir",
                 "sandbox",
+                "--reload-dir",
+                "content",
             ],
             cwd=PROJECT_ROOT,
             start_new_session=True,

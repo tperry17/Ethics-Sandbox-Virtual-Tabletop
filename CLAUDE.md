@@ -34,6 +34,8 @@ Do not substitute the stack.
 - `sandbox/web/` — FastAPI application, routes, and WebSocket hub
 - `sandbox/web/templates/` — Jinja templates
 - `sandbox/db/` — SQLAlchemy models and migrations
+- `sandbox/content_loading.py` — reads the CSV files under `content/` into plain rows
+- `content/` — editorial text as CSV, edited as a spreadsheet; see `content/README.md`
 - `client/` — TypeScript table client built by Vite
 - `static/` — compiled client output, CSS, and fonts
 - `tests/` — automated tests
