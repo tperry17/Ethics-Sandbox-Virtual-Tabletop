@@ -64,6 +64,7 @@ Python is authoritative for all state and all rules. The TypeScript table client
 - Vite compiles and watches the TypeScript table client.
 - TypeScript provides static typing for the table client.
 - Playwright provides the required browser-level test runner.
+- Hypothesis provides property-based tests for `sandbox/model/`, required to check the security and integrity invariants of `project()` and the operations against far more tables and sequences than hand-written examples could cover.
 
 ## Design tokens
 
