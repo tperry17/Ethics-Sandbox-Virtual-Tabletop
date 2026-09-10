@@ -50,3 +50,11 @@ in and reviewed as a spreadsheet ahead of that work, rather than pasted
 into a prompt as a block of text. Edit them the same way as everything
 else here; when that system is built, it will read from exactly these
 files.
+
+Each of these CSVs has an `image` column. A card or role can be an
+uploaded image instead of (or as well as) its text fields: put the image
+file in that exercise's `images/` subfolder (PNG, JPG, or SVG all work),
+then put its filename - just the filename, not a path - in the `image`
+cell on that row. Leave `image` blank for a card that should be generated
+from its text fields instead; a deck can freely mix generated and
+image-based cards. See the `README.md` inside each `images/` folder.

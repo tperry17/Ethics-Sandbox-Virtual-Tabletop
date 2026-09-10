@@ -31,3 +31,22 @@ def test_load_exercise_assembles_every_field() -> None:
 def test_load_exercise_raises_for_an_unknown_slug() -> None:
     with pytest.raises(KeyError):
         load_exercise("not-a-real-exercise")
+
+
+def test_every_referenced_exercise_image_file_exists() -> None:
+    """A typo'd filename in an `image` column should fail fast, not silently."""
+    import csv
+
+    from sandbox.content_loading import CONTENT_ROOT
+
+    exercises_dir = CONTENT_ROOT / "exercises"
+    missing: list[str] = []
+    for csv_path in sorted(exercises_dir.glob("*/*.csv")):
+        images_dir = csv_path.parent / "images"
+        with csv_path.open(newline="", encoding="utf-8") as handle:
+            for row in csv.DictReader(handle):
+                filename = row.get("image", "").strip()
+                if filename and not (images_dir / filename).is_file():
+                    missing.append(f"{csv_path}: {filename!r}")
+
+    assert not missing, f"Referenced image files not found: {missing}"
