@@ -7,9 +7,11 @@ stripped: there is a back to draw and nothing else. Test this adversarially.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from sandbox.model.entities import Piece, Table, Zone
+from sandbox.model.results import Patch
 from sandbox.model.types import PieceKind, Visibility
 
 
@@ -170,3 +172,47 @@ def project(table: Table, viewer_seat: str | None) -> ViewTable:
         strokes=strokes,
         version=table.version,
     )
+
+
+def project_patch(table: Table, patch: Patch, viewer_seat: str | None) -> Patch | None:
+    """``patch`` as ``viewer_seat`` may receive it, or None if they may not.
+
+    The same boundary as ``project``, applied to an increment rather than a
+    whole table: a piece whose face this viewer is not entitled to loses its
+    ``component_id`` and reports ``face_up`` False, and a private event -
+    one person looking at their own card - is not forwarded to anyone else
+    at all. Patches are projected against the table as it is now, which is
+    why the realtime layer projects them immediately after applying them.
+    """
+    if patch.kind == "piece" and patch.op == "upsert" and patch.entity_id is not None:
+        piece = table.pieces.get(patch.entity_id)
+        zone = None if piece is None else table.zones.get(piece.zone_id)
+        entitled = (
+            piece is not None
+            and zone is not None
+            and entitled_to_face(table, piece, zone, viewer_seat)
+        )
+        fields = dict(patch.fields)
+        # ``props`` never crosses this boundary as a bulk field: a game that
+        # needs one on the client sends it deliberately as its own patch.
+        fields.pop("props", None)
+        if not entitled:
+            fields["face_up"] = False
+            fields["component_id"] = None
+        return Patch(
+            kind=patch.kind, op=patch.op, entity_id=patch.entity_id, fields=fields
+        )
+    is_peek = patch.kind == "table" and patch.op == "event"
+    if is_peek and patch.fields.get("type") == "peek":
+        by_seat = patch.fields.get("by_seat")
+        if viewer_seat is None or by_seat != viewer_seat:
+            return None
+    return patch
+
+
+def project_patches(
+    table: Table, patches: Iterable[Patch], viewer_seat: str | None
+) -> list[Patch]:
+    """Every patch in ``patches`` this viewer is entitled to, already projected."""
+    projected = (project_patch(table, patch, viewer_seat) for patch in patches)
+    return [patch for patch in projected if patch is not None]

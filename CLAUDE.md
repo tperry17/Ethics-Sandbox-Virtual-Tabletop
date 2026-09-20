@@ -82,6 +82,7 @@ Python is authoritative for all state and all rules. The TypeScript table client
 - Hypothesis provides property-based tests for `sandbox/model/`, required to check the security and integrity invariants of `project()` and the operations against far more tables and sequences than hand-written examples could cover.
 - Alembic manages the SQLAlchemy schema as versioned migrations, so production (Postgres) and local development (SQLite) are always brought to the same shape deliberately, never by `create_all` drift.
 - python-multipart is required by Starlette to parse the HTML form submissions on `/start` and `/join`.
+- pytest-asyncio runs the realtime tests, which must await the room task itself rather than a synchronous stand-in for it.
 
 ## Design tokens
 

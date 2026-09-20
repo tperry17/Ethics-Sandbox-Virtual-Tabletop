@@ -335,7 +335,7 @@ def resume_room(session: Session, room: Room) -> None:
 # -- the one write path into a table's state -------------------------------
 
 
-def _next_seq(session: Session, room_id: str) -> int:
+def next_seq(session: Session, room_id: str) -> int:
     stmt = select(func.max(Event.seq)).where(Event.room_id == room_id)
     last = session.execute(stmt).scalar_one_or_none()
     return (last or 0) + 1
@@ -350,6 +350,34 @@ def _op_payload(op: Operation) -> dict[str, object]:
     raw = json.dumps(dataclasses.asdict(op))
     payload: dict[str, object] = json.loads(raw)
     return payload
+
+
+def append_event(
+    session: Session, room: Room, *, actor_seat: str | None, op: Operation
+) -> int:
+    """Append ``op`` to ``room``'s permanent log and return its sequence number.
+
+    The log is append-only: this is the only function that writes to it, and
+    nothing anywhere updates or deletes a row in it. The realtime layer owns
+    a room's table in memory and calls this directly for the operations it
+    has already applied; everything else goes through ``apply_op``, which
+    applies and logs together.
+    """
+    seq = next_seq(session, room.id)
+    session.add(
+        Event(
+            room_id=room.id,
+            seq=seq,
+            actor_seat=actor_seat,
+            op_type=type(op).__name__,
+            payload=_op_payload(op),
+        )
+    )
+    # Flushed here so that a batch of events appended in one session sees its
+    # own rows when it asks for the next sequence number.
+    session.flush()
+    room.last_active_at = _now()
+    return seq
 
 
 @dataclass(frozen=True)
@@ -380,16 +408,7 @@ def apply_op(session: Session, room: Room, actor_seat: str, op: Operation) -> Ap
     if already_applied:
         return AppliedOp(outcome=outcome, seq=None)
 
-    seq = _next_seq(session, room.id)
-    session.add(
-        Event(
-            room_id=room.id,
-            seq=seq,
-            actor_seat=actor_seat,
-            op_type=type(op).__name__,
-            payload=_op_payload(op),
-        )
-    )
+    seq = append_event(session, room, actor_seat=actor_seat, op=op)
     save_table_state(session, room, table)
     room.last_active_at = _now()
     return AppliedOp(outcome=outcome, seq=seq)
@@ -405,6 +424,7 @@ __all__ = [
     "RoomNotFoundError",
     "SeatUnavailableError",
     "UnknownExerciseError",
+    "append_event",
     "apply_op",
     "claim_seat",
     "close_room",
@@ -416,6 +436,7 @@ __all__ = [
     "join_room",
     "load_table",
     "make_observer",
+    "next_seq",
     "max_seats",
     "pause_room",
     "release_seat",

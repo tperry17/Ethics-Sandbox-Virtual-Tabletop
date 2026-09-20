@@ -52,6 +52,8 @@ from sandbox.model.visibility import (
     ViewZone,
     entitled_to_face,
     project,
+    project_patch,
+    project_patches,
 )
 
 __all__ = [
@@ -109,5 +111,7 @@ __all__ = [
     "new_op_id",
     "place_in_zone",
     "project",
+    "project_patch",
+    "project_patches",
     "run_op",
 ]

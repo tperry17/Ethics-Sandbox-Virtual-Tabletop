@@ -14,6 +14,7 @@ import hashlib
 import hmac
 import os
 import secrets
+from collections.abc import Mapping
 
 from fastapi import Request, Response
 
@@ -51,12 +52,22 @@ def new_participant_id() -> str:
     return secrets.token_urlsafe(18)
 
 
-def read_participant_cookie(request: Request) -> str | None:
-    """The participant id in ``request``'s cookie, if it is present and valid."""
-    raw = request.cookies.get(COOKIE_NAME)
+def participant_id_from_cookies(cookies: Mapping[str, str]) -> str | None:
+    """The participant id in a cookie jar, if it is present and correctly signed.
+
+    Takes the cookies rather than a ``Request`` so that a WebSocket, which
+    has no ``Request``, can identify its browser the same way every page
+    does. There is no second identity path.
+    """
+    raw = cookies.get(COOKIE_NAME)
     if raw is None:
         return None
     return _verify(raw)
+
+
+def read_participant_cookie(request: Request) -> str | None:
+    """The participant id in ``request``'s cookie, if it is present and valid."""
+    return participant_id_from_cookies(request.cookies)
 
 
 def set_participant_cookie(
@@ -91,6 +102,7 @@ __all__ = [
     "COOKIE_NAME",
     "ensure_participant_id",
     "new_participant_id",
+    "participant_id_from_cookies",
     "read_participant_cookie",
     "set_participant_cookie",
 ]

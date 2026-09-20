@@ -4,7 +4,15 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
+from fastapi import (
+    Depends,
+    FastAPI,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    WebSocket,
+)
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -18,6 +26,7 @@ from sandbox.web.identity import (
     read_participant_cookie,
     set_participant_cookie,
 )
+from sandbox.web.live import hub
 from sandbox.web.rooms import (
     RoomClosedError,
     RoomNotFoundError,
@@ -37,6 +46,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Ensure the schema exists on startup. A no-op against a migrated database."""
     init_db()
     yield
+    await hub.shutdown()
 
 
 app = FastAPI(title="Ethics Sandbox", lifespan=lifespan)
@@ -233,6 +243,12 @@ async def table_shell(
     )
 
 
+@app.websocket("/ws/t/{code}")
+async def table_socket(websocket: WebSocket, code: str) -> None:
+    """The live table socket. Transport only - every rule lives in the model."""
+    await hub.serve(websocket, code)
+
+
 @app.get("/styleguide", response_class=HTMLResponse)
 async def styleguide(request: Request) -> HTMLResponse:
     """Render the complete design-system reference page."""
@@ -278,9 +294,7 @@ async def styleguide(request: Request) -> HTMLResponse:
         },
         {
             "label": "Seats",
-            "tokens": [
-                {"name": f"--seat-{seat}"} for seat in range(1, 7)
-            ]
+            "tokens": [{"name": f"--seat-{seat}"} for seat in range(1, 7)]
             + [{"name": "--seat-ink", "inverse": True}],
         },
         {
