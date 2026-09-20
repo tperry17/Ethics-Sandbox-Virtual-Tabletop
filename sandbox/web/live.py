@@ -63,6 +63,7 @@ from sandbox.model import (
     Patch,
     Peek,
     Point,
+    Rect,
     Release,
     ReorderZ,
     ResetTable,
@@ -80,6 +81,7 @@ from sandbox.model import (
     project,
     run_op,
 )
+from sandbox.model.entities import Geometry
 from sandbox.model.visibility import project_patches
 from sandbox.web import rooms
 from sandbox.web.identity import participant_id_from_cookies
@@ -172,11 +174,86 @@ class PieceView(BaseModel):
     component_id: str | None
 
 
+class RectView(BaseModel):
+    """A rectangular zone outline in table coordinates."""
+
+    shape: Literal["rect"] = "rect"
+    x: float
+    y: float
+    width: float
+    height: float
+
+
+class PolygonView(BaseModel):
+    """An arbitrary zone outline in table coordinates."""
+
+    shape: Literal["polygon"] = "polygon"
+    points: list[tuple[float, float]]
+
+
+GeometryView = Annotated[RectView | PolygonView, Field(discriminator="shape")]
+
+
+def _geometry_view(geometry: Geometry) -> RectView | PolygonView:
+    if isinstance(geometry, Rect):
+        return RectView(
+            x=geometry.x, y=geometry.y, width=geometry.width, height=geometry.height
+        )
+    return PolygonView(points=[(x, y) for x, y in geometry.points])
+
+
 class ZoneView(BaseModel):
+    """A zone as this viewer may see it. Mirrors ``ViewZone``.
+
+    The outline is not a secret: what is private about a private zone is the
+    faces of the pieces in it, which ``project`` strips piece by piece.
+    """
+
+    id: str
+    kind: str
+    label: str
+    geometry: GeometryView
+    visibility: str
+    layout: str
+    owner_seat: str | None
+
+
+class ComponentView(BaseModel):
+    """What one component looks like, for a viewer entitled to see its face.
+
+    A piece names its component; this is the only place the face of that
+    component is described. A client is sent the catalog for the pieces it
+    may see, and nothing about the ones it may not: a deck's faces are not
+    in this list, because ``component_id`` is stripped from those pieces
+    long before anything here is assembled.
+
+    There is deliberately no per-component back. A client is never told
+    which component a face-down piece is, so it could not look one up; a
+    back that varied by component would announce, by varying, exactly what
+    the projection went to the trouble of withholding.
+    """
+
+    id: str
+    title: str | None = None
+    body: str | None = None
+    folio: str | None = None
+    image: str | None = None
+    tint_index: int | None = None
+    width: float | None = None
+    height: float | None = None
+
+
+class MacroView(BaseModel):
+    """One button in the table toolbar, as the exercise defines it.
+
+    What the button does is entirely the server's business; the client knows
+    only its id, its label, and whether to show it to this viewer.
+    """
+
     id: str
     label: str
-    visibility: str
-    owner_seat: str | None
+    hint: str | None = None
+    facilitator_only: bool = False
 
 
 class StrokeView(BaseModel):
@@ -235,11 +312,20 @@ class CursorView(BaseModel):
 
 
 class SnapshotMessage(BaseModel):
+    """A whole table, as one viewer may see it, plus what it takes to draw it.
+
+    ``components`` and ``macros`` travel with the snapshot rather than being
+    fetched separately so that a client is never briefly holding pieces it
+    cannot draw or a toolbar it cannot label.
+    """
+
     type: Literal["snapshot"] = "snapshot"
     seq: int
     view_table: TableView
     seats: list[SeatView]
     you: YouView
+    components: list[ComponentView] = Field(default_factory=list)
+    macros: list[MacroView] = Field(default_factory=list)
 
 
 class PatchesMessage(BaseModel):
@@ -514,6 +600,12 @@ class RoomRuntime:
         self.room_id = room_id
         self.table = table
         self.seq = 0
+        # What the pieces on this table look like, and what buttons the
+        # toolbar offers. Both are the exercise's to fill: until game
+        # definitions exist, a room has a table and no components or macros,
+        # and the client draws generic backs and an empty toolbar.
+        self.components: dict[str, ComponentView] = {}
+        self.macros: tuple[MacroView, ...] = ()
         self._hub = hub
         self._names = names
         self._commands: asyncio.Queue[_Command] = asyncio.Queue()
@@ -840,8 +932,11 @@ class RoomRuntime:
             zones=[
                 ZoneView(
                     id=zone.id,
+                    kind=str(zone.kind),
                     label=zone.label,
+                    geometry=_geometry_view(zone.geometry),
                     visibility=str(zone.visibility),
+                    layout=str(zone.layout),
                     owner_seat=zone.owner_seat,
                 )
                 for zone in view.zones
@@ -860,6 +955,33 @@ class RoomRuntime:
             version=view.version,
         )
 
+    def _components_for(self, view: ViewTable) -> list[ComponentView]:
+        """The faces this viewer already holds, and not one more.
+
+        ``project`` has already decided which pieces this viewer may see the
+        face of; every other piece reached them with ``component_id`` set to
+        None. Keying the catalog off what survived that projection is what
+        keeps a deck's contents out of the catalog: send the whole catalog
+        instead and the faces nobody has drawn yet arrive anyway.
+        """
+        wanted = {
+            piece.component_id
+            for piece in view.pieces
+            if piece.component_id is not None
+        }
+        return [
+            component
+            for component_id, component in sorted(self.components.items())
+            if component_id in wanted
+        ]
+
+    def _macros_for(self, connection: Connection) -> list[MacroView]:
+        return [
+            macro
+            for macro in self.macros
+            if connection.is_facilitator or not macro.facilitator_only
+        ]
+
     def _send_snapshot(self, connection: Connection) -> None:
         seats = self._seat_views()
         view = project(self.table, connection.seat_id)
@@ -874,6 +996,8 @@ class RoomRuntime:
                 is_facilitator=connection.is_facilitator,
                 is_observer=connection.is_observer,
             ),
+            components=self._components_for(view),
+            macros=self._macros_for(connection),
         )
         connection.last_seq_sent = self.seq
         connection.send(message)
@@ -1099,6 +1223,7 @@ __all__ = [
     "project",
     "OUTBOUND_QUEUE_LIMIT",
     "ClientMessage",
+    "ComponentView",
     "Connection",
     "CursorMessage",
     "CursorView",
@@ -1106,13 +1231,17 @@ __all__ = [
     "HelloMessage",
     "IntentError",
     "IntentMessage",
+    "GeometryView",
     "LiveHub",
+    "MacroView",
     "MessageSink",
     "NoticeMessage",
     "PatchView",
     "PatchesMessage",
     "PieceView",
+    "PolygonView",
     "PresenceMessage",
+    "RectView",
     "RejectMessage",
     "RoomRuntime",
     "SeatView",

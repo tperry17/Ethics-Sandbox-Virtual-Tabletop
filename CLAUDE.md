@@ -57,6 +57,55 @@ prompt may add a login.
 
 Python is authoritative for all state and all rules. The TypeScript table client renders what Python sends and reports what the human did. It holds no rules, knows nothing about deck contents, and is never sent the face of a card its viewer is not entitled to see. If a rule appears in TypeScript, that is a bug.
 
+## The table client
+
+`client/src/` is the only TypeScript in the project. Vite compiles it to
+`static/table/table.js`. It renders what Python sends and reports what the
+person did: no rule, no deck, and no face it was not given.
+
+- `protocol.ts` — the wire, mirroring `sandbox/web/live.py`
+- `model.ts` — the client's copy of the projected table, and patch folding
+- `viewport.ts`, `viewport-input.ts` — pan and zoom arithmetic, and the
+  gestures that drive it
+- `geometry.ts` — reading the zone outlines the server sends
+- `piece-node.ts` — one piece as a DOM element, with its own interpolation
+- `table.ts` — the reconcile pass that owns the DOM
+- `ink.ts` — the one canvas: ink, pointer pings, other people's cursors
+- `connection.ts` — the live socket, with reconnect and replay-from-seq
+- `recording.ts`, `fake-server.ts` — a recorded session behind the same
+  `ServerLink`, so rendering is built and tested with no backend running
+- `perf.ts` — frame measurement
+
+Pieces are DOM elements positioned with `translate3d` inside a single
+transformed world layer, so card text is real text at any zoom. Rendering
+reconciles from state, never from events: a message folds into the model and
+records what changed, and one animation frame later only those nodes are
+rewritten. Z-order is the model's — the zone's place in the server's list,
+then the piece's `z` within that zone — and never DOM insertion order.
+Another person's piece interpolates over 120 ms; the piece under your own
+hand never does. Your own private zone is drawn in a hand tray outside the
+world transform, so it stays put when the table moves.
+
+`/table-preview` replays the recorded session with no room behind it, and
+`?pieces=300&measure=1` is the frame-rate harness.
+
+### Measured frame rate
+
+300 pieces on screen, one of them being dragged: **59 fps**, median frame
+16.7 ms, 95th-percentile frame 16.8 ms. Measured with
+`/table-preview?pieces=300&measure=1` at 1440×900 in headless Chromium,
+three runs, timing the drag rather than the first paint. First paint of a
+300-piece table costs 80–180 ms. At 600 pieces it holds 50–59 fps.
+
+Two things bought that number and should not be handed back. Placed pieces
+carry no CSS transition on `transform`: the interpolation *is* the
+animation, and a transition on top of it is two animations fighting over one
+property. And `will-change: transform` is set only on the piece actually
+being held, not on all of them, because a compositing layer per piece costs
+more than it saves. Per-piece shadows were measured at this size and cost
+nothing, so they stay: the instruction is to spend the shadows before the
+typography, and it has not come to that.
+
 ## Rules of engagement
 
 - Every change must keep Ruff, mypy strict, and pytest green before it is called done.
@@ -94,7 +143,8 @@ assent/agreed, tension/contested, and caution/time short.
   `--surface-border`, `--surface-border-strong`
 - Table: `--table-felt`, `--table-felt-edge`, `--table-zone-outline`,
   `--table-zone-private`, `--table-drop-target`
-- Text: `--text-primary`, `--text-secondary`, `--text-muted`, `--text-inverse`
+- Text: `--text-primary`, `--text-secondary`, `--text-muted`, `--text-inverse`,
+  `--text-on-felt`
 - Accent: `--accent-rubric`, `--accent-rubric-soft`
 - Semantic: `--semantic-assent`, `--semantic-tension`, `--semantic-caution`
 - Seats: `--seat-1`, `--seat-2`, `--seat-3`, `--seat-4`, `--seat-5`,

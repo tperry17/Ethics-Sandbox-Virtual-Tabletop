@@ -10,9 +10,9 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from sandbox.model.entities import Piece, Table, Zone
+from sandbox.model.entities import Geometry, Piece, Table, Zone
 from sandbox.model.results import Patch
-from sandbox.model.types import PieceKind, Visibility
+from sandbox.model.types import Layout, PieceKind, Visibility, ZoneKind
 
 
 @dataclass(frozen=True)
@@ -39,9 +39,21 @@ class ViewPiece:
 
 @dataclass(frozen=True)
 class ViewZone:
+    """A zone as any viewer may see it: where it is, what it is for, and whose.
+
+    A zone's outline, kind and layout are not secrets - a hand is visibly a
+    hand, and its owner is named on the seat roster either way. What is
+    private about a private zone is the faces of the pieces resting in it,
+    and that is stripped from the pieces themselves, one at a time, by
+    ``_project_piece``. The client needs the outline to draw it.
+    """
+
     id: str
+    kind: ZoneKind
     label: str
+    geometry: Geometry
     visibility: Visibility
+    layout: Layout
     owner_seat: str | None
 
 
@@ -139,8 +151,11 @@ def project(table: Table, viewer_seat: str | None) -> ViewTable:
     zones = tuple(
         ViewZone(
             id=zone.id,
+            kind=zone.kind,
             label=zone.label,
+            geometry=zone.geometry,
             visibility=zone.visibility,
+            layout=zone.layout,
             owner_seat=zone.owner_seat,
         )
         for zone in table.zones.values()

@@ -249,6 +249,29 @@ async def table_socket(websocket: WebSocket, code: str) -> None:
     await hub.serve(websocket, code)
 
 
+@app.get("/table-preview", response_class=HTMLResponse)
+async def table_preview(
+    request: Request, pieces: int = 0, measure: bool = False, loop: bool = False
+) -> HTMLResponse:
+    """The table client driven by a recorded session, with no room behind it.
+
+    The rendering half of the client is developed and tested against this
+    page: it replays a recorded session in the browser, so a table can be
+    looked at, and its frame rate measured with ``?pieces=300&measure=1``,
+    without a room, a socket, or a database. Like ``/styleguide``, it shows
+    only fixture material and reaches no room's state.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="table_preview.html",
+        context={
+            "pieces": max(0, min(pieces, 2000)),
+            "measure": measure,
+            "loop": loop,
+        },
+    )
+
+
 @app.get("/styleguide", response_class=HTMLResponse)
 async def styleguide(request: Request) -> HTMLResponse:
     """Render the complete design-system reference page."""

@@ -74,8 +74,8 @@
 </div>
 {%- endmacro %}
 
-{% macro toolbar(label="Table controls") -%}
-<div class="toolbar" role="toolbar" aria-label="{{ label }}">{{ caller() }}</div>
+{% macro toolbar(label="Table controls", id="") -%}
+<div class="toolbar" role="toolbar" aria-label="{{ label }}"{% if id %} id="{{ id }}"{% endif %}>{{ caller() }}</div>
 {%- endmacro %}
 
 {% macro toast(title, message) -%}

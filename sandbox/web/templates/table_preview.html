@@ -1,0 +1,44 @@
+{% import "_ui.html" as ui %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Table preview · Ethics Sandbox</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/tabletop.css') }}">
+  </head>
+  <body>
+    <div class="table-shell">
+      <header class="table-shell__header">
+        <div class="table-shell__identity">
+          <p class="eyebrow">Table client preview</p>
+          <p class="prose">
+            A recorded session, replayed in the browser. No room, no socket, and
+            nothing behind this page.
+          </p>
+        </div>
+        <p class="tabletop__measure" id="table-measure">{{ "Measuring…" if measure else "" }}</p>
+      </header>
+
+      {% call ui.toolbar("Table controls", id="table-toolbar") %}
+        <p class="toolbar__empty prose">Loading the recorded session…</p>
+      {% endcall %}
+
+      <main class="table-shell__surface">
+        <div
+          id="table-root"
+          class="tabletop"
+          data-source="replay"
+          data-room-code="PREVIEW"
+          {% if pieces %}data-pieces="{{ pieces }}"{% endif %}
+          {% if measure %}data-measure="1"{% endif %}
+          {% if loop %}data-loop="1"{% endif %}
+        ></div>
+      </main>
+    </div>
+
+    <script type="module" src="{{ url_for('static', path='/table/table.js') }}"></script>
+  </body>
+</html>

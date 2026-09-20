@@ -42,26 +42,31 @@
         </div>
       </header>
 
-      {% call ui.toolbar("Table controls") %}
+      {# The client fills this toolbar from the macros the server sends it. #}
+      {% call ui.toolbar("Table controls", id="table-toolbar") %}
         <p class="toolbar__empty prose">
           Macro buttons for this exercise appear here once it defines them.
         </p>
       {% endcall %}
 
       <main class="table-shell__surface">
+        {# The table client takes this element over completely: everything
+           inside it is replaced on the first frame. #}
         <div
           id="table-root"
           class="tabletop"
+          data-source="live"
           data-room-code="{{ room.code }}"
           data-participant-id="{{ participant.id }}"
           data-seat-id="{{ participant.seat_id or '' }}"
         >
-          {% if not seats %}
-          {{ ui.empty_state(
-            "The table is empty",
-            "This exercise has not been set up yet. Once a facilitator presses Set up, its pieces and zones will appear here."
-          ) }}
-          {% endif %}
+          <noscript>
+            {{ ui.empty_state(
+              "The table needs JavaScript",
+              "The table surface is drawn in the browser. Everything else about this
+               room - the code, who is here, and the exercise itself - works without it."
+            ) }}
+          </noscript>
         </div>
       </main>
     </div>

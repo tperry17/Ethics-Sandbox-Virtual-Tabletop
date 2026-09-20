@@ -94,6 +94,11 @@ def _piece_patch(piece: Piece) -> Patch:
         op="upsert",
         entity_id=piece.id,
         fields={
+            # ``kind`` is repeated on every piece patch, not only the first,
+            # because a client that learns of a piece through a patch - one
+            # spawned after it connected - has nothing else to tell it what
+            # shape to draw.
+            "kind": str(piece.kind),
             "zone_id": piece.zone_id,
             "x": piece.x,
             "y": piece.y,
