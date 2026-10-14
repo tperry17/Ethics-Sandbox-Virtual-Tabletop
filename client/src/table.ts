@@ -63,8 +63,6 @@ export interface RendererOptions {
   toolbar: HTMLElement | null;
   link: ServerLink;
   roomCode: string;
-  /** Called when a toolbar button is pressed. What it means is the server's. */
-  onMacro?: (macroId: string) => void;
 }
 
 /** Things the interaction half wants to hear about as they arrive. */
@@ -668,8 +666,18 @@ export class TableRenderer {
     node.dataset.macroId = macro.id;
     node.textContent = macro.label;
     if (macro.hint !== null) node.title = macro.hint;
-    node.addEventListener("click", () => this.options.onMacro?.(macro.id));
+    node.addEventListener("click", () => this.pressMacro(macro));
     return node;
+  }
+
+  /**
+   * Ask the server to run a toolbar button. What it does, and whether it
+   * may, is the server's to decide; the client only asks the question the
+   * server supplied before a destructive one, and reports the answer.
+   */
+  pressMacro(macro: MacroView): void {
+    if (macro.confirm !== null && !window.confirm(macro.confirm)) return;
+    this.intents.send("macro", { macro_id: macro.id });
   }
 
   private setStatus(status: LinkStatus): void {

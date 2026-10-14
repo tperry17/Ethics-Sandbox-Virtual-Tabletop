@@ -1,0 +1,29 @@
+# A test-only game that exercises every hook moment and a refusing macro.
+meta:
+  slug: hooked
+  title: Hooked
+  players: {min: 1, max: 3}
+  duration_minutes: 5
+  facilitator: required
+  listed: false
+
+components:
+  pieces:
+    - {id: d6, kind: die, title: Die, faces: ["1", "2", "3", "4", "5", "6"]}
+    - {id: marker, kind: token, title: Marker}
+
+zones:
+  - {id: table, kind: table, label: Table, rect: [0, 0, 800, 600], visibility: public, layout: free}
+  - {id: tray, kind: tray, label: Tray, rect: [0, 620, 200, 100], visibility: public, layout: grid, per_seat: true, step: [220, 0]}
+
+setup:
+  - {op: spawn, component: d6, zone: table}
+
+macros:
+  - {id: setup, label: Set up, steps: [{op: reset_table}, {op: setup}]}
+  - {id: deal, label: Deal, python: marker_each}
+  - {id: reset, label: Reset, steps: [{op: reset_table}]}
+  - {id: shuffle, label: Shuffle, steps: [{op: shuffle, zone: table}]}
+  - {id: collect, label: Collect, steps: [{op: collect, to: table}]}
+  - {id: clear_ink, label: Clear ink, who: anyone, steps: [{op: clear_ink}]}
+  - {id: refuse, label: Refuse, who: anyone, python: always_refuse}

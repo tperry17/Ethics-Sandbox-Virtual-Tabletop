@@ -37,19 +37,25 @@ per item, keyed by the same `slug` used in `exercises.csv`. To add, remove,
 or reorder an item, add, remove, or reorder its row - the order rows appear
 in the file is the order they appear on the page.
 
-## Templates for exercise content (not live yet)
+## Exercise content
+
+Each exercise's game content - its deck, its roles, its facilitation
+prompts - lives under `exercises/<exercise>/`, and the exercise's game
+definition (`sandbox/games/<exercise>/game.yaml`) names the files it reads.
+
+`exercises/two-doors/cards.csv` and `prompts.csv` are live: Two Doors is
+the reference game that documents the definition format. It is not on the
+public site; a room can be started for it at `/start?game=two-doors`.
 
 `exercises/value-cards-trading/cards.csv` and
-`exercises/democracy-simulation/roles.csv` are templates for each
-exercise's actual game content - the full value-card deck, the roles in
-the simulation. They are not read by the running site yet, because the
-game-definition system that deals cards and assigns roles from a file like
-this hasn't been built (that's a later step in the build plan). They exist
-now so the content itself - the real deck, the real roles - can be filled
-in and reviewed as a spreadsheet ahead of that work, rather than pasted
-into a prompt as a block of text. Edit them the same way as everything
-else here; when that system is built, it will read from exactly these
-files.
+`exercises/democracy-simulation/roles.csv` are not read yet. Their
+exercises get game definitions in later steps of the build plan
+(`docs/BUILD-PLAN.md`, prompts 10 and 11), which will read exactly these
+files. Fill them in as spreadsheets ahead of that work.
+
+In a deck, the column the definition names as its `key` (`name` in these
+files) must be unique: it identifies the card. Renaming a card is changing
+its key, so rename between sessions, not during one.
 
 Each of these CSVs has an `image` column. A card or role can be an
 uploaded image instead of (or as well as) its text fields: put the image

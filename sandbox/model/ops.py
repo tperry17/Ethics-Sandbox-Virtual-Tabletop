@@ -9,14 +9,24 @@ table's version, so a retried message is harmless.
 
 from __future__ import annotations
 
+import copy
 import uuid
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from sandbox.model.entities import Piece, Stroke, Table, Zone
+from sandbox.model.entities import (
+    Geometry,
+    Piece,
+    Polygon,
+    Rect,
+    Seat,
+    Stroke,
+    Table,
+    Zone,
+)
 from sandbox.model.layout import place_in_zone
 from sandbox.model.results import Ok, OpOutcome, Patch, Reject
-from sandbox.model.types import Layout, PieceKind, Visibility
+from sandbox.model.types import Layout, PieceKind, Visibility, ZoneKind
 from sandbox.model.visibility import entitled_to_face
 
 
@@ -384,24 +394,42 @@ class ReorderZ:
 
 @dataclass(frozen=True)
 class Shuffle:
-    """Shuffle the pieces within a zone into a new order, using the table's RNG."""
+    """Shuffle the pieces within a zone, using the table's RNG.
+
+    What moves is what each piece *is* - its component, kind, face and
+    props - not the piece itself. Every piece keeps its id, its place and its
+    z, and comes out of the shuffle as a random one of the cards that went
+    in. Reordering z instead would leave each piece's id attached to the same
+    card, and anyone who had seen a card face up, then watched it go into the
+    deck, could follow its id through the shuffle and into someone's hand.
+    """
 
     zone_id: str
     op_id: str = field(default_factory=new_op_id)
 
     def validate(self, table: Table, actor_seat: str) -> str | None:
-        if _get_zone(table, self.zone_id) is None:
+        zone = _get_zone(table, self.zone_id)
+        if zone is None:
             return f"There is no zone {self.zone_id!r} on the table."
+        if any(piece.held_by is not None for piece in table.pieces_in_zone(zone.id)):
+            return f"Someone is holding a piece from {zone.label}."
         return None
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         pieces = table.pieces_in_zone(self.zone_id)
         if len(pieces) <= 1:
             return []
-        z_values = [piece.z for piece in pieces]
+        identities = [
+            (piece.kind, piece.component_id, piece.face_up, dict(piece.props))
+            for piece in pieces
+        ]
         order = table.rng.shuffled_indices(len(pieces))
-        for piece, z in zip(pieces, (z_values[i] for i in order), strict=True):
-            piece.z = z
+        for piece, source in zip(pieces, order, strict=True):
+            kind, component_id, face_up, props = identities[source]
+            piece.kind, piece.component_id = kind, component_id
+            piece.face_up, piece.props = face_up, props
+            # A reveal names a piece, and the piece is now a different card.
+            _clear_reveal(piece)
         return [_piece_patch(piece) for piece in pieces]
 
 
@@ -1073,3 +1101,154 @@ class Peek:
                 },
             )
         ]
+
+
+# -- seats, zones, and transactions ----------------------------------------------
+#
+# None of these is a client intent: the realtime layer's table of wire
+# operations does not include them. Seats and zones are added by the room
+# service when someone sits down, and a transaction is how an exercise's
+# macro is applied.
+
+
+def _zone_patch(zone: Zone) -> Patch:
+    geometry: dict[str, object]
+    if isinstance(zone.geometry, Rect):
+        geometry = {
+            "shape": "rect",
+            "x": zone.geometry.x,
+            "y": zone.geometry.y,
+            "width": zone.geometry.width,
+            "height": zone.geometry.height,
+        }
+    else:
+        geometry = {
+            "shape": "polygon",
+            "points": [list(point) for point in zone.geometry.points],
+        }
+    return Patch(
+        kind="zone",
+        op="upsert",
+        entity_id=zone.id,
+        fields={
+            "kind": str(zone.kind),
+            "label": zone.label,
+            "geometry": geometry,
+            "visibility": str(zone.visibility),
+            "layout": str(zone.layout),
+            "owner_seat": zone.owner_seat,
+        },
+    )
+
+
+@dataclass(frozen=True)
+class AddSeat:
+    """Add an empty or occupied seat to the table."""
+
+    seat_id: str
+    label: str
+    tint_index: int
+    is_facilitator: bool = False
+    participant_id: str | None = None
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        if self.seat_id in table.seats:
+            return f"There is already a seat {self.seat_id!r} at the table."
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        seat = Seat(
+            id=self.seat_id,
+            label=self.label,
+            tint_index=self.tint_index,
+            participant_id=self.participant_id,
+            is_facilitator=self.is_facilitator,
+        )
+        table.seats[seat.id] = seat
+        return [
+            Patch(
+                kind="seat",
+                op="upsert",
+                entity_id=seat.id,
+                fields={
+                    "label": seat.label,
+                    "tint_index": seat.tint_index,
+                    "participant_id": seat.participant_id,
+                    "is_facilitator": seat.is_facilitator,
+                },
+            )
+        ]
+
+
+@dataclass(frozen=True)
+class AddZone:
+    """Add a zone to the table: at setup, or when a seat brings its own hand."""
+
+    zone_id: str
+    kind: ZoneKind
+    label: str
+    geometry: Rect | Polygon
+    visibility: Visibility
+    layout: Layout
+    owner_seat: str | None = None
+    capacity: int | None = None
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        if self.zone_id in table.zones:
+            return f"There is already a zone {self.zone_id!r} on the table."
+        if self.owner_seat is not None and self.owner_seat not in table.seats:
+            return f"There is no seat {self.owner_seat!r} at the table."
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        geometry: Geometry = self.geometry
+        zone = Zone(
+            id=self.zone_id,
+            kind=self.kind,
+            label=self.label,
+            geometry=geometry,
+            visibility=self.visibility,
+            layout=self.layout,
+            owner_seat=self.owner_seat,
+            capacity=self.capacity,
+        )
+        table.zones[zone.id] = zone
+        return [_zone_patch(zone)]
+
+
+@dataclass(frozen=True)
+class Transaction:
+    """Several operations applied as one: every one of them, or none at all.
+
+    ``validate`` runs the steps in order against a copy of the table, so a
+    step is judged against what the steps before it did, and the first
+    reason any of them gives is the transaction's reason. ``apply`` then runs
+    the same steps against the real table. Because the copy carries the
+    table's RNG state, a shuffle or a roll lands the same way both times.
+
+    ``name`` says what the transaction is for the event log (``macro:deal``,
+    ``setup``, ``seat:seat-3``); ``label`` is the same thing for a person.
+    No steps at all is a valid transaction that changes nothing.
+    """
+
+    steps: tuple[Operation, ...]
+    name: str = ""
+    label: str = ""
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        trial = copy.deepcopy(table)
+        for step in self.steps:
+            reason = step.validate(trial, actor_seat)
+            if reason is not None:
+                return reason
+            step.apply(trial, actor_seat)
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        patches: list[Patch] = []
+        for step in self.steps:
+            patches.extend(step.apply(table, actor_seat))
+        return patches

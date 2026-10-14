@@ -38,6 +38,12 @@ def main() -> None:
                 "sandbox",
                 "--reload-dir",
                 "content",
+                # Uvicorn watches only *.py unless told otherwise; game
+                # definitions and the content they name are YAML and CSV.
+                "--reload-include",
+                "*.yaml",
+                "--reload-include",
+                "*.csv",
             ],
             cwd=PROJECT_ROOT,
             start_new_session=True,

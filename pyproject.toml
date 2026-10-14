@@ -10,16 +10,19 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "alembic>=1.19.2",
+    "anyio>=4.0,<5",
     "fastapi>=0.115,<1",
     "jinja2>=3.1,<4",
     "pydantic>=2.10,<3",
     "python-multipart>=0.0.32",
+    "pyyaml>=6.0,<7",
     "sqlalchemy>=2.0,<3",
     "uvicorn[standard]>=0.34,<1",
 ]
 
 [project.scripts]
 dev = "sandbox.dev:main"
+sandbox = "sandbox.cli:main"
 
 [dependency-groups]
 dev = [
@@ -29,6 +32,7 @@ dev = [
     "pytest>=8.3,<9",
     "pytest-asyncio>=0.25,<2",
     "ruff>=0.9,<1",
+    "types-pyyaml>=6.0,<7",
 ]
 
 [tool.hatch.build.targets.wheel]

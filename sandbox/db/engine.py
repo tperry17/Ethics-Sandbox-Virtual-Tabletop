@@ -12,8 +12,9 @@ import os
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Connection, Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from sandbox.db.models import Base
@@ -27,11 +28,36 @@ def database_url() -> str:
     return os.environ.get("DATABASE_URL", DEFAULT_SQLITE_URL)
 
 
+def _queue_sqlite_writers(engine: Engine) -> None:
+    """Make SQLite transactions wait their turn instead of failing.
+
+    By default a SQLite transaction starts as a reader and becomes a writer
+    at its first write. Two that both read and then both write cannot both
+    become writers, and SQLite answers "database is locked" at once, without
+    waiting. A live room saving its table while someone joins it is exactly
+    that. ``BEGIN IMMEDIATE`` takes the write lock when the transaction
+    starts, so a second one waits (up to the driver's timeout) for the first
+    to finish rather than failing. Postgres needs none of this.
+    """
+
+    @event.listens_for(engine, "connect")
+    def _no_driver_begin(dbapi_connection: Any, _record: Any) -> None:
+        # Let SQLAlchemy say when a transaction begins, not the driver.
+        dbapi_connection.isolation_level = None
+
+    @event.listens_for(engine, "begin")
+    def _begin_immediate(connection: Connection) -> None:
+        connection.exec_driver_sql("BEGIN IMMEDIATE")
+
+
 def make_engine(url: str | None = None) -> Engine:
     """Build an engine for ``url`` (or the configured database)."""
     resolved = url if url is not None else database_url()
-    connect_args = {"check_same_thread": False} if resolved.startswith("sqlite") else {}
-    return create_engine(resolved, connect_args=connect_args)
+    if not resolved.startswith("sqlite"):
+        return create_engine(resolved)
+    engine = create_engine(resolved, connect_args={"check_same_thread": False})
+    _queue_sqlite_writers(engine)
+    return engine
 
 
 engine: Engine = make_engine()

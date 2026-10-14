@@ -120,6 +120,8 @@ export interface MacroView {
   label: string;
   hint: string | null;
   facilitator_only: boolean;
+  /** Asked before the button runs, when the server says it is destructive. */
+  confirm: string | null;
 }
 
 export interface YouView {

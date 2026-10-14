@@ -13,7 +13,8 @@ table below in the same pull request.
 
 ## Where we are
 
-Prompts 1–8 are done. **Next: Prompt 9, game definitions and macro buttons.**
+Prompts 1–8 are done. **Prompt 9, game definitions and macro buttons, is in review** on
+branch `claude/game-definitions`.
 Prompts 10 and 11 need written rules from the author before they can run
 (see "Waiting on the author").
 
@@ -27,7 +28,7 @@ Prompts 10 and 11 need written rules from the author before they can run
 | 6 | The realtime layer | Done | `d852f75` |
 | 7 | The table client — rendering | Done | `9c86f37` |
 | 8 | The table client — interaction | Done | `d8c383d` (PR #1) |
-| 9 | Game definitions and macro buttons | **Next** | |
+| 9 | Game definitions and macro buttons | **In review** | branch `claude/game-definitions` |
 | 10 | Value Cards Trading | Waiting on the author's rules | |
 | 11 | Democracy Simulation | Waiting on the author's rules | |
 | 12 | Facilitator controls and the shared view | Not started | |
@@ -62,7 +63,8 @@ Checked against the code on `main`; none of these has been fixed yet.
 - **Prompt 2.** `/styleguide` still describes the design as a "scholarly
   edition", which CLAUDE.md now rules out. Being removed in a separate PR.
 - **No CI.** There is no `.github/workflows/`. Prompt 9 asks for
-  `validate-games` to fail CI, and Prompt 15 wires the suite into CI.
+  `validate-games` to fail CI; until there is CI, pytest runs the same
+  check. Prompt 15 wires the suite into CI.
 
 ## Changes since the plan was written
 
@@ -619,7 +621,7 @@ Commit.
 
 ## 9. Game definitions and macro buttons
 
-**Status: Next.**
+**Status: In review.**
 
 The prompt that makes a third exercise cheap. Data-driven, with a Python escape hatch for mechanics the generic format cannot express.
 

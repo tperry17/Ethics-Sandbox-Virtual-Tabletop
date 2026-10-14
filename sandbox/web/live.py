@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import time
 import uuid
 from collections import deque
@@ -42,7 +43,11 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from sandbox.db.engine import SessionLocal, session_scope
 from sandbox.db.models import Participant, Room
+from sandbox.games import GAMES, Game
+from sandbox.games.engine import announcement, build_macro
 from sandbox.model import (
+    AddSeat,
+    AddZone,
     ClearInk,
     Deal,
     Despawn,
@@ -71,15 +76,18 @@ from sandbox.model import (
     ResetZone,
     Roll,
     Rotate,
+    Seat,
     SetProp,
     ShowTo,
     Shuffle,
     Spawn,
     StackOnto,
     Table,
+    Transaction,
     Ungroup,
     Unlock,
     ViewTable,
+    Zone,
     piece_actions,
     project,
     run_op,
@@ -271,6 +279,7 @@ class MacroView(BaseModel):
     label: str
     hint: str | None = None
     facilitator_only: bool = False
+    confirm: str | None = None
 
 
 class StrokeView(BaseModel):
@@ -472,6 +481,7 @@ _ADAPTERS: dict[str, TypeAdapter[Any]] = {
 # each of them so a late joiner starts from the new arrangement.
 MACRO_OPERATIONS = frozenset(
     {
+        "transaction",
         "shuffle",
         "draw",
         "deal",
@@ -481,6 +491,46 @@ MACRO_OPERATIONS = frozenset(
         "reset_table",
     }
 )
+
+
+# The intent a toolbar button sends. It is not a model operation: the room
+# asks the exercise's definition what pressing that button does now.
+MACRO_INTENT = "macro"
+
+
+def component_views(game: Game | None) -> dict[str, ComponentView]:
+    """Every face the exercise defines, ready to send to whoever may see it."""
+    if game is None:
+        return {}
+    return {
+        component_id: ComponentView(
+            id=component_id,
+            title=face.title,
+            body=face.body,
+            folio=face.folio,
+            image=face.image,
+            tint_index=face.tint_index,
+            width=face.width,
+            height=face.height,
+        )
+        for component_id, face in game.faces().items()
+    }
+
+
+def macro_views(game: Game | None) -> tuple[MacroView, ...]:
+    """The exercise's toolbar, in the order its definition lists the buttons."""
+    if game is None:
+        return ()
+    return tuple(
+        MacroView(
+            id=macro.id,
+            label=macro.label,
+            hint=macro.hint,
+            facilitator_only=macro.who == "facilitator",
+            confirm=macro.confirm,
+        )
+        for macro in game.definition.macros
+    )
 
 
 class IntentError(Exception):
@@ -553,6 +603,10 @@ class Connection:
     # Every component whose face this connection has been sent, so a patch
     # carries a description only the first time it names one.
     known_components: set[str] = field(default_factory=set)
+    # This person's seat and its own zones as the database has them. A seat
+    # taken while the room was already live is not on the room task's table
+    # yet; joining brings it there.
+    stored_seat: tuple[Seat, tuple[Zone, ...]] | None = None
 
     def send(self, message: BaseModel) -> bool:
         """Queue ``message``. False means this connection has fallen behind."""
@@ -590,7 +644,14 @@ class _Inbound:
     message: ClientMessage
 
 
-_Command = _Join | _Leave | _Inbound
+@dataclass(frozen=True)
+class _SeatTaken:
+    """Someone sat down while the room was live; here is their stored seat."""
+
+    stored: tuple[Seat, tuple[Zone, ...]]
+
+
+_Command = _Join | _Leave | _Inbound | _SeatTaken
 
 
 @dataclass(frozen=True)
@@ -620,7 +681,7 @@ def _persist(
                 session, room, actor_seat=entry.actor_seat, op=entry.operation
             )
         if table is not None:
-            rooms.save_table_state(session, room, table)
+            rooms.save_live_table_state(session, room, table)
 
 
 def _load_room(
@@ -640,10 +701,45 @@ def _load_room(
         return room, table, names
 
 
+def _stored_seat(
+    session: Session, room: Room, seat_id: str | None
+) -> tuple[Seat, tuple[Zone, ...]] | None:
+    """A seat and the zones it owns, as the database has them."""
+    if seat_id is None:
+        return None
+    table = rooms.load_table(session, room)
+    seat = table.seats.get(seat_id)
+    if seat is None:
+        return None
+    owned = tuple(zone for zone in table.zones.values() if zone.owner_seat == seat.id)
+    return seat, owned
+
+
+def _load_seat(
+    factory: sessionmaker[Session], code: str, participant_id: str
+) -> tuple[Seat, tuple[Zone, ...]] | None:
+    """The stored seat of the participant ``participant_id`` in room ``code``."""
+    with session_scope(factory) as session:
+        room = rooms.get_room_by_code(session, code)
+        if room is None:
+            return None
+        participant = next(
+            (person for person in room.participants if person.id == participant_id),
+            None,
+        )
+        if participant is None:
+            return None
+        return _stored_seat(session, room, participant.seat_id)
+
+
 def _load_participant(
     factory: sessionmaker[Session], code: str, cookie_id: str
-) -> tuple[Room, Participant] | None:
-    """Who this browser already is in this room, if it has joined it."""
+) -> tuple[Room, Participant, tuple[Seat, tuple[Zone, ...]] | None] | None:
+    """Who this browser already is in this room, if it has joined it.
+
+    Also their seat and its own zones as stored, for a room task that was
+    already running when they sat down.
+    """
     with session_scope(factory) as session:
         room = rooms.get_room_by_code(session, code)
         if room is None:
@@ -652,7 +748,7 @@ def _load_participant(
         if participant is None:
             return None
         participant.connected = True
-        return room, participant
+        return room, participant, _stored_seat(session, room, participant.seat_id)
 
 
 # -- the room task ----------------------------------------------------------------
@@ -667,18 +763,25 @@ class RoomRuntime:
     """
 
     def __init__(
-        self, code: str, room_id: str, table: Table, names: dict[str, str], hub: LiveHub
+        self,
+        code: str,
+        room_id: str,
+        table: Table,
+        names: dict[str, str],
+        hub: LiveHub,
+        game: Game | None = None,
     ) -> None:
         self.code = code
         self.room_id = room_id
         self.table = table
         self.seq = 0
         # What the pieces on this table look like, and what buttons the
-        # toolbar offers. Both are the exercise's to fill: until game
-        # definitions exist, a room has a table and no components or macros,
-        # and the client draws generic backs and an empty toolbar.
-        self.components: dict[str, ComponentView] = {}
-        self.macros: tuple[MacroView, ...] = ()
+        # toolbar offers, both from the exercise's game definition. An
+        # exercise without one has neither, and the client draws generic
+        # backs and an empty toolbar.
+        self.game = game
+        self.components: dict[str, ComponentView] = component_views(game)
+        self.macros: tuple[MacroView, ...] = macro_views(game)
         self._hub = hub
         self._names = names
         self._commands: asyncio.Queue[_Command] = asyncio.Queue()
@@ -727,6 +830,9 @@ class RoomRuntime:
     async def submit(self, connection: Connection, message: ClientMessage) -> None:
         await self._commands.put(_Inbound(connection, message))
 
+    async def seat_taken(self, stored: tuple[Seat, tuple[Zone, ...]]) -> None:
+        await self._commands.put(_SeatTaken(stored))
+
     async def drain(self) -> None:
         """Wait until every queued command has been handled. For tests."""
         await self._commands.join()
@@ -771,12 +877,64 @@ class RoomRuntime:
                 self._names[command.connection.seat_id] = (
                     command.connection.display_name
                 )
+            if command.connection.stored_seat is not None:
+                self._bring_seat(command.connection.stored_seat)
+            self._presence_due = True
+            return
+        if isinstance(command, _SeatTaken):
+            self._bring_seat(command.stored)
             self._presence_due = True
             return
         if isinstance(command, _Leave):
             self._on_leave(command.connection)
             return
         self._on_message(command.connection, command.message)
+
+    def _bring_seat(self, stored: tuple[Seat, tuple[Zone, ...]]) -> None:
+        """Put a seat taken while this room was live onto this room's table.
+
+        The room service added it, logged it and stored it; this table was
+        loaded before that. Nothing is logged again. Everyone already here
+        is sent the whole table afresh, because a seat and its zones are new
+        outlines, and a patch only ever changes what a client already has.
+        """
+        if stored[0].id in self.table.seats:
+            return
+        seat, zones = stored
+        steps: list[Operation] = [
+            AddSeat(
+                seat_id=seat.id,
+                label=seat.label,
+                tint_index=seat.tint_index,
+                is_facilitator=seat.is_facilitator,
+                participant_id=seat.participant_id,
+            )
+        ]
+        steps.extend(
+            AddZone(
+                zone_id=zone.id,
+                kind=zone.kind,
+                label=zone.label,
+                geometry=zone.geometry,
+                visibility=zone.visibility,
+                layout=zone.layout,
+                owner_seat=zone.owner_seat,
+                capacity=zone.capacity,
+            )
+            for zone in zones
+            if zone.id not in self.table.zones
+        )
+        outcome = run_op(
+            self.table, seat.id, Transaction(steps=tuple(steps), name=f"seat:{seat.id}")
+        )
+        if not isinstance(outcome, Ok):
+            return
+        self.seq += 1
+        self._history.clear()
+        self._snapshot_due = True
+        for other in list(self._connections.values()):
+            if other.ready:
+                self._send_snapshot(other)
 
     def _on_leave(self, connection: Connection) -> None:
         self._connections.pop(connection.id, None)
@@ -843,6 +1001,9 @@ class RoomRuntime:
                 connection, message.client_id, "Observers can watch but not act."
             )
             return
+        if message.op_type == MACRO_INTENT:
+            self._on_macro(connection, seat_id, message)
+            return
         try:
             operation = decode_intent(message.op_type, message.payload)
         except IntentError as error:
@@ -875,6 +1036,41 @@ class RoomRuntime:
         # Sent after the patches, so by the time the client hears "accepted"
         # it already holds the table that resulted.
         connection.send(AckMessage(client_id=message.client_id))
+
+    def _on_macro(
+        self, connection: Connection, seat_id: str, message: IntentMessage
+    ) -> None:
+        """A toolbar button: the definition says what it does, all at once.
+
+        The whole macro is one transaction - every step applies or none
+        does - logged as one event, snapshotted, and announced to the table.
+        A repeat of the same intent is applied once, like any other.
+        """
+        macro_id = message.payload.get("macro_id")
+        op_id = message.payload.get("op_id")
+        if self.game is None or not isinstance(macro_id, str):
+            self._reject(connection, message.client_id, "There is no such button.")
+            return
+        if isinstance(op_id, str) and op_id in self.table.applied_op_ids:
+            connection.send(AckMessage(client_id=message.client_id))
+            return
+        built = build_macro(self.game, self.table, seat_id, macro_id)
+        if not isinstance(built, Transaction):
+            self._reject(connection, message.client_id, built.reason)
+            return
+        if isinstance(op_id, str) and op_id:
+            built = dataclasses.replace(built, op_id=op_id)
+        # A drag still being coalesced lands before the macro, not after it.
+        for piece_id in list(self._pending_moves):
+            self._settle_piece(piece_id)
+        outcome = self._apply(seat_id, built, log=True)
+        if not isinstance(outcome, Ok):
+            self._reject(connection, message.client_id, outcome.reason)
+            return
+        connection.send(AckMessage(client_id=message.client_id))
+        text = announcement(self.game, macro_id, connection.display_name)
+        if text:
+            self._notice(text)
 
     def _on_menu_request(
         self, connection: Connection, message: MenuRequestMessage
@@ -1229,10 +1425,30 @@ class LiveHub:
             if loaded is None:
                 return None
             room, table, names = loaded
-            runtime = RoomRuntime(room.code, room.id, table, names, self)
+            runtime = RoomRuntime(
+                room.code, room.id, table, names, self, game=GAMES.get(room.game_slug)
+            )
             runtime.start()
             self._rooms[room.code] = runtime
             return runtime
+
+    async def seat_taken(self, code: str, participant_id: str) -> None:
+        """Tell a live room that ``participant_id`` has just sat down in it.
+
+        Called once the seat is committed. A room nobody has open does not
+        need telling: it reads every seat from the database when it starts.
+        Without this, a seat would reach a live room only when its owner's
+        page connected, and a deal pressed in between would pass them by.
+        """
+        async with self._lock:
+            runtime = self._rooms.get(code)
+        if runtime is None:
+            return
+        stored = await asyncio.to_thread(
+            _load_seat, self.session_factory, code, participant_id
+        )
+        if stored is not None:
+            await runtime.seat_taken(stored)
 
     async def close_room(self, code: str) -> None:
         async with self._lock:
@@ -1257,6 +1473,7 @@ class LiveHub:
         seat_id: str | None,
         is_facilitator: bool,
         is_observer: bool,
+        stored_seat: tuple[Seat, tuple[Zone, ...]] | None = None,
     ) -> tuple[Connection, asyncio.Task[None]]:
         """Register a connection and start the task that writes to its socket."""
         connection = Connection(
@@ -1267,6 +1484,7 @@ class LiveHub:
             seat_id=seat_id,
             is_facilitator=is_facilitator,
             is_observer=is_observer,
+            stored_seat=stored_seat,
         )
         writer = asyncio.create_task(_write_forever(connection))
         await runtime.join(connection)
@@ -1307,7 +1525,7 @@ class LiveHub:
             )
             await websocket.close(code=CLOSE_NOT_IN_ROOM)
             return
-        room, participant = found
+        room, participant, stored_seat = found
         runtime = await self.runtime_for(room.code)
         if runtime is None:
             await websocket.close(code=CLOSE_NOT_IN_ROOM)
@@ -1321,6 +1539,7 @@ class LiveHub:
             seat_id=participant.seat_id,
             is_facilitator=room.facilitator_participant_id == participant.id,
             is_observer=participant.is_observer,
+            stored_seat=stored_seat,
         )
         try:
             while True:
@@ -1372,6 +1591,7 @@ __all__ = [
     "IntentMessage",
     "GeometryView",
     "LiveHub",
+    "MACRO_INTENT",
     "MacroView",
     "MenuItemView",
     "MenuMessage",
@@ -1393,7 +1613,9 @@ __all__ = [
     "TableView",
     "YouView",
     "ZoneView",
+    "component_views",
     "decode_intent",
     "encode_operation",
     "hub",
+    "macro_views",
 ]

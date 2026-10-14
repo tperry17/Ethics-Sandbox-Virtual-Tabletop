@@ -305,22 +305,22 @@ def test_apply_op_persists_state_logs_an_event_and_is_idempotent() -> None:
         session.commit()
 
         assert isinstance(applied.outcome, Ok)
-        assert applied.seq == 1
+        # Event 1 is the transaction that built the room's table.
+        assert applied.seq == 2
 
         reloaded = rooms.load_table(session, room)
         assert reloaded.pieces["card-1"].x == 99.0
 
         events = session.query(Event).filter_by(room_id=room.id).all()
-        assert len(events) == 1
-        assert events[0].op_type == "Move"
-        assert events[0].payload["x"] == 99.0
+        assert [event.op_type for event in events] == ["Transaction", "Move"]
+        assert events[1].payload["x"] == 99.0
 
         # Retrying the same op_id is a no-op: no new event, same outcome.
         replay = rooms.apply_op(session, room, seat_id, move)
         session.commit()
         assert isinstance(replay.outcome, Ok)
         events_after_replay = session.query(Event).filter_by(room_id=room.id).all()
-        assert len(events_after_replay) == 1
+        assert len(events_after_replay) == 2
 
 
 def test_apply_op_rejects_without_writing_anything() -> None:

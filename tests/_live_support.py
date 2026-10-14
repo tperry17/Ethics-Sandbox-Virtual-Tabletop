@@ -139,11 +139,22 @@ class LiveFixture:
             await asyncio.sleep(0.02)
 
     def events(self) -> list[tuple[int, str]]:
-        """The room's permanent log, as ``(seq, op_type)`` pairs."""
+        """The room's permanent log since the room was created.
+
+        As ``(seq, op_type)`` pairs. The transaction that built the room's
+        table is left out: these tests are about what happens at the table.
+        """
         with session_scope(self.factory) as session:
             room = rooms.get_room(session, self.runtime.room_id)
             assert room is not None
-            return [(event.seq, event.op_type) for event in room.events]
+            return [
+                (event.seq, event.op_type)
+                for event in room.events
+                if not (
+                    event.op_type == "Transaction"
+                    and event.payload.get("name") == "setup"
+                )
+            ]
 
 
 @asynccontextmanager

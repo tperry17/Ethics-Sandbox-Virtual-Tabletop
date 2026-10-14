@@ -674,3 +674,71 @@
     to { opacity: 1; translate: 0 0; }
   }
 }
+
+/* A still picture of a table after setup (sandbox/web/preview.py). */
+.table-picture {
+  display: grid;
+  margin: 0;
+  gap: var(--space-3);
+}
+
+.table-picture__svg {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  background: var(--table-felt);
+  box-shadow: var(--shadow-raised);
+}
+
+.table-picture__zone rect {
+  fill: var(--transparent);
+  stroke: var(--table-zone-outline);
+  stroke-dasharray: 10 8;
+  stroke-width: 3;
+}
+
+.table-picture__zone--private_to_owner rect {
+  fill: var(--table-zone-private);
+  stroke-dasharray: none;
+}
+
+.table-picture__zone--hidden rect {
+  fill: var(--table-felt-edge);
+  stroke-dasharray: none;
+}
+
+.table-picture__zone--table rect {
+  stroke: var(--table-felt-edge);
+  stroke-dasharray: none;
+}
+
+.table-picture__zone text {
+  fill: var(--text-on-felt);
+  font-family: var(--font-ui);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.table-picture__piece rect {
+  fill: var(--surface-raised);
+  stroke: var(--surface-border-strong);
+  stroke-width: 2;
+}
+
+.table-picture__piece.is-back rect {
+  fill: var(--surface-sunken);
+}
+
+.table-picture__piece text {
+  fill: var(--text-primary);
+  font-family: var(--font-reading);
+  font-size: 22px;
+}
+
+.table-picture__caption {
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}

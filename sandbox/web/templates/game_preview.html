@@ -1,0 +1,34 @@
+{% import "_ui.html" as ui %}
+{% from "_table_preview.html" import table_preview %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>{{ game.title }} table · Ethics Sandbox</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
+  </head>
+  <body>
+    <main class="site">
+      <p class="site__back"><a href="/">← Ethics Sandbox</a></p>
+
+      <header class="site__header">
+        <p class="eyebrow">Table after setup</p>
+        <h1>{{ game.title }}</h1>
+        <div class="prose site__lede">
+          <p>{{ game.definition.meta.players.min }}–{{ game.definition.meta.players.max }}
+          people · about {{ game.definition.meta.duration_minutes }} minutes ·
+          facilitator {{ game.definition.meta.facilitator }}.</p>
+        </div>
+      </header>
+
+      <section class="site__section">
+        {{ table_preview(preview) }}
+        <div class="toolbar" role="group" aria-label="Start actions">
+          <a class="button button--primary button--lg" href="/start?game={{ game.slug }}">Start a table</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

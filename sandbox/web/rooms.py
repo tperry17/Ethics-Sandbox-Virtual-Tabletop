@@ -4,10 +4,11 @@ one write path into a table's state.
 This is the service layer between the FastAPI routes and both the database
 (``sandbox.db``) and the pure tabletop model (``sandbox.model``). No
 exercise-specific logic belongs here - seat and observer handling is
-generic room administration, not a rule of any particular game. Full
-per-game seating (roles, seat counts drawn from a game definition) arrives
-with the game-definition system; until then, seats are created generically,
-up to a configurable cap, as participants join.
+generic room administration, not a rule of any particular game. What a
+room's table holds, how its seats are named and how many there may be
+come from the exercise's game definition, read through
+``sandbox.games.engine``; an exercise without one gets plain seats at an
+empty table.
 """
 
 from __future__ import annotations
@@ -23,17 +24,28 @@ from sqlalchemy.orm import Session
 
 from sandbox.db.models import Event, Participant, Room, TableState
 from sandbox.db.snapshot import from_snapshot, to_snapshot
-from sandbox.games import EXERCISES_BY_SLUG
-from sandbox.model import Ok, Operation, OpOutcome, Reject, Seat, Table, run_op
+from sandbox.games import GAMES, Game, playable_slugs
+from sandbox.games.engine import build_seat, build_table
+from sandbox.model import (
+    Ok,
+    Operation,
+    OpOutcome,
+    Reject,
+    Seat,
+    Table,
+    TableRng,
+    Transaction,
+    run_op,
+)
 
 # Excludes characters easily confused when read aloud or handwritten:
 # I, O, 0, 1, L.
 CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 CODE_LENGTH = 6
 
-# CLAUDE.md: facilitators run groups of 4-30 participants. A room's config
-# may override this (``config["max_seats"]``) for an exercise that needs a
-# different bound.
+# CLAUDE.md: facilitators run groups of 4-30 participants. An exercise's
+# game definition sets its own bound (``meta.players.max``), and a room's
+# config may override either (``config["max_seats"]``).
 DEFAULT_MAX_SEATS = 30
 
 DEFAULT_DISPLAY_NAME = "Participant"
@@ -88,10 +100,20 @@ def get_participant(
     return session.execute(stmt).scalar_one_or_none()
 
 
+def game_for(room: Room) -> Game | None:
+    """The game definition this room's table is built from, if it has one."""
+    return GAMES.get(room.game_slug)
+
+
 def max_seats(room: Room) -> int:
     """How many seats this room may grow to hold."""
     configured = room.config.get("max_seats")
-    return int(configured) if isinstance(configured, int) else DEFAULT_MAX_SEATS
+    if isinstance(configured, int):
+        return configured
+    game = game_for(room)
+    if game is not None:
+        return game.definition.meta.players.max
+    return DEFAULT_MAX_SEATS
 
 
 # -- table persistence ---------------------------------------------------
@@ -117,6 +139,37 @@ def save_table_state(session: Session, room: Room, table: Table) -> None:
     state.version = table.version
     state.snapshot = snapshot
     state.updated_at = _now()
+
+
+def save_live_table_state(session: Session, room: Room, table: Table) -> None:
+    """Persist a live room's table, keeping seats it has not heard of yet.
+
+    A seat taken while the room is live is written to the stored table by
+    ``join_room`` and reaches the room task's table only when that person
+    connects. Until then the stored seat, and the zones it owns, must
+    survive the room task's own snapshots.
+    """
+    state = session.get(TableState, room.id)
+    snapshot = to_snapshot(table)
+    if state is not None:
+        seats = snapshot["seats"]
+        zones = snapshot["zones"]
+        stored_seats = state.snapshot.get("seats")
+        stored_zones = state.snapshot.get("zones")
+        assert isinstance(seats, dict) and isinstance(zones, dict)
+        assert isinstance(stored_seats, dict) and isinstance(stored_zones, dict)
+        for seat_id, seat in stored_seats.items():
+            if seat_id in seats:
+                continue
+            seats[seat_id] = seat
+            for zone_id, zone in stored_zones.items():
+                if isinstance(zone, dict) and zone.get("owner_seat") == seat_id:
+                    zones.setdefault(zone_id, zone)
+        state.version = table.version
+        state.snapshot = snapshot
+        state.updated_at = _now()
+        return
+    session.add(TableState(room_id=room.id, version=table.version, snapshot=snapshot))
 
 
 # -- room and seat lifecycle -----------------------------------------------
@@ -152,23 +205,20 @@ def _dedupe_name(
     return f"{base} ({suffix})"
 
 
-def _create_seat(table: Table, *, is_facilitator: bool) -> Seat:
-    """A new seat in ``table``, mutated in place, with a deterministic tint."""
-    index = len(table.seats)
-    seat = Seat(
-        id=f"seat-{index + 1}",
-        label=f"Seat {index + 1}",
-        tint_index=index % 6,
-        is_facilitator=is_facilitator,
-    )
-    table.seats[seat.id] = seat
-    return seat
-
-
 def _find_free_seat(table: Table) -> Seat | None:
     return next(
         (seat for seat in table.seats.values() if seat.participant_id is None), None
     )
+
+
+def _apply_and_log(
+    session: Session, room: Room, table: Table, seat_id: str, transaction: Transaction
+) -> None:
+    """Apply a transaction the room service built, and log it as one event."""
+    outcome = run_op(table, seat_id, transaction)
+    if not isinstance(outcome, Ok):
+        raise RuntimeError(f"{transaction.label} was refused: {outcome.reason}")
+    append_event(session, room, actor_seat=seat_id, op=transaction)
 
 
 def create_room(
@@ -181,12 +231,11 @@ def create_room(
 ) -> tuple[Room, Participant]:
     """Start a new room for ``game_slug``, seating its facilitator.
 
-    Table setup for the exercise itself - dealing, initial zones, starting
-    props - belongs to the game definition's ``setup`` macro once that system
-    exists; this only gives the facilitator a seat at an otherwise empty
-    table.
+    The table is built from the exercise's game definition - its zones, the
+    facilitator's seat and own zones, and its setup - as one logged
+    transaction, so the room's event log starts from an empty table.
     """
-    if game_slug not in EXERCISES_BY_SLUG:
+    if game_slug not in playable_slugs():
         raise UnknownExerciseError(f"There is no exercise called {game_slug!r}.")
 
     room = Room(
@@ -204,10 +253,14 @@ def create_room(
     session.add(facilitator)
     session.flush()  # assigns facilitator.id
 
-    table = Table()
-    seat = _create_seat(table, is_facilitator=True)
-    seat.participant_id = facilitator.id
-    facilitator.seat_id = seat.id
+    # Each room shuffles differently. The seed is kept on the table, so the
+    # room's own shuffles can still be replayed exactly from its log.
+    table = Table(rng=TableRng(seed=secrets.randbits(63)))
+    seat_id, transaction = build_table(
+        game_for(room), table, participant_id=facilitator.id
+    )
+    _apply_and_log(session, room, table, seat_id, transaction)
+    facilitator.seat_id = seat_id
     room.facilitator_participant_id = facilitator.id
 
     save_table_state(session, room, table)
@@ -253,7 +306,11 @@ def join_room(
     table = load_table(session, room)
     seat = _find_free_seat(table)
     if seat is None and len(table.seats) < max_seats(room):
-        seat = _create_seat(table, is_facilitator=False)
+        seat_id, transaction = build_seat(
+            game_for(room), table, participant_id=participant.id
+        )
+        _apply_and_log(session, room, table, seat_id, transaction)
+        seat = table.seats[seat_id]
     if seat is not None:
         seat.participant_id = participant.id
         participant.seat_id = seat.id
@@ -342,7 +399,21 @@ def next_seq(session: Session, room_id: str) -> int:
 
 
 def _op_payload(op: Operation) -> dict[str, object]:
-    """``op``'s fields as a JSON-safe dict, for the event log."""
+    """``op``'s fields as a JSON-safe dict, for the event log.
+
+    A transaction's steps are logged one by one with their own operation
+    names, so a macro reads in the log as exactly what it did.
+    """
+    if isinstance(op, Transaction):
+        return {
+            "name": op.name,
+            "label": op.label,
+            "op_id": op.op_id,
+            "steps": [
+                {"op_type": type(step).__name__, "payload": _op_payload(step)}
+                for step in op.steps
+            ],
+        }
     if not dataclasses.is_dataclass(op):
         raise TypeError(f"Operation {op!r} must be a dataclass to be logged.")
     # Round-tripping through json normalises tuples to lists and fails fast
@@ -429,6 +500,7 @@ __all__ = [
     "claim_seat",
     "close_room",
     "create_room",
+    "game_for",
     "generate_room_code",
     "get_participant",
     "get_room",
@@ -443,5 +515,6 @@ __all__ = [
     "remove_participant",
     "rename",
     "resume_room",
+    "save_live_table_state",
     "save_table_state",
 ]

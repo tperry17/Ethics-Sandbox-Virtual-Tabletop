@@ -240,9 +240,21 @@ export function demoRecording(): Recording {
     },
     components: COMPONENTS,
     macros: [
-      { id: "set-up", label: "Set up", hint: "Arrange the table", facilitator_only: true },
-      { id: "deal", label: "Deal", hint: null, facilitator_only: true },
-      { id: "reset", label: "Reset", hint: null, facilitator_only: true },
+      {
+        id: "set-up",
+        label: "Set up",
+        hint: "Arrange the table",
+        facilitator_only: true,
+        confirm: null,
+      },
+      { id: "deal", label: "Deal", hint: null, facilitator_only: true, confirm: null },
+      {
+        id: "reset",
+        label: "Reset",
+        hint: null,
+        facilitator_only: true,
+        confirm: "This clears the table. Continue?",
+      },
     ],
   };
 
