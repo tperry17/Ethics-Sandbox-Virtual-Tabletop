@@ -14,6 +14,14 @@
   gap: var(--space-5);
 }
 
+.styleguide__back {
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}
+
+.styleguide__back a { color: inherit; text-underline-offset: var(--space-1); }
+
 .styleguide__lede { color: var(--text-secondary); }
 
 .styleguide__nav {

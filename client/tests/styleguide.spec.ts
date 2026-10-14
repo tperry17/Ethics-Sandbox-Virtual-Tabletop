@@ -65,3 +65,12 @@ test("shows a focus ring on interactive controls", async ({ page }) => {
   const focusShadow = await button.evaluate((element) => getComputedStyle(element).boxShadow);
   expect(focusShadow).not.toBe("none");
 });
+
+test("links back to the landing page, which links here from its footer", async ({ page }) => {
+  await page.goto("/styleguide");
+  await page.getByRole("link", { name: "← Back to Ethics Sandbox" }).click();
+  await expect(page).toHaveURL("/");
+
+  await page.locator(".site__footer").getByRole("link", { name: "Style guide" }).click();
+  await expect(page).toHaveURL("/styleguide");
+});
