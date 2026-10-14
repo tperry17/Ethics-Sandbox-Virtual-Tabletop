@@ -61,3 +61,16 @@ def test_landing_page_links_style_guide_in_footer() -> None:
     footer = response.text.split('<footer class="site__footer">', 1)[1]
     assert '<a href="/styleguide">Style guide</a>' in footer
     assert "design system" not in response.text
+
+
+def test_favicon_is_served_at_the_root_and_linked_from_pages() -> None:
+    client = TestClient(app)
+
+    icon = client.get("/favicon.ico")
+    assert icon.status_code == 200
+    assert icon.content[:4] == b"\x00\x00\x01\x00"
+
+    page = client.get("/")
+    for path in ("favicon.ico", "seal-512.png", "apple-touch-icon.png"):
+        assert f"/static/icons/{path}" in page.text
+        assert client.get(f"/static/icons/{path}").status_code == 200

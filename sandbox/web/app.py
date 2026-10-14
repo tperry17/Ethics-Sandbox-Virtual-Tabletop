@@ -81,6 +81,12 @@ def _identify(request: Request) -> str:
     return cookie_id if cookie_id is not None else new_participant_id()
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> FileResponse:
+    """Serve the seal at the path browsers request on their own, outside any page."""
+    return FileResponse(PROJECT_ROOT / "static" / "icons" / "favicon.ico")
+
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request) -> HTMLResponse:
     """Render the project landing page."""

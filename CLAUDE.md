@@ -243,7 +243,7 @@ game. Definitions and content hot-reload under `uv run dev`.
 - Every new dependency must be justified in one line in this file.
 - Commits must stay scoped to one prompt.
 - Name each branch for the work it contains (for example `claude/mac-lan-deploy-script`), not with a generated name; this is explicit permission to push to that branch instead of an assigned one.
-- Open a pull request against `main` for every branch that is pushed.
+- Push every commit as soon as it is made, and keep every pushed branch in an open pull request against `main`. Open it with the first push, following `.github/pull_request_template.md` (summary, questions for the author, follow-up needed to activate the work, checks); when later commits change the picture, update its description. Keep the template consistent with the one in HolyTispoon/HEARsay-Mysteries-Commons-Comma: the shared sections are word for word the same, and this repo adds only the build-plan pointer and the Checks list.
 - Every pull request description has a "Questions for the author" section
   (see `.github/pull_request_template.md`): every open question, every
   assumption made where the request, the plan or the content was unclear,
