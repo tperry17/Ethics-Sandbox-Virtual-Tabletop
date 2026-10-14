@@ -13,7 +13,7 @@ from fastapi import (
     Response,
     WebSocket,
 )
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -70,6 +70,12 @@ def _identify(request: Request) -> str:
     """
     cookie_id = read_participant_cookie(request)
     return cookie_id if cookie_id is not None else new_participant_id()
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> FileResponse:
+    """Serve the seal at the path browsers request on their own, outside any page."""
+    return FileResponse(PROJECT_ROOT / "static" / "icons" / "favicon.ico")
 
 
 @app.get("/", response_class=HTMLResponse)
