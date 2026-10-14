@@ -6,30 +6,58 @@
  * that changed are rewritten. The table is never rebuilt, and no node is
  * touched because a message arrived - only because a value on it differs.
  *
- * This half of the client renders and moves the camera. It knows no rule,
- * holds no deck, and asks for nothing: a face it was not sent is a face it
- * cannot draw.
+ * This file renders and moves the camera; `interaction.ts` turns what a
+ * person does into intents. Neither knows a rule or holds a deck: a face
+ * this client was not sent is a face it cannot draw, and the only local
+ * result of a gesture is an override laid over the server's truth until the
+ * server says yes - or no, at which point the override is taken away and
+ * the piece is seen to go back.
  */
 
+import { Announcer } from "./announcer.js";
 import { InkLayer } from "./ink.js";
-import { type Diff, TableModel, emptyDiff, mergeDiff } from "./model.js";
-import { PieceNode, initialsFor, pieceSize } from "./piece-node.js";
+import { IntentTracker } from "./intents.js";
+import { ContextMenu } from "./menu.js";
+import { type Diff, type LocalPiece, TableModel, emptyDiff, mergeDiff } from "./model.js";
+import { PieceNode, initialsFor, pieceSize, seatTintClass } from "./piece-node.js";
 import { geometryBounds, polygonClipPath } from "./geometry.js";
 import type {
+  ClientMessage,
   LinkStatus,
   MacroView,
+  MenuItemView,
   SeatView,
   ServerLink,
   ServerMessage,
+  StrokeView,
 } from "./protocol.js";
+import { RevealLayer } from "./reveal.js";
 import { ViewportController } from "./viewport-input.js";
-import { type Bounds, type Viewport, unionBounds } from "./viewport.js";
+import { type Bounds, type Viewport, screenToWorld, unionBounds } from "./viewport.js";
 
 /** Where a card's centre sits in the tray, so its top edge starts at the top. */
 const TRAY_BASELINE = 160;
 const MAX_NOTICES = 3;
 const NOTICE_MS = 6000;
+/** How long a piece that was sent back stays marked as having been sent back. */
+const ROLLBACK_MARK_MS = 700;
+/** More zone changes than this in one go are summarised, not listed. */
+const ANNOUNCE_EACH_UP_TO = 3;
 
+/**
+ * A local, not-yet-confirmed result laid over what the server last said.
+ *
+ * `x`/`y`/`rotation` pin where a piece is drawn (its own hand is on it);
+ * `hideFace` draws the back of a card just turned face down; `lifted` draws
+ * it picked up. Any field left out falls through to the server's truth.
+ */
+export interface Override {
+  x?: number;
+  y?: number;
+  rotation?: number;
+  hideFace?: boolean;
+  lifted?: boolean;
+}
 export interface RendererOptions {
   root: HTMLElement;
   toolbar: HTMLElement | null;
@@ -39,8 +67,23 @@ export interface RendererOptions {
   onMacro?: (macroId: string) => void;
 }
 
+/** Things the interaction half wants to hear about as they arrive. */
+export interface RendererListener {
+  /** This viewer's own close look at a piece, confirmed by the server. */
+  onOwnPeek?: (pieceId: string) => void;
+  /** The whole table was replaced; any gesture in progress is moot. */
+  onSnapshot?: () => void;
+}
+
 export class TableRenderer {
   readonly model = new TableModel();
+  readonly intents: IntentTracker;
+  readonly menu: ContextMenu;
+  readonly reveals: RevealLayer;
+  readonly announcer = new Announcer();
+  listener: RendererListener = {};
+  /** True while a gesture is in progress, so the camera does not refit under it. */
+  interacting = false;
 
   private readonly surface: HTMLElement;
   private readonly world: HTMLElement;
@@ -59,6 +102,15 @@ export class TableRenderer {
   private readonly pieceHome = new Map<string, "world" | "tray">();
   private readonly zoneNodes = new Map<string, HTMLElement>();
   private readonly animating = new Set<string>();
+  private readonly overrides = new Map<string, Override>();
+  private readonly rollingBack = new Set<string>();
+  private selection = new Set<string>();
+  private stackTarget: string | null = null;
+  private draftStroke: StrokeView | null = null;
+  private trayInvited = false;
+  private readonly controlsElement: HTMLElement;
+  private readonly toolGroup = element("div", "toolbar__group toolbar__group--tools");
+  private lastNotice = { text: "", at: 0 };
 
   private diff: Diff = emptyDiff();
   private frameRequested = false;
@@ -86,7 +138,8 @@ export class TableRenderer {
     this.notices.setAttribute("aria-live", "polite");
 
     this.world.append(this.zoneLayer, this.pieceLayer);
-    this.surface.append(this.world, this.canvas, this.controls(), this.status);
+    this.controlsElement = this.controls();
+    this.surface.append(this.world, this.canvas, this.controlsElement, this.status);
     this.surface.append(this.notices);
 
     this.tray = element("div", "hand-tray");
@@ -95,7 +148,21 @@ export class TableRenderer {
     this.trayFan = element("div", "hand-tray__fan");
     this.tray.append(this.trayLabel, this.trayFan);
 
-    root.append(this.surface, this.tray);
+    this.intents = new IntentTracker(options.link, (reason) =>
+      this.notice(reason, "warning"),
+    );
+    this.reveals = new RevealLayer({
+      putAway: (pieceId) => {
+        this.intents.send("end_show", { piece_id: pieceId });
+      },
+      nameOf: (seatId) => this.nameOf(seatId),
+    });
+    this.surface.append(this.reveals.element, this.reveals.peek);
+
+    root.append(this.surface, this.tray, this.announcer.element);
+    this.menu = new ContextMenu(root, options.link, (item, pieceId) =>
+      this.chooseMenuItem(item, pieceId),
+    );
 
     this.ink = new InkLayer(this.canvas);
     this.controller = new ViewportController({
@@ -167,10 +234,21 @@ export class TableRenderer {
   private receive(message: ServerMessage): void {
     if (message.type === "snapshot") {
       this.absorb(this.model.applySnapshot(message));
+      this.listener.onSnapshot?.();
       return;
     }
     if (message.type === "patches") {
-      this.absorb(this.model.applyPatches(message.patches, message.seq));
+      this.absorb(
+        this.model.applyPatches(message.patches, message.seq, message.components ?? []),
+      );
+      return;
+    }
+    if (message.type === "ack") {
+      this.intents.ack(message.client_id);
+      return;
+    }
+    if (message.type === "menu") {
+      this.menu.receive(message);
       return;
     }
     if (message.type === "presence") {
@@ -182,6 +260,9 @@ export class TableRenderer {
       this.notice(message.text, message.level);
       return;
     }
+    // A rejection is answered twice: the gesture that proposed it is taken
+    // back, and the person is told why in the server's own words.
+    this.intents.reject(message.client_id, message.reason);
     this.notice(message.reason, "warning");
   }
 
@@ -209,7 +290,7 @@ export class TableRenderer {
       this.canvasDirty = true;
       this.trayDirty = true;
       this.renderToolbar();
-      if (!this.controller.adjustedByPerson) this.controller.fit();
+      if (!this.controller.adjustedByPerson && !this.interacting) this.controller.fit();
     } else {
       for (const id of diff.removedZones) this.dropZone(id);
       for (const id of diff.zones) this.syncZone(id);
@@ -225,21 +306,32 @@ export class TableRenderer {
     if (diff.strokes) this.canvasDirty = true;
 
     for (const event of diff.events) {
-      if (event.type !== "point") continue;
-      const x = event.fields["x"];
-      const y = event.fields["y"];
-      const seat = event.fields["seat_id"];
-      if (typeof x === "number" && typeof y === "number" && typeof seat === "string") {
-        this.ink.ping(x, y, seat, now);
-        this.canvasDirty = true;
+      if (event.type === "point") {
+        const x = event.fields["x"];
+        const y = event.fields["y"];
+        const seat = event.fields["seat_id"];
+        if (typeof x === "number" && typeof y === "number" && typeof seat === "string") {
+          this.ink.ping(x, y, seat, now);
+          this.canvasDirty = true;
+        }
+        continue;
       }
+      this.announceEvent(event.type, event.fields);
+    }
+    this.announceZoneChanges(diff);
+    if (diff.everything || diff.pieces.size > 0 || diff.removedPieces.size > 0 || diff.seats) {
+      this.reveals.sync(this.model);
     }
 
     if (this.trayDirty) {
       this.trayDirty = false;
       const wasShowing = !this.tray.hidden;
       this.layoutTray();
-      if (wasShowing !== !this.tray.hidden && !this.controller.adjustedByPerson) {
+      if (
+        wasShowing !== !this.tray.hidden &&
+        !this.controller.adjustedByPerson &&
+        !this.interacting
+      ) {
         this.controller.fit();
       }
     }
@@ -258,10 +350,19 @@ export class TableRenderer {
     let pinging = false;
     if (this.canvasDirty || animating) {
       this.canvasDirty = false;
+      const strokes: StrokeView[] = [...this.model.strokes.values()];
+      if (this.draftStroke !== null && !this.model.strokes.has(this.draftStroke.id)) {
+        strokes.push(this.draftStroke);
+      }
+      // Your own pointer is already on screen; its echo from the server
+      // would only trail behind it.
+      const cursors = this.model.cursors.filter(
+        (cursor) => cursor.seat_id !== this.model.seatId,
+      );
       pinging = this.ink.draw(
         this.viewport,
-        this.model.strokes.values(),
-        this.model.cursors,
+        strokes,
+        cursors,
         this.model.seats,
         now,
       );
@@ -365,22 +466,31 @@ export class TableRenderer {
       this.pieceNodes.set(id, node);
     }
 
-    const home = this.isInMyHand(piece.zone_id) ? "tray" : "world";
+    const override = this.overrides.get(id);
+    const pinned = override?.x !== undefined && override.y !== undefined;
+    const home = pinned || !this.isInMyHand(piece.zone_id) ? "world" : "tray";
     if (this.pieceHome.get(id) !== home) {
+      const hadFocus = document.activeElement === node.element;
+      const leavingTray = this.pieceHome.get(id) === "tray";
       this.pieceHome.set(id, home);
       (home === "tray" ? this.trayFan : this.pieceLayer).append(node.element);
+      if (hadFocus) node.element.focus({ preventScroll: true });
       this.trayDirty = true;
       this.animating.delete(id);
+      // A card leaving the tray starts from where it was let go, not from
+      // its old spot in the fan, which is in another coordinate space.
+      if (leavingTray && !pinned) node.placeAt(piece.x, piece.y, piece.rotation);
     }
 
+    const shown = this.shownPiece(piece);
     const component =
-      piece.component_id === null
+      shown.component_id === null
         ? undefined
-        : this.model.components.get(piece.component_id);
-    const [width, height] = pieceSize(piece, component);
+        : this.model.components.get(shown.component_id);
+    const [width, height] = pieceSize(shown, component);
     node.setSize(width, height);
     node.setZ(this.model.stackingOrder(piece.zone_id, piece.z));
-    node.setFace(piece, component, this.model.zones.get(piece.zone_id)?.label ?? "");
+    node.setFace(shown, component, this.model.zones.get(piece.zone_id)?.label ?? "");
     this.syncHolder(id);
 
     if (home === "tray") {
@@ -388,24 +498,64 @@ export class TableRenderer {
       return;
     }
 
-    // The person dragging must see their own piece exactly where their hand
-    // is. Everyone else's pieces glide, so that a table in motion reads as
-    // hands moving things rather than things teleporting.
+    if (pinned) {
+      // The piece under this person's own hand goes exactly where the hand
+      // is, and stays above everything while it is held.
+      node.placeAt(override!.x!, override!.y!, override!.rotation ?? piece.rotation);
+      node.setZ(10_000_000);
+      this.animating.delete(id);
+      return;
+    }
+
+    // Everyone else's pieces glide, so that a table in motion reads as
+    // hands moving things rather than things teleporting. A piece that was
+    // sent back glides too, so that the going back is seen.
+    const target =
+      override?.rotation === undefined ? piece : { ...piece, rotation: override.rotation };
     const mine = piece.held_by !== null && piece.held_by === this.model.seatId;
-    const animate = !fresh && !mine && !this.reduceMotion;
-    node.setTarget(piece, animate, now);
+    const rollback = this.rollingBack.has(id);
+    const animate = !fresh && (!mine || rollback) && !this.reduceMotion;
+    node.setTarget(target, animate, now);
     if (animate) this.animating.add(id);
     else node.advance(now);
   }
 
+  /** The piece as this viewer should see it now: the server's truth, plus overrides. */
+  private shownPiece(piece: LocalPiece): LocalPiece {
+    const override = this.overrides.get(piece.id);
+    if (override === undefined) return piece;
+    const shown = { ...piece };
+    if (override.hideFace === true) {
+      shown.component_id = null;
+      shown.face_up = false;
+    }
+    if (override.lifted === true) shown.held_by = this.model.seatId;
+    return shown;
+  }
+
   private syncHolder(id: string): void {
     const node = this.pieceNodes.get(id);
-    const piece = this.model.pieces.get(id);
-    if (node === undefined || piece === undefined) return;
+    const truth = this.model.pieces.get(id);
+    if (node === undefined || truth === undefined) return;
+    const piece = this.shownPiece(truth);
     const holder =
       piece.held_by === null ? undefined : this.model.seats.get(piece.held_by);
-    node.setClasses(piece, holder, this.pieceHome.get(id) === "tray" ? "piece--in-tray" : "");
+    const extra: string[] = [];
+    if (this.pieceHome.get(id) === "tray") extra.push("piece--in-tray");
+    if (this.selection.has(id)) extra.push("is-selected");
+    if (this.stackTarget === id) extra.push("is-stack-target");
+    if (this.rollingBack.has(id)) extra.push("is-rolling-back");
+    if (this.overrides.get(id)?.lifted === true) extra.push("is-dragging");
+    if (truth.revealed_by !== null && truth.revealed_to.length > 0) extra.push("is-shown");
+    node.setClasses(piece, holder, extra.join(" "));
     node.setHolder(holder);
+    const name = this.pieceLabel(id);
+    const held =
+      holder === undefined ? "" : `, held by ${holder.display_name ?? holder.label}`;
+    const label = `${name}${held}`;
+    if (node.element.getAttribute("aria-label") !== label) {
+      node.element.setAttribute("aria-label", label);
+    }
   }
 
   private isInMyHand(zoneId: string): boolean {
@@ -429,9 +579,9 @@ export class TableRenderer {
       .sort((a, b) => a.z - b.z)
       .map((piece) => piece.id);
 
-    this.tray.hidden = ids.length === 0;
+    this.tray.hidden = ids.length === 0 && !this.trayInvited;
     if (ids.length === 0) {
-      this.trayLabel.textContent = "";
+      this.trayLabel.textContent = this.trayInvited ? "Drop here to take it into your hand" : "";
       return;
     }
 
@@ -485,6 +635,16 @@ export class TableRenderer {
     return controls;
   }
 
+  /**
+   * Where the interaction half puts its own tools: the page toolbar, beside
+   * the exercise's macros, so nothing sits on the felt covering pieces. A
+   * page with no toolbar gets them among the camera controls instead.
+   */
+  get toolArea(): HTMLElement {
+    if (this.options.toolbar === null) return this.controlsElement;
+    return this.toolGroup;
+  }
+
   private renderToolbar(): void {
     const toolbar = this.options.toolbar;
     if (toolbar === null) return;
@@ -494,11 +654,11 @@ export class TableRenderer {
       empty.textContent =
         "Macro buttons for this exercise appear here once it defines them.";
       toolbar.append(empty);
-      return;
     }
     for (const macro of this.model.macros) {
       toolbar.append(this.macroButton(macro));
     }
+    toolbar.append(this.toolGroup);
   }
 
   private macroButton(macro: MacroView): HTMLElement {
@@ -522,7 +682,12 @@ export class TableRenderer {
           : "Offline";
   }
 
-  private notice(text: string, level: "info" | "warning"): void {
+  notice(text: string, level: "info" | "warning"): void {
+    // One refused gesture can draw the same refusal for several pieces at
+    // once; saying it once is enough.
+    const now = performance.now();
+    if (text === this.lastNotice.text && now - this.lastNotice.at < 1500) return;
+    this.lastNotice = { text, at: now };
     const toast = element("aside", "toast toast--compact");
     toast.dataset.level = level;
     const message = element("p", "toast__message");
@@ -533,6 +698,241 @@ export class TableRenderer {
       this.notices.firstElementChild?.remove();
     }
     window.setTimeout(() => toast.remove(), NOTICE_MS);
+  }
+
+  // -- what the interaction half may ask for -------------------------------------------
+
+  /** Send something to the server that is not an intent - a cursor position. */
+  send(message: ClientMessage): void {
+    this.options.link.send(message);
+  }
+
+  get surfaceElement(): HTMLElement {
+    return this.surface;
+  }
+
+  get trayElement(): HTMLElement {
+    return this.tray;
+  }
+
+  get selected(): ReadonlySet<string> {
+    return this.selection;
+  }
+
+  overrideOf(id: string): Override | undefined {
+    return this.overrides.get(id);
+  }
+
+  /** Draw `id` per `override` until told otherwise. Merges with any already set. */
+  setOverride(id: string, override: Override): void {
+    this.overrides.set(id, { ...this.overrides.get(id), ...override });
+    this.touch(id);
+  }
+
+  /**
+   * Stop overriding `id` and draw it where the server says it is.
+   *
+   * With `rollback`, the server refused what the override showed: the piece
+   * is seen to travel back, and is marked for a moment as having been sent
+   * back, so a refusal is never a silent snap.
+   */
+  clearOverride(id: string, rollback: boolean): void {
+    if (!this.overrides.delete(id) && !rollback) return;
+    if (rollback && this.model.pieces.has(id)) {
+      this.rollingBack.add(id);
+      window.setTimeout(() => {
+        this.rollingBack.delete(id);
+        this.touch(id);
+      }, ROLLBACK_MARK_MS);
+    }
+    this.touch(id);
+  }
+
+  setSelection(ids: Iterable<string>): void {
+    const next = new Set([...ids].filter((id) => this.model.pieces.has(id)));
+    const changed = [...this.selection, ...next].filter(
+      (id) => this.selection.has(id) !== next.has(id),
+    );
+    this.selection = next;
+    for (const id of changed) this.syncHolder(id);
+  }
+
+  setStackTarget(id: string | null): void {
+    if (id === this.stackTarget) return;
+    const previous = this.stackTarget;
+    this.stackTarget = id;
+    if (previous !== null) this.syncHolder(previous);
+    if (id !== null) this.syncHolder(id);
+  }
+
+  /** Light the hand tray up as somewhere a held piece could be let go. */
+  setTrayTarget(on: boolean): void {
+    this.tray.classList.toggle("is-drop-target", on);
+  }
+
+  /** Show the tray even when the hand is empty, so there is somewhere to drop. */
+  inviteTray(on: boolean): void {
+    if (on === this.trayInvited) return;
+    this.trayInvited = on && this.myHandZoneId() !== null;
+    this.trayDirty = true;
+    this.schedule();
+  }
+
+  setDraftStroke(stroke: StrokeView | null): void {
+    this.draftStroke = stroke === null ? null : { ...stroke, points: [...stroke.points] };
+    this.canvasDirty = true;
+    this.schedule();
+  }
+
+  /** The piece drawn at a screen point, or null. Pieces being dragged are see-through. */
+  pieceIdAt(clientX: number, clientY: number): string | null {
+    const hit = document.elementFromPoint(clientX, clientY);
+    if (!(hit instanceof Element)) return null;
+    const node = hit.closest<HTMLElement>("[data-piece-id]");
+    if (node === null || !this.root.contains(node)) return null;
+    return node.dataset.pieceId ?? null;
+  }
+
+  isInTray(id: string): boolean {
+    return this.pieceHome.get(id) === "tray";
+  }
+
+  overTray(clientX: number, clientY: number): boolean {
+    if (this.tray.hidden) return false;
+    const box = this.tray.getBoundingClientRect();
+    return (
+      clientX >= box.left && clientX <= box.right && clientY >= box.top && clientY <= box.bottom
+    );
+  }
+
+  /** The topmost zone whose outline contains a world point, or null. */
+  zoneAtWorld(x: number, y: number): string | null {
+    const zones = [...this.model.zones.values()].sort(
+      (a, b) => (this.model.zoneOrder.get(b.id) ?? 0) - (this.model.zoneOrder.get(a.id) ?? 0),
+    );
+    for (const zone of zones) {
+      if (zone.geometry.shape === "rect") {
+        const g = zone.geometry;
+        if (x >= g.x && x <= g.x + g.width && y >= g.y && y <= g.y + g.height) return zone.id;
+      } else if (pointInPolygon(x, y, zone.geometry.points)) {
+        return zone.id;
+      }
+    }
+    return null;
+  }
+
+  myHandZoneId(): string | null {
+    for (const zone of this.model.zones.values()) {
+      if (zone.kind === "hand" && zone.owner_seat === this.model.seatId) return zone.id;
+    }
+    return null;
+  }
+
+  clientToWorld(clientX: number, clientY: number): [number, number] {
+    const box = this.surface.getBoundingClientRect();
+    return screenToWorld(this.viewport, clientX - box.left, clientY - box.top);
+  }
+
+  /** Where a piece is drawn on screen, centre, in client coordinates. */
+  clientPositionOf(id: string): [number, number] | null {
+    const node = this.pieceNodes.get(id);
+    if (node === undefined) return null;
+    const box = node.element.getBoundingClientRect();
+    return [box.left + box.width / 2, box.top + box.height / 2];
+  }
+
+  pieceElement(id: string): HTMLElement | null {
+    return this.pieceNodes.get(id)?.element ?? null;
+  }
+
+  /** A short name for a piece, for menus and announcements. Never more than this viewer may know. */
+  pieceLabel(id: string): string {
+    const piece = this.model.pieces.get(id);
+    if (piece === undefined) return "a piece";
+    const component =
+      piece.component_id === null ? undefined : this.model.components.get(piece.component_id);
+    if (component?.title) return component.title;
+    return piece.component_id === null ? `face-down ${piece.kind}` : `a ${piece.kind}`;
+  }
+
+  zoneLabelOf(zoneId: string): string {
+    const zone = this.model.zones.get(zoneId);
+    if (zone === undefined) return "the table";
+    return this.zoneLabel(zone.label, zone.owner_seat);
+  }
+
+  nameOf(seatId: string): string {
+    const seat = this.model.seats.get(seatId);
+    return seat?.display_name ?? seat?.label ?? "Someone";
+  }
+
+  /** The CSS colour of a seat's tint, for ink. */
+  seatColour(seatId: string): string {
+    const seat = this.model.seats.get(seatId);
+    if (seat === undefined) return "#9db0b2";
+    const token = seatTintClass(seat.tint_index).replace("seat-", "--seat-");
+    const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    return value || "#9db0b2";
+  }
+
+  private get root(): HTMLElement {
+    return this.options.root;
+  }
+
+  private touch(id: string): void {
+    this.diff.pieces.add(id);
+    this.schedule();
+  }
+
+  private chooseMenuItem(item: MenuItemView, pieceId: string): void {
+    this.intents.send(item.op_type, item.payload);
+    if (item.op_type === "peek") this.lookingFromMenu = pieceId;
+  }
+
+  /** Set when "Look closely" was chosen, so the look opens once the server agrees. */
+  lookingFromMenu: string | null = null;
+
+  // -- announcing ------------------------------------------------------------------------
+
+  private announceEvent(type: string, fields: Record<string, unknown>): void {
+    const pieceId = typeof fields["piece_id"] === "string" ? fields["piece_id"] : null;
+    const by = typeof fields["by_seat"] === "string" ? fields["by_seat"] : null;
+    if (type === "peek" && pieceId !== null && by === this.model.seatId) {
+      this.listener.onOwnPeek?.(pieceId);
+      return;
+    }
+    if (type === "show" && pieceId !== null && by !== null) {
+      const seats = Array.isArray(fields["to_seats"])
+        ? fields["to_seats"].filter((seat): seat is string => typeof seat === "string")
+        : [];
+      const audience = this.reveals.audience(this.model, seats, by, this.model.seatId);
+      const who = by === this.model.seatId ? "You are" : `${this.nameOf(by)} is`;
+      const toMe = this.model.seatId !== null && seats.includes(this.model.seatId);
+      const what = toMe || by === this.model.seatId ? this.pieceLabel(pieceId) : "a card";
+      this.announcer.announce(`${who} showing ${what} to ${audience}.`);
+      return;
+    }
+    if (type === "show_end" && by !== null) {
+      const who = by === this.model.seatId ? "You" : this.nameOf(by);
+      this.announcer.announce(`${who} put away the card being shown.`);
+    }
+  }
+
+  private announceZoneChanges(diff: Diff): void {
+    const changes = diff.zoneChanges;
+    if (changes.length === 0) return;
+    if (changes.length > ANNOUNCE_EACH_UP_TO) {
+      this.announcer.announce(`${changes.length} pieces moved.`);
+      return;
+    }
+    const sentences = changes.map((change) => {
+      const where = this.isInMyHand(change.to)
+        ? "your hand"
+        : this.zoneLabelOf(change.to);
+      const name = this.pieceLabel(change.id);
+      return `${name[0]!.toUpperCase()}${name.slice(1)} moved to ${where}.`;
+    });
+    this.announcer.announce(sentences.join(" "));
   }
 
   // -- geometry ----------------------------------------------------------------------
@@ -600,6 +1000,16 @@ export class TableRenderer {
     this.resizeObserver = new ResizeObserver(apply);
     this.resizeObserver.observe(this.surface);
   }
+}
+
+function pointInPolygon(x: number, y: number, points: Array<[number, number]>): boolean {
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
+    const [xi, yi] = points[i]!;
+    const [xj, yj] = points[j]!;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 function element(tag: string, className: string): HTMLElement {

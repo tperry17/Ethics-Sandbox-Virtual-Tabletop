@@ -67,6 +67,10 @@ export class PieceNode {
   ) {
     this.element = document.createElement("article");
     this.element.dataset.pieceId = piece.id;
+    // Every piece is reachable from the keyboard: Tab to it, then act on it.
+    this.element.tabIndex = 0;
+    this.element.setAttribute("role", "button");
+    this.element.setAttribute("aria-roledescription", piece.kind);
     this.body = document.createElement("div");
     this.body.className = "piece__body";
     this.element.append(this.body);
@@ -222,23 +226,7 @@ export class PieceNode {
       // blank face rather than inventing one.
       return;
     }
-    if (component.image !== null) {
-      const image = document.createElement("img");
-      image.className = "piece__image";
-      image.src = component.image;
-      image.alt = component.title ?? "";
-      image.draggable = false;
-      this.body.append(image);
-    }
-    if (component.title !== null) {
-      this.body.append(span("piece__title", component.title));
-    }
-    if (component.body !== null) {
-      this.body.append(span("piece__copy", component.body));
-    }
-    if (component.folio !== null) {
-      this.body.append(span("piece__folio", component.folio));
-    }
+    appendFace(this.body, component);
   }
 
   /** The little badge showing whose hand is on this piece. */
@@ -262,6 +250,27 @@ export class PieceNode {
 
   remove(): void {
     this.element.remove();
+  }
+}
+
+/** A component's face - image, title, body, folio - appended to `container`. */
+export function appendFace(container: HTMLElement, component: ComponentView): void {
+  if (component.image !== null) {
+    const image = document.createElement("img");
+    image.className = "piece__image";
+    image.src = component.image;
+    image.alt = component.title ?? "";
+    image.draggable = false;
+    container.append(image);
+  }
+  if (component.title !== null) {
+    container.append(span("piece__title", component.title));
+  }
+  if (component.body !== null) {
+    container.append(span("piece__copy", component.body));
+  }
+  if (component.folio !== null) {
+    container.append(span("piece__folio", component.folio));
   }
 }
 

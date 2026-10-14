@@ -44,7 +44,11 @@ class Piece:
 
     ``component_id`` names what the piece actually is (which card, which
     face-set of dice) and is the one field ``project`` may strip from a
-    viewer who is not entitled to it. ``props`` carries whatever a game
+    viewer who is not entitled to it. ``revealed_to`` and ``revealed_by``
+    record a deliberate reveal in progress: who is being shown the face, and
+    who is showing it. Neither is a secret - that a card is being shown, and
+    to whom, is exactly what everyone else at the table should see.
+    ``props`` carries whatever a game
     definition needs beyond the fields every piece has - a die's rolled
     value, a note's text.
     """
@@ -61,6 +65,7 @@ class Piece:
     held_by: str | None = None
     locked: bool = False
     revealed_to: frozenset[str] = field(default_factory=frozenset)
+    revealed_by: str | None = None
     group_id: str | None = None
     props: dict[str, object] = field(default_factory=dict)
 

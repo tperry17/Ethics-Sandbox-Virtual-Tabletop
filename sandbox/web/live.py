@@ -43,6 +43,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sandbox.db.engine import SessionLocal, session_scope
 from sandbox.db.models import Participant, Room
 from sandbox.model import (
+    ClearInk,
     Deal,
     Despawn,
     Draw,
@@ -74,10 +75,12 @@ from sandbox.model import (
     ShowTo,
     Shuffle,
     Spawn,
+    StackOnto,
     Table,
     Ungroup,
     Unlock,
     ViewTable,
+    piece_actions,
     project,
     run_op,
 )
@@ -148,8 +151,20 @@ class HeartbeatMessage(BaseModel):
     type: Literal["heartbeat"] = "heartbeat"
 
 
+class MenuRequestMessage(BaseModel):
+    """What may I do to this piece? The answer is a ``MenuMessage``."""
+
+    type: Literal["menu_request"] = "menu_request"
+    client_id: str
+    piece_id: str
+
+
 ClientMessage = Annotated[
-    HelloMessage | IntentMessage | CursorMessage | HeartbeatMessage,
+    HelloMessage
+    | IntentMessage
+    | CursorMessage
+    | HeartbeatMessage
+    | MenuRequestMessage,
     Field(discriminator="type"),
 ]
 CLIENT_MESSAGE: TypeAdapter[ClientMessage] = TypeAdapter(ClientMessage)
@@ -172,6 +187,8 @@ class PieceView(BaseModel):
     held_by: str | None
     locked: bool
     component_id: str | None
+    revealed_to: list[str] = Field(default_factory=list)
+    revealed_by: str | None = None
 
 
 class RectView(BaseModel):
@@ -329,9 +346,43 @@ class SnapshotMessage(BaseModel):
 
 
 class PatchesMessage(BaseModel):
+    """Projected changes, plus the faces of any components they newly name.
+
+    A card that becomes visible to someone - drawn into their hand, shown to
+    them - arrives with a ``component_id`` the snapshot never described.
+    ``components`` carries what it looks like, for that recipient only.
+    """
+
     type: Literal["patches"] = "patches"
     seq: int
     patches: list[PatchView]
+    components: list[ComponentView] = Field(default_factory=list)
+
+
+class AckMessage(BaseModel):
+    """The intent ``client_id`` was accepted. What changed arrives as patches."""
+
+    type: Literal["ack"] = "ack"
+    client_id: str
+
+
+class MenuItemView(BaseModel):
+    """One context-menu entry: a label, and the intent that choosing it sends."""
+
+    id: str
+    label: str
+    group: str | None
+    op_type: str
+    payload: dict[str, Any]
+
+
+class MenuMessage(BaseModel):
+    """What this viewer may do to one piece now, in the order to offer it."""
+
+    type: Literal["menu"] = "menu"
+    client_id: str
+    piece_id: str
+    items: list[MenuItemView]
 
 
 class RejectMessage(BaseModel):
@@ -355,7 +406,13 @@ class NoticeMessage(BaseModel):
 
 
 ServerMessage = (
-    SnapshotMessage | PatchesMessage | RejectMessage | PresenceMessage | NoticeMessage
+    SnapshotMessage
+    | PatchesMessage
+    | AckMessage
+    | MenuMessage
+    | RejectMessage
+    | PresenceMessage
+    | NoticeMessage
 )
 
 
@@ -366,6 +423,7 @@ _OPERATION_TYPES: tuple[type, ...] = (
     Release,
     Move,
     MoveToZone,
+    StackOnto,
     Flip,
     Rotate,
     ReorderZ,
@@ -383,6 +441,7 @@ _OPERATION_TYPES: tuple[type, ...] = (
     InkAppend,
     InkEnd,
     EraseInk,
+    ClearInk,
     Spawn,
     Despawn,
     ResetZone,
@@ -426,6 +485,17 @@ MACRO_OPERATIONS = frozenset(
 
 class IntentError(Exception):
     """The intent could not be read as an operation. Carries a readable reason."""
+
+
+def encode_operation(operation: Operation) -> tuple[str, dict[str, Any]]:
+    """The wire name and payload that ``decode_intent`` would read back as ``op``.
+
+    ``op_id`` is left out: an operation offered on a menu has not happened
+    yet, and the client that chooses it supplies a fresh one.
+    """
+    payload = TypeAdapter(type(operation)).dump_python(operation, mode="json")
+    payload.pop("op_id", None)
+    return _wire_name(type(operation)), payload
 
 
 def decode_intent(op_type: str, payload: Mapping[str, Any]) -> Operation:
@@ -480,6 +550,9 @@ class Connection:
     )
     last_seq_sent: int = 0
     ready: bool = False
+    # Every component whose face this connection has been sent, so a patch
+    # carries a description only the first time it names one.
+    known_components: set[str] = field(default_factory=set)
 
     def send(self, message: BaseModel) -> bool:
         """Queue ``message``. False means this connection has fallen behind."""
@@ -728,6 +801,9 @@ class RoomRuntime:
         if isinstance(message, HelloMessage):
             self._on_hello(connection, message)
             return
+        if isinstance(message, MenuRequestMessage):
+            self._on_menu_request(connection, message)
+            return
         self._on_intent(connection, message)
 
     def _on_hello(self, connection: Connection, message: HelloMessage) -> None:
@@ -784,16 +860,53 @@ class RoomRuntime:
         if isinstance(operation, Move):
             self._pending_moves[operation.piece_id] = (seat_id, operation)
             self._holds[operation.piece_id] = (seat_id, time.monotonic())
+            connection.send(AckMessage(client_id=message.client_id))
             return
 
         if isinstance(operation, Grab):
             self._holds[operation.piece_id] = (seat_id, time.monotonic())
-        if isinstance(operation, Release | MoveToZone):
+        if isinstance(operation, Release | MoveToZone | StackOnto):
             self._settle_piece(operation.piece_id)
 
         outcome = self._apply(seat_id, operation, log=True)
         if not isinstance(outcome, Ok):
             self._reject(connection, message.client_id, outcome.reason)
+            return
+        # Sent after the patches, so by the time the client hears "accepted"
+        # it already holds the table that resulted.
+        connection.send(AckMessage(client_id=message.client_id))
+
+    def _on_menu_request(
+        self, connection: Connection, message: MenuRequestMessage
+    ) -> None:
+        """Answer with what this viewer may do to one piece, judged by the model."""
+        seat_id = connection.seat_id
+        entries = (
+            []
+            if seat_id is None
+            else piece_actions(self.table, message.piece_id, seat_id)
+        )
+        items = []
+        for entry in entries:
+            op_type, payload = encode_operation(entry.operation)
+            label = entry.label
+            name = None if entry.seat_id is None else self._names.get(entry.seat_id)
+            if name is not None:
+                label = name if entry.group == "Show to…" else f"{label} · {name}"
+            items.append(
+                MenuItemView(
+                    id=entry.key,
+                    label=label,
+                    group=entry.group,
+                    op_type=op_type,
+                    payload=payload,
+                )
+            )
+        connection.send(
+            MenuMessage(
+                client_id=message.client_id, piece_id=message.piece_id, items=items
+            )
+        )
 
     # -- applying and broadcasting ------------------------------------------------
 
@@ -878,6 +991,10 @@ class RoomRuntime:
         for piece in self.table.pieces.values():
             if piece.held_by == seat_id:
                 self._apply(seat_id, Release(piece_id=piece.id), log=True)
+        # A card is shown for as long as someone is there holding it up.
+        for piece in list(self.table.pieces.values()):
+            if piece.revealed_by == seat_id:
+                self._apply(seat_id, EndShow(piece_id=piece.id), log=True)
 
     async def _flush_persistence(self) -> None:
         if not self._pending_events and not self._snapshot_due:
@@ -926,6 +1043,8 @@ class RoomRuntime:
                     held_by=piece.held_by,
                     locked=piece.locked,
                     component_id=piece.component_id,
+                    revealed_to=list(piece.revealed_to),
+                    revealed_by=piece.revealed_by,
                 )
                 for piece in view.pieces
             ],
@@ -985,6 +1104,8 @@ class RoomRuntime:
     def _send_snapshot(self, connection: Connection) -> None:
         seats = self._seat_views()
         view = project(self.table, connection.seat_id)
+        components = self._components_for(view)
+        connection.known_components = {component.id for component in components}
         message = SnapshotMessage(
             seq=self.seq,
             view_table=self._table_view(view, seats),
@@ -996,7 +1117,7 @@ class RoomRuntime:
                 is_facilitator=connection.is_facilitator,
                 is_observer=connection.is_observer,
             ),
-            components=self._components_for(view),
+            components=components,
             macros=self._macros_for(connection),
         )
         connection.last_seq_sent = self.seq
@@ -1009,8 +1130,25 @@ class RoomRuntime:
         if not projected:
             connection.last_seq_sent = seq
             return
+        # Only components named by a patch that survived projection: a
+        # piece this viewer may not see has already lost its component_id.
+        named = {
+            patch.fields["component_id"]
+            for patch in projected
+            if patch.kind == "piece"
+            and isinstance(patch.fields.get("component_id"), str)
+        }
+        fresh = sorted(
+            component_id
+            for component_id in named
+            if isinstance(component_id, str)
+            and component_id not in connection.known_components
+            and component_id in self.components
+        )
+        connection.known_components.update(fresh)
         message = PatchesMessage(
             seq=seq,
+            components=[self.components[component_id] for component_id in fresh],
             patches=[
                 PatchView(
                     kind=patch.kind,
@@ -1216,6 +1354,7 @@ hub = LiveHub()
 
 
 __all__ = [
+    "AckMessage",
     "CLIENT_MESSAGE",
     "HOLD_TIMEOUT_SECONDS",
     "MACRO_OPERATIONS",
@@ -1234,6 +1373,9 @@ __all__ = [
     "GeometryView",
     "LiveHub",
     "MacroView",
+    "MenuItemView",
+    "MenuMessage",
+    "MenuRequestMessage",
     "MessageSink",
     "NoticeMessage",
     "PatchView",
@@ -1252,5 +1394,6 @@ __all__ = [
     "YouView",
     "ZoneView",
     "decode_intent",
+    "encode_operation",
     "hub",
 ]

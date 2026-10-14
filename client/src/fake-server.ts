@@ -7,7 +7,8 @@
  *
  * It replays; it does not decide. An intent sent to it is remembered so a
  * test can assert what the client proposed, and answered with nothing -
- * judging an intent is the server's job, and this is not a server.
+ * judging an intent is the server's job, and this is not a server. A test
+ * that wants an answer plays the server's part itself, with `inject`.
  */
 
 import type {
@@ -79,6 +80,11 @@ export class RecordedLink implements ServerLink {
 
   send(message: ClientMessage): void {
     this.sent.push(message);
+  }
+
+  /** Deliver one message as if the server had just sent it. For tests. */
+  inject(message: ServerMessage): void {
+    this.messageHandler?.(message);
   }
 
   /** Deliver every frame up to `at` milliseconds. Deterministic; for tests. */

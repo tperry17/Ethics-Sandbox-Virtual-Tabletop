@@ -6,9 +6,11 @@ SQLAlchemy, or asyncio, and every function is deterministic given its inputs
 and, where noted, the table's own seeded RNG.
 """
 
+from sandbox.model.actions import MenuEntry, piece_actions
 from sandbox.model.entities import Piece, Polygon, Rect, Seat, Stroke, Table, Zone
 from sandbox.model.layout import place_in_zone
 from sandbox.model.ops import (
+    ClearInk,
     Deal,
     Despawn,
     Draw,
@@ -36,6 +38,7 @@ from sandbox.model.ops import (
     ShowTo,
     Shuffle,
     Spawn,
+    StackOnto,
     Ungroup,
     Unlock,
     new_op_id,
@@ -57,6 +60,7 @@ from sandbox.model.visibility import (
 )
 
 __all__ = [
+    "ClearInk",
     "Deal",
     "Despawn",
     "Draw",
@@ -70,6 +74,7 @@ __all__ = [
     "InkEnd",
     "Layout",
     "Lock",
+    "MenuEntry",
     "Move",
     "MoveToZone",
     "Ok",
@@ -94,6 +99,7 @@ __all__ = [
     "Shuffle",
     "ShowTo",
     "Spawn",
+    "StackOnto",
     "Stroke",
     "Table",
     "TableRng",
@@ -109,6 +115,7 @@ __all__ = [
     "ZoneKind",
     "entitled_to_face",
     "new_op_id",
+    "piece_actions",
     "place_in_zone",
     "project",
     "project_patch",

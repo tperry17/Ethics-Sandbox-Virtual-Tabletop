@@ -33,6 +33,13 @@ export interface TableEvent {
   fields: Record<string, unknown>;
 }
 
+/** A piece that arrived in a different zone, for announcing. */
+export interface ZoneChange {
+  id: string;
+  from: string;
+  to: string;
+}
+
 /** What changed, so the renderer can touch only those nodes. */
 export interface Diff {
   pieces: Set<string>;
@@ -44,6 +51,7 @@ export interface Diff {
   catalog: boolean;
   everything: boolean;
   events: TableEvent[];
+  zoneChanges: ZoneChange[];
 }
 
 export function emptyDiff(): Diff {
@@ -57,6 +65,7 @@ export function emptyDiff(): Diff {
     catalog: false,
     everything: false,
     events: [],
+    zoneChanges: [],
   };
 }
 
@@ -70,6 +79,7 @@ export function mergeDiff(into: Diff, from: Diff): Diff {
   into.catalog = into.catalog || from.catalog;
   into.everything = into.everything || from.everything;
   into.events.push(...from.events);
+  into.zoneChanges.push(...from.zoneChanges);
   return into;
 }
 
@@ -137,8 +147,16 @@ export class TableModel {
     return diff;
   }
 
-  applyPatches(patches: PatchView[], seq: number): Diff {
+  applyPatches(
+    patches: PatchView[],
+    seq: number,
+    components: ComponentView[] = [],
+  ): Diff {
     const diff = emptyDiff();
+    // Faces first, so the pieces that name them can be drawn this frame.
+    for (const component of components) {
+      this.components.set(component.id, { ...component });
+    }
     for (const patch of patches) {
       this.applyPatch(patch, diff);
     }
@@ -204,6 +222,8 @@ export class TableModel {
           held_by: null,
           locked: false,
           component_id: null,
+          revealed_to: [],
+          revealed_by: null,
         };
 
     if ("kind" in fields) piece.kind = (readString(fields, "kind") ??
@@ -221,7 +241,12 @@ export class TableModel {
     // whatever face they were shown before - a card put back face-down stops
     // being readable the moment the server says so.
     if ("component_id" in fields) piece.component_id = readString(fields, "component_id");
+    if ("revealed_to" in fields) piece.revealed_to = readStrings(fields["revealed_to"]);
+    if ("revealed_by" in fields) piece.revealed_by = readString(fields, "revealed_by");
 
+    if (existing !== undefined && existing.zone_id !== piece.zone_id) {
+      diff.zoneChanges.push({ id, from: existing.zone_id, to: piece.zone_id });
+    }
     this.pieces.set(id, piece);
     diff.pieces.add(id);
   }
@@ -281,6 +306,11 @@ export class TableModel {
 function readString(fields: Record<string, unknown>, key: string): string | null {
   const value = fields[key];
   return typeof value === "string" ? value : null;
+}
+
+function readStrings(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === "string");
 }
 
 function readNumber(fields: Record<string, unknown>, key: string): number | null {

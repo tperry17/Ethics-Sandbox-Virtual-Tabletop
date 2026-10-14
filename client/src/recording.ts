@@ -77,6 +77,8 @@ function piece(
     held_by: null,
     locked: false,
     component_id: componentId,
+    revealed_to: [],
+    revealed_by: null,
   };
 }
 

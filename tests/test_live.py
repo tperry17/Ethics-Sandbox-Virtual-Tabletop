@@ -48,7 +48,7 @@ def _pieces_in(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def test_every_operation_has_a_wire_name() -> None:
     assert live.OPERATIONS["move_to_zone"] is MoveToZone
     assert live.OPERATIONS["move"] is Move
-    assert len(live.OPERATIONS) == 28
+    assert len(live.OPERATIONS) == 30
 
 
 def test_decode_intent_reads_a_payload_into_an_operation() -> None:
@@ -403,6 +403,191 @@ async def test_a_heartbeat_changes_nothing() -> None:
 
         assert room.runtime.table.version == version
         assert room.events() == []
+
+
+# -- interaction: menus, acknowledgements, reveals ------------------------------------
+
+
+async def _card_in_hand_a(room: Any, actor: Any) -> str:
+    await room.intent(actor, "draw", {"count": 1, "from_zone": DECK, "to_zone": HAND_A})
+    await room.settle(0.1)
+    card: str = next(
+        piece.id
+        for piece in room.runtime.table.pieces.values()
+        if piece.zone_id == HAND_A
+    )
+    await room.intent(actor, "flip", {"piece_id": card})
+    await room.settle(0.1)
+    return card
+
+
+def _faces_described(socket: Any) -> set[str]:
+    return {
+        component["id"]
+        for message in socket.sent
+        if message["type"] in ("snapshot", "patches")
+        for component in message.get("components", [])
+    }
+
+
+async def test_a_menu_lists_what_the_model_allows_with_peoples_names() -> None:
+    async with live_room() as room:
+        await room.connect(SEAT_B, display_name="Bo")
+        actor = await room.connect(SEAT_A, display_name="Ana")
+        card = await _card_in_hand_a(room, actor)
+        actor.socket.clear()
+
+        await room.send(
+            actor, {"type": "menu_request", "client_id": "m1", "piece_id": card}
+        )
+        await room.settle(0.1)
+
+        menu = actor.socket.of_type("menu")[-1]
+        assert menu["client_id"] == "m1"
+        assert menu["piece_id"] == card
+        items = {item["id"]: item for item in menu["items"]}
+        assert items[f"show_to:{SEAT_B}"]["label"] == "Bo"
+        assert items[f"show_to:{SEAT_B}"]["group"] == "Show to…"
+        assert items[f"show_to:{SEAT_B}"]["op_type"] == "show_to"
+        assert items[f"show_to:{SEAT_B}"]["payload"] == {
+            "piece_id": card,
+            "seat_ids": [SEAT_B],
+        }
+        assert "delete" not in items
+
+
+async def test_a_menu_item_sent_back_as_an_intent_does_what_it_says() -> None:
+    async with live_room() as room:
+        watcher = await room.connect(SEAT_B, display_name="Bo")
+        actor = await room.connect(SEAT_A, display_name="Ana")
+        card = await _card_in_hand_a(room, actor)
+        await room.send(
+            actor, {"type": "menu_request", "client_id": "m1", "piece_id": card}
+        )
+        await room.settle(0.1)
+        item = next(
+            item
+            for item in actor.socket.of_type("menu")[-1]["items"]
+            if item["id"] == f"show_to:{SEAT_B}"
+        )
+
+        await room.intent(actor, item["op_type"], item["payload"])
+        await room.settle(0.1)
+
+        assert room.runtime.table.pieces[card].revealed_to == frozenset({SEAT_B})
+        shown = [p for p in _pieces_in(watcher.socket.sent) if p["id"] == card]
+        assert shown[-1]["component_id"] is not None
+
+
+async def test_an_observer_is_offered_nothing() -> None:
+    async with live_room() as room:
+        observer = await room.connect(None, display_name="Visitor")
+
+        await room.send(
+            observer,
+            {"type": "menu_request", "client_id": "m1", "piece_id": "card-0"},
+        )
+        await room.settle(0.1)
+
+        assert observer.socket.of_type("menu")[-1]["items"] == []
+
+
+async def test_an_accepted_intent_is_acknowledged_after_its_patches() -> None:
+    async with live_room() as room:
+        actor = await room.connect(SEAT_A, display_name="Ana")
+        actor.socket.clear()
+
+        await room.intent(
+            actor,
+            "move_to_zone",
+            {"piece_id": "card-0", "zone_id": PUBLIC_TABLE},
+            client_id="i-7",
+        )
+        await room.settle(0.1)
+
+        kinds = [message["type"] for message in actor.socket.sent]
+        assert "patches" in kinds
+        acks = [m for m in actor.socket.sent if m["type"] == "ack"]
+        assert acks == [{"type": "ack", "client_id": "i-7"}]
+        assert kinds.index("patches") < kinds.index("ack")
+
+
+async def test_a_rejected_intent_is_not_acknowledged() -> None:
+    async with live_room() as room:
+        actor = await room.connect(SEAT_A, display_name="Ana")
+
+        await room.intent(actor, "reset_table", {}, client_id="i-8")
+        await room.settle(0.1)
+
+        assert actor.socket.of_type("ack") == []
+        assert actor.socket.of_type("reject")[-1]["client_id"] == "i-8"
+
+
+async def test_a_newly_visible_face_is_described_to_its_viewer_only() -> None:
+    async with live_room() as room:
+        room.runtime.components = {
+            f"the-{index}-of-values": live.ComponentView(
+                id=f"the-{index}-of-values", title=f"Value {index}"
+            )
+            for index in range(6)
+        }
+        watcher = await room.connect(SEAT_B, display_name="Bo")
+        actor = await room.connect(SEAT_A, display_name="Ana")
+        # Nothing on the table is face-up yet, so the snapshot describes nothing.
+        assert _faces_described(actor.socket) == set()
+
+        card = await _card_in_hand_a(room, actor)
+        component = room.runtime.table.pieces[card].component_id
+
+        assert _faces_described(actor.socket) == {component}
+        assert _faces_described(watcher.socket) == set()
+
+        await room.intent(actor, "show_to", {"piece_id": card, "seat_ids": [SEAT_B]})
+        await room.settle(0.1)
+
+        assert _faces_described(watcher.socket) == {component}
+
+
+async def test_a_face_is_described_only_once_per_connection() -> None:
+    async with live_room() as room:
+        room.runtime.components = {
+            f"the-{index}-of-values": live.ComponentView(id=f"the-{index}-of-values")
+            for index in range(6)
+        }
+        actor = await room.connect(SEAT_A, display_name="Ana")
+        card = await _card_in_hand_a(room, actor)
+        actor.socket.clear()
+
+        await room.intent(actor, "rotate", {"piece_id": card})
+        await room.settle(0.1)
+
+        assert actor.socket.of_type("patches")
+        assert _faces_described(actor.socket) == set()
+
+
+async def test_leaving_the_table_puts_away_a_card_being_shown() -> None:
+    async with live_room() as room:
+        watcher = await room.connect(SEAT_B, display_name="Bo")
+        actor = await room.connect(SEAT_A, display_name="Ana")
+        card = await _card_in_hand_a(room, actor)
+        await room.intent(actor, "show_to", {"piece_id": card})
+        await room.settle(0.1)
+        watcher.socket.clear()
+
+        room.clients.remove(actor)
+        await room.hub.detach(room.runtime, actor.connection, actor.writer)
+        await room.settle(0.1)
+
+        assert room.runtime.table.pieces[card].revealed_to == frozenset()
+        ended = [
+            patch["fields"]
+            for message in watcher.socket.of_type("patches")
+            for patch in message["patches"]
+            if patch["fields"].get("type") == "show_end"
+        ]
+        assert ended == [{"type": "show_end", "piece_id": card, "by_seat": SEAT_A}]
+        theirs = [p for p in _pieces_in(watcher.socket.sent) if p["id"] == card]
+        assert theirs[-1]["component_id"] is None
 
 
 # -- persistence -----------------------------------------------------------------------

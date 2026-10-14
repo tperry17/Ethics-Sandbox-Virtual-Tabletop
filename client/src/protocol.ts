@@ -68,6 +68,10 @@ export interface PieceView {
   held_by: string | null;
   locked: boolean;
   component_id: string | null;
+  /** Seats being shown this piece's face right now. Public: a reveal is seen. */
+  revealed_to: string[];
+  /** Who is showing it, or null when nobody is. */
+  revealed_by: string | null;
 }
 
 export interface ZoneView {
@@ -161,6 +165,31 @@ export interface PatchesMessage {
   type: "patches";
   seq: number;
   patches: PatchView[];
+  /** Faces these patches newly entitle this viewer to. Absent means none. */
+  components?: ComponentView[];
+}
+
+/** The intent `client_id` was accepted; its patches have already arrived. */
+export interface AckMessage {
+  type: "ack";
+  client_id: string;
+}
+
+/** One context-menu entry, and the intent choosing it sends. */
+export interface MenuItemView {
+  id: string;
+  label: string;
+  group: string | null;
+  op_type: string;
+  payload: Record<string, unknown>;
+}
+
+/** What this viewer may do to one piece, as the server judged it. */
+export interface MenuMessage {
+  type: "menu";
+  client_id: string;
+  piece_id: string;
+  items: MenuItemView[];
 }
 
 export interface RejectMessage {
@@ -184,6 +213,8 @@ export interface NoticeMessage {
 export type ServerMessage =
   | SnapshotMessage
   | PatchesMessage
+  | AckMessage
+  | MenuMessage
   | RejectMessage
   | PresenceMessage
   | NoticeMessage;
@@ -211,11 +242,19 @@ export interface HeartbeatMessage {
   type: "heartbeat";
 }
 
+/** Ask what may be done to a piece. Answered by a `MenuMessage`. */
+export interface MenuRequestMessage {
+  type: "menu_request";
+  client_id: string;
+  piece_id: string;
+}
+
 export type ClientMessage =
   | HelloMessage
   | IntentMessage
   | CursorMessage
-  | HeartbeatMessage;
+  | HeartbeatMessage
+  | MenuRequestMessage;
 
 /** Connected, catching up, or not talking to anything. */
 export type LinkStatus = "connected" | "reconnecting" | "offline";

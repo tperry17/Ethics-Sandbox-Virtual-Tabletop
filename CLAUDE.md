@@ -75,6 +75,11 @@ person did: no rule, no deck, and no face it was not given.
 - `recording.ts`, `fake-server.ts` — a recorded session behind the same
   `ServerLink`, so rendering is built and tested with no backend running
 - `perf.ts` — frame measurement
+- `interaction.ts` — pointer, touch and keyboard gestures, turned into intents
+- `intents.ts` — sending intents and matching each `ack` or `reject` to it
+- `menu.ts` — the context menu, whose contents the server supplies
+- `reveal.ts` — reveals in progress, and a close look at your own card
+- `announcer.ts` — the live region that says what happened, in words
 
 Pieces are DOM elements positioned with `translate3d` inside a single
 transformed world layer, so card text is real text at any zoom. Rendering
@@ -88,6 +93,38 @@ world transform, so it stays put when the table moves.
 
 `/table-preview` replays the recorded session with no room behind it, and
 `?pieces=300&measure=1` is the frame-rate harness.
+
+### Interaction
+
+Every gesture is shown at once and proposed as an intent. The local result
+is an override laid over the model on the renderer, never a change to the
+model itself. The server answers every intent exactly once: `ack` (sent
+after its patches, so the truth has already arrived) or `reject` with a
+sentence. On `ack` the override is dropped; on `reject` it is dropped with
+a visible rollback (the piece glides back and is marked) and the sentence
+is shown in a toast. An intent with no answer within eight seconds is
+treated as refused. Each intent's `client_id` doubles as its `op_id`, so a
+repeat is applied once.
+
+The client never decides legality. Where a piece was let go - over a zone,
+over another piece, over the hand tray - is input; it becomes
+`move_to_zone`, `stack_onto` or a plain `move`, and the server judges it.
+The context menu is a `menu_request` answered by a `menu` message built by
+`sandbox/model/actions.py`, which offers every plausible operation and
+keeps those whose own `validate` accepts them. Faces a patch newly entitles
+a viewer to travel with that patch as `components`, to that viewer only.
+
+Reveals are read from state (`revealed_to`, `revealed_by`), not from
+events, so a reconnect sees exactly what is being shown now. Only someone
+whose zone lets them see a face may show it (being shown a card does not
+count), only they or the facilitator may put it away, and it is put away
+when they leave the table. Who is showing what to whom is public; the face
+is not.
+
+Keyboard: Tab reaches every piece; arrow keys move by a 20-unit step (Shift
+for five); Enter turns over; R and Shift-R rotate; M, the context-menu key
+or Shift-F10 open the menu; P points; Escape clears. With nothing focused,
+R and Enter act on the selection.
 
 ### Measured frame rate
 
