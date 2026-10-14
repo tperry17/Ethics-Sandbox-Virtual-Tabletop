@@ -57,15 +57,15 @@
 
 .piece--card.is-face-down {
   place-items: center;
-  border-color: var(--accent-rubric-soft);
-  background: var(--accent-rubric);
-  color: var(--text-inverse);
+  border-color: var(--card-back-edge);
+  background: var(--card-back);
+  color: var(--card-back-ink);
 }
 
 .piece--card.is-face-down::before {
   width: 65%;
   height: 65%;
-  border: var(--line-strong) solid var(--text-inverse);
+  border: var(--line-strong) solid var(--card-back-ink);
   background: var(--transparent);
   content: "§";
   display: grid;

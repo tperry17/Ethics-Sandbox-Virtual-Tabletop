@@ -68,6 +68,9 @@
   --table-zone-outline: #c3d0de;
   --table-zone-private: #223f61;
   --table-drop-target: #cd9a57;
+  --card-back: #a41034;
+  --card-back-edge: #f8e6ea;
+  --card-back-ink: #ffffff;
   --text-primary: #172d4a;
   --text-secondary: #3c4b5f;
   --text-muted: #5e6b7c;
@@ -142,6 +145,9 @@
     --table-zone-outline: #6f8aa8;
     --table-zone-private: #162b45;
     --table-drop-target: #b98a4c;
+    --card-back: #a41034;
+    --card-back-edge: #ec8aa0;
+    --card-back-ink: #ffffff;
     --text-primary: #eef1f5;
     --text-secondary: #c2cad5;
     --text-muted: #919dad;
@@ -177,6 +183,9 @@
   --table-zone-outline: #6f8aa8;
   --table-zone-private: #162b45;
   --table-drop-target: #b98a4c;
+  --card-back: #a41034;
+  --card-back-edge: #ec8aa0;
+  --card-back-ink: #ffffff;
   --text-primary: #eef1f5;
   --text-secondary: #c2cad5;
   --text-muted: #919dad;

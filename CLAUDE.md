@@ -191,6 +191,8 @@ assent/agreed, tension/contested, and caution/time short.
   `--surface-border`, `--surface-border-strong`
 - Table: `--table-felt`, `--table-felt-edge`, `--table-zone-outline`,
   `--table-zone-private`, `--table-drop-target`
+- Card back: `--card-back`, `--card-back-edge`, `--card-back-ink` (crimson in
+  both themes, so a face-down card looks the same in light and dark)
 - Text: `--text-primary`, `--text-secondary`, `--text-muted`, `--text-inverse`,
   `--text-on-felt`
 - Accent: `--accent-rubric`, `--accent-rubric-soft`
