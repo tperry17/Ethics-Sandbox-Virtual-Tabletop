@@ -43,6 +43,7 @@ Do not substitute the stack.
 - `client/` — TypeScript table client built by Vite
 - `static/` — compiled client output, CSS, and fonts
 - `tests/` — automated tests
+- `docs/BUILD-PLAN.md` — the build plan, and where the build stands
 
 ## Identity without sign-in
 
@@ -150,7 +151,15 @@ typography, and it has not come to that.
 - Every new dependency must be justified in one line in this file.
 - Commits must stay scoped to one prompt.
 - Name each branch for the work it contains (for example `claude/mac-lan-deploy-script`), not with a generated name; this is explicit permission to push to that branch instead of an assigned one.
-- Push every commit as soon as it is made, and keep every pushed branch in an open pull request against `main`. Open it with the first push, following `.github/pull_request_template.md` (summary, questions for the author, follow-up needed to activate the work; keep it consistent with the template in HolyTispoon/HEARsay-Mysteries-Commons-Comma, identical unless a repo needs a difference); when later commits change the picture, update its description.
+- Push every commit as soon as it is made, and keep every pushed branch in an open pull request against `main`. Open it with the first push, following `.github/pull_request_template.md` (summary, questions for the author, follow-up needed to activate the work, checks); when later commits change the picture, update its description. Keep the template consistent with the one in HolyTispoon/HEARsay-Mysteries-Commons-Comma: the shared sections are word for word the same, and this repo adds only the build-plan pointer and the Checks list.
+- Every pull request description has a "Questions for the author" section
+  (see `.github/pull_request_template.md`): every open question, every
+  assumption made where the request, the plan or the content was unclear,
+  and anything the author should double-check, numbered. If there is
+  genuinely nothing, it says "None" and why.
+- `docs/BUILD-PLAN.md` is the build plan and its status. A pull request
+  that completes or advances a step updates the status in the same pull
+  request. Where the plan and this file disagree, this file wins.
 
 ## Dependency justifications
 
