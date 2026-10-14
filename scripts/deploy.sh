@@ -1,8 +1,11 @@
 #!/bin/bash
 # Serve the Ethics Sandbox from this Mac to everyone on the same network.
 #
-#   scripts/deploy.sh                 checks, build, migrate, serve on port 8000
+#   scripts/deploy.sh                 update main, stop the old server, check,
+#                                     build, migrate, serve on port 8000
 #   scripts/deploy.sh --skip-checks   skip Ruff, mypy, and pytest
+#   scripts/deploy.sh --no-pull       serve the checkout as it is, without
+#                                     switching to and updating main
 #   PORT=9000 scripts/deploy.sh       serve on another port
 #
 # Unlike `uv run dev`, this serves without --reload and keeps its own database
@@ -12,14 +15,16 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-PROJECT_ROOT="$(pwd)"
+PROJECT_ROOT="$(pwd -P)"
 PORT="${PORT:-8000}"
 RUN_CHECKS=1
+PULL=1
 
 for arg in "$@"; do
     case "$arg" in
         --skip-checks) RUN_CHECKS=0 ;;
-        -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
+        --no-pull) PULL=0 ;;
+        -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
         *) echo "Unknown option: $arg" >&2; exit 2 ;;
     esac
 done
@@ -33,8 +38,72 @@ require() {
     fi
 }
 
+# The working directory of a process, or nothing if it cannot be read.
+process_cwd() {
+    if [ -r "/proc/$1/cwd" ]; then
+        readlink "/proc/$1/cwd" 2>/dev/null || true
+    else
+        lsof -a -p "$1" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -n 1
+    fi
+}
+
+# PIDs of this project's servers and watchers: `uv run dev`, its Uvicorn and
+# Vite children, an earlier run of this script, and anything else started
+# here that is listening on $PORT.
+project_pids() {
+    {
+        pgrep -f 'uvicorn sandbox\.web\.app:app' || true
+        pgrep -f 'vite build --watch' || true
+        pgrep -f '\.venv/bin/dev' || true
+        if command -v lsof >/dev/null 2>&1; then
+            lsof -t -iTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true
+        fi
+    } | sort -un | while read -r pid; do
+        if [ -n "$pid" ] && [ "$pid" != "$$" ] && [ "$(process_cwd "$pid")" = "$PROJECT_ROOT" ]; then
+            echo "$pid"
+        fi
+    done
+}
+
+stop_running_servers() {
+    local pids pid waited
+    pids="$(project_pids)"
+    if [ -z "$pids" ]; then
+        echo "Nothing running."
+        return
+    fi
+    for pid in $pids; do
+        echo "Stopping $pid: $(ps -o command= -p "$pid" 2>/dev/null || true)"
+        kill "$pid" 2>/dev/null || true
+    done
+    waited=0
+    while [ -n "$(project_pids)" ] && [ "$waited" -lt 10 ]; do
+        sleep 0.5
+        waited=$((waited + 1))
+    done
+    for pid in $(project_pids); do
+        kill -9 "$pid" 2>/dev/null || true
+    done
+}
+
+require git "xcode-select --install"
 require uv "brew install uv"
 require npm "brew install node"
+
+if [ "$PULL" -eq 1 ] && [ -z "${SANDBOX_DEPLOY_UPDATED:-}" ]; then
+    step "Updating to the latest main"
+    if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+        echo "This checkout has uncommitted changes, so it was not switched to main:" >&2
+        git status --short --untracked-files=no >&2
+        echo "Commit or stash them, or run with --no-pull to serve the checkout as it is." >&2
+        exit 1
+    fi
+    git fetch origin main
+    git checkout main
+    git merge --ff-only origin/main
+    # Run the version of this script that just arrived, not the one in memory.
+    SANDBOX_DEPLOY_UPDATED=1 exec "$PROJECT_ROOT/scripts/deploy.sh" "$@"
+fi
 
 case "$PROJECT_ROOT" in
     *"Google Drive"*|*GoogleDrive*|*CloudStorage*)
@@ -44,8 +113,21 @@ case "$PROJECT_ROOT" in
         ;;
 esac
 
+step "Stopping servers already running from this folder"
+stop_running_servers
+
 step "Installing Python and client dependencies"
+# A virtualenv activated in this terminal, such as one from the project's old
+# location, must not stand in for this project's own .venv.
+unset VIRTUAL_ENV
+# A .venv copied or moved from another folder keeps that folder's paths in its
+# scripts and fails at the first `uv run`. Rebuild it rather than reuse it.
+if [ -d .venv ] && ! { .venv/bin/python -c '' && .venv/bin/pytest --version; } >/dev/null 2>&1; then
+    echo "The .venv here was built for another folder; rebuilding it."
+    rm -rf .venv
+fi
 uv sync --frozen
+# npm ci always replaces node_modules, so a copied one is never reused.
 npm ci --no-audit --no-fund
 
 if [ "$RUN_CHECKS" -eq 1 ]; then
