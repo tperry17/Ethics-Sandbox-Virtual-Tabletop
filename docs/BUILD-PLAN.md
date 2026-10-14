@@ -20,7 +20,7 @@ Prompts 10 and 11 need written rules from the author before they can run
 | # | Step | Status | Commit or PR |
 |---|------|--------|--------------|
 | 1 | Repo scaffold and project constitution | Done | `2006c3c` |
-| 2 | Design system | Done | `5834435` |
+| 2 | Design system | Done; palette revised to the Center's brand guide | `5834435`, then the `claude/center-brand-palette` PR |
 | 3 | The public site | Done, with gaps (below) | `5fc34dd`, then `d491312`, `108a5cb` |
 | 4 | The tabletop model | Done | `47c6c80` |
 | 5 | Rooms, identity and persistence | Done, with gaps (below) | `08cfbe8` |
@@ -202,6 +202,12 @@ DO NOT yet: build the table, add the database, or design anything.
 ## 2. Design system
 
 **Status: Done.**
+
+The colour values were later revised to the Center's brand style guide: a
+white page instead of cool paper, Harvard crimson (`#a41034`) as the accent,
+and the guide's dark and light blues for ink and the table. The token names,
+the dark-mode structure and the seat tints are unchanged. The prompt below is
+kept as it was given.
 
 Do this before any real screen exists, or you will spend the build fighting inconsistent spacing. It covers both the site and the table felt, which need to feel like one place.
 
