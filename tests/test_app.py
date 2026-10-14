@@ -50,3 +50,14 @@ def test_styleguide_renders_design_system() -> None:
     assert "CARD READABILITY CHECK" in response.text
     assert "button--destructive" in response.text
     assert "zone--private" in response.text
+    assert '<a href="/">' in response.text
+    assert "scholarly edition" not in response.text
+
+
+def test_landing_page_links_style_guide_in_footer() -> None:
+    response = TestClient(app).get("/")
+
+    assert response.status_code == 200
+    footer = response.text.split('<footer class="site__footer">', 1)[1]
+    assert '<a href="/styleguide">Style guide</a>' in footer
+    assert "design system" not in response.text

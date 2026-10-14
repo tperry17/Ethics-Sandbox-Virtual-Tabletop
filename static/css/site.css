@@ -27,6 +27,16 @@
   font-size: var(--text-sm);
 }
 
+.site__footer {
+  padding-top: var(--space-5);
+  border-top: var(--line-hairline) solid var(--surface-border);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}
+
+.site__footer a { color: inherit; text-underline-offset: var(--space-1); }
+
 .principle-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
