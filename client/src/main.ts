@@ -9,6 +9,7 @@
 
 import { SocketLink } from "./connection.js";
 import { RecordedLink } from "./fake-server.js";
+import { InteractionController } from "./interaction.js";
 import { measureFrames } from "./perf.js";
 import { DENSE_DRAG_START_MS, demoRecording, denseRecording } from "./recording.js";
 import type { ServerLink } from "./protocol.js";
@@ -18,6 +19,8 @@ declare global {
   interface Window {
     /** The live renderer, for the interaction half and for tests to reach. */
     ethicsSandboxTable?: TableRenderer;
+    /** The recorded session behind `/table-preview`, so tests can play the server. */
+    ethicsSandboxLink?: RecordedLink;
   }
 }
 
@@ -43,14 +46,17 @@ function boot(): void {
   const root = document.getElementById("table-root");
   if (!(root instanceof HTMLElement)) return;
 
+  const link = linkFor(root);
   const renderer = new TableRenderer({
     root,
     toolbar: document.getElementById("table-toolbar"),
-    link: linkFor(root),
+    link,
     roomCode: root.dataset.roomCode ?? "",
   });
   window.ethicsSandboxTable = renderer;
+  if (link instanceof RecordedLink) window.ethicsSandboxLink = link;
   renderer.start();
+  new InteractionController(renderer).attach();
 
   if (root.dataset.measure === "1") {
     const readout = document.getElementById("table-measure");

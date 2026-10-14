@@ -11,8 +11,8 @@ import type { CursorView, SeatView, StrokeView } from "./protocol.js";
 import { initialsFor, seatTintClass } from "./piece-node.js";
 import type { Viewport } from "./viewport.js";
 
-/** How long a pointer ping stays on the table after someone points. */
-export const PING_MS = 1400;
+/** How long a pointer marker stays on the table after someone points. */
+export const PING_MS = 3000;
 
 interface Ping {
   x: number;
@@ -97,11 +97,29 @@ export class InkLayer {
     context.globalAlpha = 1;
     context.restore();
 
-    // Cursors are drawn in screen space so a name stays the same size,
-    // and readable, however far out the table is zoomed.
+    // Cursors and names are drawn in screen space so a name stays the same
+    // size, and readable, however far out the table is zoomed.
     context.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
     context.font = "500 12px system-ui, sans-serif";
     context.textBaseline = "top";
+
+    // Who pointed, beside the marker, fading with it.
+    for (const ping of this.pings) {
+      const seat = seats.get(ping.seatId);
+      if (seat === undefined) continue;
+      const age = (now - ping.at) / PING_MS;
+      const x = ping.x * viewport.scale + viewport.offsetX;
+      const y = ping.y * viewport.scale + viewport.offsetY;
+      const name = seat.display_name ?? seat.label;
+      const width = context.measureText(name).width;
+      context.globalAlpha = Math.max(0, 1 - age * age);
+      context.fillStyle = this.seatColour(seat);
+      context.fillRect(x + 14, y - 26, width + 10, 18);
+      context.fillStyle = "#0e1417";
+      context.fillText(name, x + 19, y - 23);
+    }
+    context.globalAlpha = 1;
+
     for (const cursor of cursors) {
       const seat = seats.get(cursor.seat_id);
       const x = cursor.x * viewport.scale + viewport.offsetX;

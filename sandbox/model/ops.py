@@ -16,7 +16,7 @@ from typing import Protocol
 from sandbox.model.entities import Piece, Stroke, Table, Zone
 from sandbox.model.layout import place_in_zone
 from sandbox.model.results import Ok, OpOutcome, Patch, Reject
-from sandbox.model.types import PieceKind, Visibility
+from sandbox.model.types import Layout, PieceKind, Visibility
 from sandbox.model.visibility import entitled_to_face
 
 
@@ -109,8 +109,16 @@ def _piece_patch(piece: Piece) -> Patch:
             "locked": piece.locked,
             "component_id": piece.component_id,
             "group_id": piece.group_id,
+            "revealed_to": sorted(piece.revealed_to),
+            "revealed_by": piece.revealed_by,
         },
     )
+
+
+def _clear_reveal(piece: Piece) -> None:
+    """End any reveal in progress: a piece that moves is no longer being shown."""
+    piece.revealed_to = frozenset()
+    piece.revealed_by = None
 
 
 def _stroke_patch(stroke: Stroke) -> Patch:
@@ -203,10 +211,12 @@ class Move:
 class MoveToZone:
     """Move a piece into a different zone, atomically re-placing it there.
 
-    If ``x``/``y`` are omitted, the destination zone's layout decides where
-    the piece lands. Because this is one operation, a piece moving into a
-    private zone never passes through an intermediate state where its true
-    face is visible to someone not entitled to it.
+    In a free-layout zone, ``x``/``y`` say where the piece lands. Anywhere
+    else - and whenever they are omitted - the destination zone's layout
+    decides: a card let go over a deck joins the deck, wherever on its
+    outline the hand happened to open. Because this is one operation, a
+    piece moving into a private zone never passes through an intermediate
+    state where its true face is visible to someone not entitled to it.
     """
 
     piece_id: str
@@ -239,13 +249,62 @@ class MoveToZone:
         zone = table.zones[self.zone_id]
         piece.zone_id = zone.id
         piece.z = table.next_z_in_zone(zone.id)
-        piece.revealed_to = frozenset()
-        if self.x is not None and self.y is not None:
-            piece.x, piece.y, piece.rotation = self.x, self.y, piece.rotation
+        _clear_reveal(piece)
+        if self.x is not None and self.y is not None and zone.layout is Layout.FREE:
+            piece.x, piece.y = self.x, self.y
         else:
             index = len(table.pieces_in_zone(zone.id)) - 1
             x, y, rotation = place_in_zone(zone, index=index, count=index + 1)
             piece.x, piece.y, piece.rotation = x, y, rotation
+        return [_piece_patch(piece)]
+
+
+@dataclass(frozen=True)
+class StackOnto:
+    """Put one piece on top of another, wherever that one is.
+
+    The piece joins the other's zone, takes its position and rotation, and
+    goes on top of everything else in that zone. A stack is nothing more
+    than pieces sharing a spot; taking the top one off is an ordinary move.
+    """
+
+    piece_id: str
+    onto_id: str
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        piece = _get_piece(table, self.piece_id)
+        if (reason := _reason_piece_missing(piece, self.piece_id)) is not None:
+            return reason
+        onto = _get_piece(table, self.onto_id)
+        if (reason := _reason_piece_missing(onto, self.onto_id)) is not None:
+            return reason
+        assert piece is not None and onto is not None
+        if piece.id == onto.id:
+            return "A piece cannot be stacked on itself."
+        if (reason := _reason_not_movable(table, piece, actor_seat)) is not None:
+            return reason
+        zone = table.zones.get(onto.zone_id)
+        if zone is None:
+            return f"There is no zone {onto.zone_id!r} on the table."
+        if (
+            zone.capacity is not None
+            and piece.zone_id != zone.id
+            and len(table.pieces_in_zone(zone.id)) >= zone.capacity
+        ):
+            return f"{zone.label} is full."
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        piece = table.pieces[self.piece_id]
+        onto = table.pieces[self.onto_id]
+        if piece.zone_id != onto.zone_id:
+            _clear_reveal(piece)
+        piece.zone_id = onto.zone_id
+        piece.z = (
+            max(p.z for p in table.pieces_in_zone(onto.zone_id) if p.id != piece.id) + 1
+        )
+        piece.x, piece.y, piece.rotation = onto.x, onto.y, onto.rotation
         return [_piece_patch(piece)]
 
 
@@ -379,7 +438,7 @@ class Draw:
             piece.z = next_z
             x, y, rotation = place_in_zone(destination, index=index, count=index + 1)
             piece.x, piece.y, piece.rotation = x, y, rotation
-            piece.revealed_to = frozenset()
+            _clear_reveal(piece)
             patches.append(_piece_patch(piece))
         return patches
 
@@ -729,6 +788,34 @@ class EraseInk:
         return [Patch(kind="stroke", op="remove", entity_id=stroke.id, fields={})]
 
 
+@dataclass(frozen=True)
+class ClearInk:
+    """Erase every stroke a seat has drawn, or, for the facilitator, everyone's."""
+
+    everyone: bool = False
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        if actor_seat not in table.seats:
+            return "Only a seated participant may clear ink."
+        if self.everyone and not table.is_facilitator(actor_seat):
+            return "Only the facilitator may clear everyone's ink."
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        doomed = [
+            stroke_id
+            for stroke_id, stroke in table.strokes.items()
+            if self.everyone or stroke.seat_id == actor_seat
+        ]
+        for stroke_id in doomed:
+            table.strokes.pop(stroke_id)
+        return [
+            Patch(kind="stroke", op="remove", entity_id=stroke_id, fields={})
+            for stroke_id in doomed
+        ]
+
+
 # -- spawning and resetting -----------------------------------------------------
 
 
@@ -789,12 +876,14 @@ class Spawn:
 
 @dataclass(frozen=True)
 class Despawn:
-    """Remove pieces from the table entirely."""
+    """Remove pieces from the table entirely. Facilitator-only to invoke."""
 
     piece_ids: tuple[str, ...]
     op_id: str = field(default_factory=new_op_id)
 
     def validate(self, table: Table, actor_seat: str) -> str | None:
+        if not table.is_facilitator(actor_seat):
+            return "Only the facilitator may remove a piece from the table."
         for piece_id in self.piece_ids:
             if piece_id not in table.pieces:
                 return f"There is no piece {piece_id!r} on the table."
@@ -865,6 +954,11 @@ class ShowTo:
     A deliberate reveal, distinct from playing a card: the piece does not
     move and its zone does not change. Pair with ``EndShow`` to put it away
     again once whoever is showing it stops holding it up.
+
+    Only someone whose zone already lets them see the face may show it. A
+    reveal overrides the zone's visibility, so without that check anyone
+    could "show" themselves a card in someone else's hand. Being shown a card
+    does not count: you may not pass on what you were only shown.
     """
 
     piece_id: str
@@ -875,6 +969,14 @@ class ShowTo:
         piece = _get_piece(table, self.piece_id)
         if (reason := _reason_piece_missing(piece, self.piece_id)) is not None:
             return reason
+        assert piece is not None
+        zone = table.zones.get(piece.zone_id)
+        if zone is None or not entitled_to_face(
+            table, piece, zone, actor_seat, count_reveals=False
+        ):
+            return "You can only show a piece whose face you can see."
+        if piece.revealed_by is not None and piece.revealed_by != actor_seat:
+            return "Someone else is already showing that piece."
         for seat_id in self.seat_ids:
             if seat_id not in table.seats:
                 return f"There is no seat {seat_id!r} at the table."
@@ -886,6 +988,7 @@ class ShowTo:
             piece.revealed_to = frozenset(self.seat_ids)
         else:
             piece.revealed_to = frozenset(table.seats)
+        piece.revealed_by = actor_seat
         return [
             _piece_patch(piece),
             Patch(
@@ -904,19 +1007,40 @@ class ShowTo:
 
 @dataclass(frozen=True)
 class EndShow:
-    """Put away a piece shown with ``ShowTo``, restoring its zone's usual visibility."""
+    """Put away a piece shown with ``ShowTo``, restoring its zone's usual visibility.
+
+    The person showing it may put it away, and so may the facilitator.
+    """
 
     piece_id: str
     op_id: str = field(default_factory=new_op_id)
 
     def validate(self, table: Table, actor_seat: str) -> str | None:
         piece = _get_piece(table, self.piece_id)
-        return _reason_piece_missing(piece, self.piece_id)
+        if (reason := _reason_piece_missing(piece, self.piece_id)) is not None:
+            return reason
+        assert piece is not None
+        if not piece.revealed_to:
+            return "That piece is not being shown."
+        if piece.revealed_by not in (None, actor_seat) and not table.is_facilitator(
+            actor_seat
+        ):
+            return "Only the person showing that piece may put it away."
+        return None
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         piece = table.pieces[self.piece_id]
-        piece.revealed_to = frozenset()
-        return [_piece_patch(piece)]
+        shown_by = piece.revealed_by
+        _clear_reveal(piece)
+        return [
+            _piece_patch(piece),
+            Patch(
+                kind="table",
+                op="event",
+                entity_id=None,
+                fields={"type": "show_end", "piece_id": piece.id, "by_seat": shown_by},
+            ),
+        ]
 
 
 @dataclass(frozen=True)

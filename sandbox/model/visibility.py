@@ -35,6 +35,8 @@ class ViewPiece:
     held_by: str | None
     locked: bool
     component_id: str | None
+    revealed_to: tuple[str, ...] = ()
+    revealed_by: str | None = None
 
 
 @dataclass(frozen=True)
@@ -87,7 +89,12 @@ class ViewTable:
 
 
 def entitled_to_face(
-    table: Table, piece: Piece, zone: Zone, viewer_seat: str | None
+    table: Table,
+    piece: Piece,
+    zone: Zone,
+    viewer_seat: str | None,
+    *,
+    count_reveals: bool = True,
 ) -> bool:
     """Whether ``viewer_seat`` may see ``piece``'s true, current face.
 
@@ -96,8 +103,12 @@ def entitled_to_face(
     entitled to until it is turned over - and a hidden zone (a deck) shows
     its pieces' faces to no one, ever, regardless of ``face_up``: that flag
     is not to be trusted for a piece nobody has looked at yet.
+
+    ``count_reveals=False`` asks what the zone alone entitles the viewer to.
+    That is the question for showing a piece on to someone else: having been
+    shown a card is not the same as holding it.
     """
-    if viewer_seat is not None and viewer_seat in piece.revealed_to:
+    if count_reveals and viewer_seat is not None and viewer_seat in piece.revealed_to:
         return True
     if zone.visibility is Visibility.HIDDEN:
         return False
@@ -131,6 +142,8 @@ def _project_piece(table: Table, piece: Piece, viewer_seat: str | None) -> ViewP
         held_by=piece.held_by,
         locked=piece.locked,
         component_id=piece.component_id if entitled else None,
+        revealed_to=tuple(sorted(piece.revealed_to)),
+        revealed_by=piece.revealed_by,
     )
 
 

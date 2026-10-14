@@ -25,6 +25,7 @@ from hypothesis import strategies as st
 
 from sandbox.model.entities import Table
 from sandbox.model.ops import (
+    ClearInk,
     Deal,
     Despawn,
     Draw,
@@ -52,6 +53,7 @@ from sandbox.model.ops import (
     ShowTo,
     Shuffle,
     Spawn,
+    StackOnto,
     Ungroup,
     Unlock,
     new_op_id,
@@ -132,6 +134,10 @@ def _draw_op(data: st.DataObject, table: Table) -> tuple[str, Operation]:
         ),
         lambda: Ungroup(piece_ids=tuple(piece_ids[:2])),
         lambda: Roll(target_id=piece_id),
+        lambda: StackOnto(
+            piece_id=piece_id, onto_id=data.draw(st.sampled_from(piece_ids))
+        ),
+        lambda: ClearInk(everyone=bool(int(coord) % 2)),
     ]
     build = data.draw(st.sampled_from(choices), label="op_kind")
     return actor, build()
@@ -192,6 +198,30 @@ def test_project_never_leaks_a_component_id_the_viewer_is_not_entitled_to(
         actor, op = _draw_op(data, table)
         run_op(table, actor, op)
         _assert_no_leak(table)
+
+
+@given(data=st.data())
+@_settings
+def test_nobody_can_reveal_a_face_their_own_zone_does_not_show_them(
+    data: st.DataObject,
+) -> None:
+    """A reveal overrides a zone's visibility, so it is only safe if the
+    person making it could already see the face without anyone's help."""
+    table = build_sample_table(seed=data.draw(st.integers(0, 1000)), deck_size=4)
+
+    steps = data.draw(st.integers(min_value=1, max_value=25))
+    for _ in range(steps):
+        actor, op = _draw_op(data, table)
+        could_see = False
+        if isinstance(op, ShowTo) and op.piece_id in table.pieces:
+            piece = table.pieces[op.piece_id]
+            saved = piece.revealed_to
+            piece.revealed_to = frozenset()
+            could_see = _should_see_face(table, piece.id, actor)
+            piece.revealed_to = saved
+        outcome = run_op(table, actor, op)
+        if isinstance(op, ShowTo) and isinstance(outcome, Ok):
+            assert could_see, f"{actor} revealed {op.piece_id} without seeing it"
 
 
 @given(data=st.data())

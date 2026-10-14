@@ -88,6 +88,7 @@ def _dump_piece(piece: Piece) -> Snapshot:
         "held_by": piece.held_by,
         "locked": piece.locked,
         "revealed_to": sorted(piece.revealed_to),
+        "revealed_by": piece.revealed_by,
         "group_id": piece.group_id,
         "props": piece.props,
     }
@@ -107,6 +108,8 @@ def _load_piece(piece_id: str, fields: Snapshot) -> Piece:
         held_by=fields["held_by"],
         locked=fields["locked"],
         revealed_to=frozenset(fields["revealed_to"]),
+        # Snapshots written before reveals recorded who was showing.
+        revealed_by=fields.get("revealed_by"),
         group_id=fields["group_id"],
         props=dict(fields["props"]),
     )
