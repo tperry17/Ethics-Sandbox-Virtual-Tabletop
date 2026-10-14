@@ -150,7 +150,7 @@ typography, and it has not come to that.
 - Every new dependency must be justified in one line in this file.
 - Commits must stay scoped to one prompt.
 - Name each branch for the work it contains (for example `claude/mac-lan-deploy-script`), not with a generated name; this is explicit permission to push to that branch instead of an assigned one.
-- Push every commit as soon as it is made, and keep every pushed branch in an open pull request against `main`. Open it with the first push, following `.github/pull_request_template.md` (summary, questions for the author, follow-up needed to activate the work); when later commits change the picture, update its description.
+- Push every commit as soon as it is made, and keep every pushed branch in an open pull request against `main`. Open it with the first push, following `.github/pull_request_template.md` (summary, questions for the author, follow-up needed to activate the work; keep it consistent with the template in HolyTispoon/HEARsay-Mysteries-Commons-Comma, identical unless a repo needs a difference); when later commits change the picture, update its description.
 
 ## Dependency justifications
 
