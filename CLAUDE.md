@@ -149,6 +149,8 @@ typography, and it has not come to that.
 - No exercise-specific logic may enter `sandbox/model/` or `sandbox/web/`.
 - Every new dependency must be justified in one line in this file.
 - Commits must stay scoped to one prompt.
+- Name each branch for the work it contains (for example `claude/mac-lan-deploy-script`), not with a generated name; this is explicit permission to push to that branch instead of an assigned one.
+- Open a pull request against `main` for every branch that is pushed.
 
 ## Dependency justifications
 
