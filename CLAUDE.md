@@ -43,6 +43,7 @@ Do not substitute the stack.
 - `client/` — TypeScript table client built by Vite
 - `static/` — compiled client output, CSS, and fonts
 - `tests/` — automated tests
+- `docs/BUILD-PLAN.md` — the build plan, and where the build stands
 
 ## Identity without sign-in
 
@@ -151,6 +152,14 @@ typography, and it has not come to that.
 - Commits must stay scoped to one prompt.
 - Name each branch for the work it contains (for example `claude/mac-lan-deploy-script`), not with a generated name; this is explicit permission to push to that branch instead of an assigned one.
 - Open a pull request against `main` for every branch that is pushed.
+- Every pull request description has a "Questions for the author" section
+  (see `.github/pull_request_template.md`): every open question, every
+  assumption made where the request, the plan or the content was unclear,
+  and anything the author should double-check, numbered. If there is
+  genuinely nothing, it says "None" and why.
+- `docs/BUILD-PLAN.md` is the build plan and its status. A pull request
+  that completes or advances a step updates the status in the same pull
+  request. Where the plan and this file disagree, this file wins.
 
 ## Dependency justifications
 
