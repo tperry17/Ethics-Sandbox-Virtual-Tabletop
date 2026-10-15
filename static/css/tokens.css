@@ -57,24 +57,27 @@
 :root {
   color-scheme: light;
 
-  /* Cool paper and ink */
-  --surface-page: #f1f3f5;
-  --surface-raised: #fafbfc;
-  --surface-sunken: #e5e9ed;
-  --surface-border: #c9d0d7;
-  --surface-border-strong: #89949f;
-  --table-felt: #34484a;
-  --table-felt-edge: #1f3032;
-  --table-zone-outline: #9db0b2;
-  --table-zone-private: #293b40;
-  --table-drop-target: #d8c6c9;
-  --text-primary: #171b20;
-  --text-secondary: #46515c;
-  --text-muted: #697580;
-  --text-inverse: #f7f9fa;
-  --text-on-felt: #eef2f3;
-  --accent-rubric: #922d3a;
-  --accent-rubric-soft: #f2e1e4;
+  /* White page, Harvard crimson and the Center's blues (ELSCE brand style guide) */
+  --surface-page: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f2f4f7;
+  --surface-border: #d3d9e1;
+  --surface-border-strong: #8b95a3;
+  --table-felt: #2d5072;
+  --table-felt-edge: #172d4a;
+  --table-zone-outline: #c3d0de;
+  --table-zone-private: #223f61;
+  --table-drop-target: #cd9a57;
+  --card-back: #a41034;
+  --card-back-edge: #f8e6ea;
+  --card-back-ink: #ffffff;
+  --text-primary: #172d4a;
+  --text-secondary: #3c4b5f;
+  --text-muted: #5e6b7c;
+  --text-inverse: #ffffff;
+  --text-on-felt: #eef2f6;
+  --accent-rubric: #a41034;
+  --accent-rubric-soft: #f8e6ea;
   --semantic-assent: #236b5a;
   --semantic-tension: #69508f;
   --semantic-caution: #8a6115;
@@ -86,12 +89,12 @@
   --seat-4: #cc79a7;
   --seat-5: #f0e442;
   --seat-6: #0072b2;
-  --seat-ink: #162027;
+  --seat-ink: #172d4a;
 
   /* Supporting colour tokens */
-  --overlay: #171b20b8;
-  --shadow-color: #17232b2e;
-  --shadow-color-strong: #11191f52;
+  --overlay: #172d4ab8;
+  --shadow-color: #172d4a24;
+  --shadow-color-strong: #0f1e3347;
   --transparent: #00000000;
 
   /* Type */
@@ -132,23 +135,26 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --surface-page: #171d23;
-    --surface-raised: #202830;
-    --surface-sunken: #10161b;
-    --surface-border: #3e4a55;
-    --surface-border-strong: #71808d;
-    --table-felt: #243638;
-    --table-felt-edge: #111d1f;
-    --table-zone-outline: #6f8587;
-    --table-zone-private: #1a292d;
-    --table-drop-target: #593a40;
-    --text-primary: #f0f2f3;
-    --text-secondary: #c0c7cd;
-    --text-muted: #939ea8;
-    --text-inverse: #11171c;
-  --text-on-felt: #dfe6e8;
-    --accent-rubric: #e0717d;
-    --accent-rubric-soft: #41282d;
+    --surface-page: #0f1928;
+    --surface-raised: #18243a;
+    --surface-sunken: #0a121e;
+    --surface-border: #2f3e55;
+    --surface-border-strong: #6b7b91;
+    --table-felt: #1e3754;
+    --table-felt-edge: #0f1e33;
+    --table-zone-outline: #6f8aa8;
+    --table-zone-private: #162b45;
+    --table-drop-target: #b98a4c;
+    --card-back: #a41034;
+    --card-back-edge: #ec8aa0;
+    --card-back-ink: #ffffff;
+    --text-primary: #eef1f5;
+    --text-secondary: #c2cad5;
+    --text-muted: #919dad;
+    --text-inverse: #0f1928;
+    --text-on-felt: #f2f5f8;
+    --accent-rubric: #ec8aa0;
+    --accent-rubric-soft: #3f1b26;
     --semantic-assent: #72b9a5;
     --semantic-tension: #b9a1da;
     --semantic-caution: #dfb765;
@@ -158,32 +164,35 @@
     --seat-4: #cc79a7;
     --seat-5: #f0e442;
     --seat-6: #0072b2;
-    --seat-ink: #10171b;
-    --overlay: #080b0de0;
-    --shadow-color: #05080b66;
-    --shadow-color-strong: #03050699;
+    --seat-ink: #0f1928;
+    --overlay: #060b12e0;
+    --shadow-color: #03070d66;
+    --shadow-color-strong: #02040899;
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --surface-page: #171d23;
-  --surface-raised: #202830;
-  --surface-sunken: #10161b;
-  --surface-border: #3e4a55;
-  --surface-border-strong: #71808d;
-  --table-felt: #243638;
-  --table-felt-edge: #111d1f;
-  --table-zone-outline: #6f8587;
-  --table-zone-private: #1a292d;
-  --table-drop-target: #593a40;
-  --text-primary: #f0f2f3;
-  --text-secondary: #c0c7cd;
-  --text-muted: #939ea8;
-  --text-inverse: #11171c;
-  --text-on-felt: #dfe6e8;
-  --accent-rubric: #e0717d;
-  --accent-rubric-soft: #41282d;
+  --surface-page: #0f1928;
+  --surface-raised: #18243a;
+  --surface-sunken: #0a121e;
+  --surface-border: #2f3e55;
+  --surface-border-strong: #6b7b91;
+  --table-felt: #1e3754;
+  --table-felt-edge: #0f1e33;
+  --table-zone-outline: #6f8aa8;
+  --table-zone-private: #162b45;
+  --table-drop-target: #b98a4c;
+  --card-back: #a41034;
+  --card-back-edge: #ec8aa0;
+  --card-back-ink: #ffffff;
+  --text-primary: #eef1f5;
+  --text-secondary: #c2cad5;
+  --text-muted: #919dad;
+  --text-inverse: #0f1928;
+  --text-on-felt: #f2f5f8;
+  --accent-rubric: #ec8aa0;
+  --accent-rubric-soft: #3f1b26;
   --semantic-assent: #72b9a5;
   --semantic-tension: #b9a1da;
   --semantic-caution: #dfb765;
@@ -193,8 +202,8 @@
   --seat-4: #cc79a7;
   --seat-5: #f0e442;
   --seat-6: #0072b2;
-  --seat-ink: #10171b;
-  --overlay: #080b0de0;
-  --shadow-color: #05080b66;
-  --shadow-color-strong: #03050699;
+  --seat-ink: #0f1928;
+  --overlay: #060b12e0;
+  --shadow-color: #03070d66;
+  --shadow-color-strong: #02040899;
 }
