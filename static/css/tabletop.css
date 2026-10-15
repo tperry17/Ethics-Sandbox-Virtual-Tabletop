@@ -62,24 +62,19 @@
   color: var(--card-back-ink);
 }
 
-.piece--card.is-face-down::before {
-  width: 65%;
-  height: 65%;
-  border: var(--line-strong) solid var(--card-back-ink);
-  background: var(--transparent);
-  content: "";
-}
+/* A back carries the seal alone: no title rule. */
+.piece--card.is-face-down::before { content: none; }
 
 /* The Center's seal, in the back's ink. The image is used only as a mask, so
    its colour comes from the token; the style guide allows the seal in white
-   on a dark ground. */
+   on a dark ground, and its use here is approved (see CLAUDE.md). */
 .piece--card.is-face-down::after {
   position: absolute;
   inset: 0;
   background: var(--card-back-ink);
   content: "";
-  -webkit-mask: url("../icons/seal-512.png") center / 36% auto no-repeat;
-  mask: url("../icons/seal-512.png") center / 36% auto no-repeat;
+  -webkit-mask: url("../icons/seal-512.png") center / 62% auto no-repeat;
+  mask: url("../icons/seal-512.png") center / 62% auto no-repeat;
 }
 
 .piece--card.is-lifted {
