@@ -100,8 +100,10 @@ Checked against the code on `main`; none of these has been fixed yet.
   purged after 30 days, and the UI does not announce either.
 - **Prompt 2.** `/styleguide` still describes the design as a "scholarly
   edition", which CLAUDE.md now rules out. Being removed in a separate PR.
-- **No CI.** There is no `.github/workflows/`. Prompt 9 asks for
-  `validate-games` to fail CI, and Prompt 15 wires the suite into CI.
+- **CI.** `.github/workflows/ci.yml` runs Ruff, mypy, pytest and the
+  Playwright suite on every pull request. It does not run
+  `ruff format --check`, which fails on `main` for two files. Prompt 15
+  still adds the load check and the recorded-session security test.
 
 ## Changes since the plan was written
 
