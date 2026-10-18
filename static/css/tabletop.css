@@ -746,3 +746,12 @@
   font-family: var(--font-ui);
   font-size: var(--text-sm);
 }
+
+/* What a rolled die landed on. */
+.piece__value {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}

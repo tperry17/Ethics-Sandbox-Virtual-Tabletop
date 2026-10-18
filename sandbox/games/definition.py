@@ -202,9 +202,10 @@ class ShuffleStep(_Strict):
 class DealStep(_Strict):
     """``count`` pieces to each destination, one round at a time.
 
-    ``face_up`` turns the dealt pieces over as they land: a card dealt from
-    a face-down deck into a hand stays face down, unreadable even to the
-    hand's owner, unless the deal turns it up.
+    ``face_up`` turns the dealt pieces as they land. Left out, a piece dealt
+    into its owner's private hand lands face up - readable by the owner and
+    nobody else - and a piece dealt anywhere else stays as it came off the
+    pile.
     """
 
     op: Literal["deal"]
@@ -279,19 +280,15 @@ Step = Annotated[
 
 
 class MacroSpec(_Strict):
-    """One toolbar button: steps, or the name of a ``@macro`` function.
+    """One toolbar button: who may press it, and steps or a ``@macro`` name.
 
-    ``announce`` is what the table is told afterwards, with ``{name}`` for
-    who pressed it and ``{label}`` for the button. ``confirm``, when set, is
-    the question asked before a destructive macro runs.
+    What the button says - its label, hint, the question asked before it
+    runs, and what the table is told afterwards - is in the game's buttons
+    CSV, one row per macro id, so it can be edited as a spreadsheet.
     """
 
     id: Identifier
-    label: str = Field(min_length=1)
-    hint: str | None = None
     who: Literal["facilitator", "anyone"] = "facilitator"
-    confirm: str | None = None
-    announce: str = "{name} pressed “{label}”."
     steps: tuple[Step, ...] | None = None
     python: Identifier | None = None
 
@@ -301,26 +298,36 @@ class MacroSpec(_Strict):
             raise ValueError(
                 f"macro {self.id!r} needs exactly one of 'steps' or 'python'"
             )
-        names = {
-            name
-            for _text, name, _spec, _conversion in string.Formatter().parse(
-                self.announce
-            )
-            if name is not None
-        }
-        unknown = names - ANNOUNCE_FIELDS
-        if unknown:
-            raise ValueError(
-                f"macro {self.id!r} announces with unknown field(s) "
-                f"{sorted(unknown)}; use {{name}} and {{label}} only"
-            )
         return self
 
 
-class Prompts(_Strict):
-    """Facilitation questions, as a CSV with ``id`` and ``text`` columns."""
+def announce_fields(announce: str) -> set[str]:
+    """The ``{fields}`` an announcement uses."""
+    return {
+        name
+        for _text, name, _spec, _conversion in string.Formatter().parse(announce)
+        if name is not None
+    }
+
+
+class TextSource(_Strict):
+    """A CSV file under the content folder."""
 
     source: str = Field(min_length=1)
+
+
+class Prompts(TextSource):
+    """Facilitation questions, as a CSV with ``id`` and ``text`` columns."""
+
+
+class Buttons(TextSource):
+    """What each macro button says, as a CSV.
+
+    Columns: ``id`` (the macro), ``label``, ``hint``, ``confirm`` (asked
+    before it runs; give one to anything destructive) and ``announce`` (what
+    the table is told, with ``{name}`` for who pressed it and ``{label}``).
+    Only ``id`` and ``label`` must be filled in.
+    """
 
 
 class GameDefinition(_Strict):
@@ -332,6 +339,7 @@ class GameDefinition(_Strict):
     zones: tuple[ZoneSpec, ...]
     setup: tuple[Step, ...] = ()
     macros: tuple[MacroSpec, ...]
+    buttons: Buttons
     prompts: Prompts | None = None
 
     @model_validator(mode="after")
@@ -368,6 +376,7 @@ class GameDefinition(_Strict):
 
 __all__ = [
     "ANNOUNCE_FIELDS",
+    "Buttons",
     "ClearInkStep",
     "CollectStep",
     "Components",
@@ -390,5 +399,7 @@ __all__ = [
     "SpawnDeckStep",
     "SpawnStep",
     "Step",
+    "TextSource",
+    "announce_fields",
     "ZoneSpec",
 ]

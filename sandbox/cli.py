@@ -8,9 +8,14 @@ from collections.abc import Sequence
 
 
 def _validate_games() -> int:
+    from sandbox.games import extra_game_roots
     from sandbox.games.validation import validate_games
 
     report = validate_games()
+    for root in extra_game_roots():
+        extra = validate_games(root, root / "content", catalog_notes=False)
+        report.checked += extra.checked
+        report.errors += extra.errors
     for slug in report.checked:
         print(f"checked {slug}")
     for note in report.notes:

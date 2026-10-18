@@ -23,6 +23,7 @@ from sandbox.model.entities import (
     Stroke,
     Table,
     Zone,
+    rolled_value,
 )
 from sandbox.model.layout import place_in_zone
 from sandbox.model.results import Ok, OpOutcome, Patch, Reject
@@ -90,12 +91,51 @@ def _reason_piece_missing(piece: Piece | None, piece_id: str) -> str | None:
 
 
 def _reason_not_movable(table: Table, piece: Piece, actor_seat: str) -> str | None:
-    """Shared legality check for grabbing, moving, flipping, and rotating."""
-    if piece.locked and not table.is_facilitator(actor_seat):
+    """Shared legality check for grabbing, moving, flipping, and rotating.
+
+    The facilitator may take a piece from anywhere: a locked one, one
+    someone else is holding, one in someone else's hand. Anyone else may
+    not touch a locked piece, a piece another seat is holding, or a piece
+    resting in another seat's private zone - they may give a piece to
+    someone's hand, but not take one out of it.
+    """
+    if table.is_facilitator(actor_seat):
+        return None
+    if piece.locked:
         return "That piece is locked."
     if piece.held_by is not None and piece.held_by != actor_seat:
         return "Someone else is already holding that piece."
+    zone = table.zones.get(piece.zone_id)
+    owned = (Visibility.PRIVATE_TO_OWNER, Visibility.FACILITATOR_ONLY)
+    if (
+        zone is not None
+        and zone.visibility in owned
+        and zone.owner_seat is not None
+        and zone.owner_seat != actor_seat
+    ):
+        return "That piece is in someone else's hand."
     return None
+
+
+def _reason_cannot_take_from(table: Table, zone: Zone, actor_seat: str) -> str | None:
+    """Whether ``actor_seat`` may take pieces out of ``zone`` as a whole."""
+    if table.is_facilitator(actor_seat):
+        return None
+    owned = (Visibility.PRIVATE_TO_OWNER, Visibility.FACILITATOR_ONLY)
+    if zone.visibility in owned and zone.owner_seat not in (None, actor_seat):
+        return f"Only its owner or the facilitator may take from {zone.label}."
+    if any(
+        piece.held_by not in (None, actor_seat)
+        for piece in table.pieces_in_zone(zone.id)
+    ):
+        return f"Someone is holding a piece from {zone.label}."
+    return None
+
+
+def _take_from_holder(piece: Piece, actor_seat: str) -> None:
+    """A piece someone else was holding is no longer theirs once it is taken."""
+    if piece.held_by is not None and piece.held_by != actor_seat:
+        piece.held_by = None
 
 
 def _piece_patch(piece: Piece) -> Patch:
@@ -121,6 +161,7 @@ def _piece_patch(piece: Piece) -> Patch:
             "group_id": piece.group_id,
             "revealed_to": sorted(piece.revealed_to),
             "revealed_by": piece.revealed_by,
+            "value": rolled_value(piece),
         },
     )
 
@@ -213,6 +254,7 @@ class Move:
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         piece = table.pieces[self.piece_id]
+        _take_from_holder(piece, actor_seat)
         piece.x, piece.y = self.x, self.y
         return [_piece_patch(piece)]
 
@@ -257,6 +299,7 @@ class MoveToZone:
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         piece = table.pieces[self.piece_id]
         zone = table.zones[self.zone_id]
+        _take_from_holder(piece, actor_seat)
         piece.zone_id = zone.id
         piece.z = table.next_z_in_zone(zone.id)
         _clear_reveal(piece)
@@ -308,6 +351,7 @@ class StackOnto:
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         piece = table.pieces[self.piece_id]
         onto = table.pieces[self.onto_id]
+        _take_from_holder(piece, actor_seat)
         if piece.zone_id != onto.zone_id:
             _clear_reveal(piece)
         piece.zone_id = onto.zone_id
@@ -411,9 +455,11 @@ class Shuffle:
         zone = _get_zone(table, self.zone_id)
         if zone is None:
             return f"There is no zone {self.zone_id!r} on the table."
+        # Even the facilitator does not shuffle a card out from under the
+        # hand holding it: what that hand holds would change mid-drag.
         if any(piece.held_by is not None for piece in table.pieces_in_zone(zone.id)):
             return f"Someone is holding a piece from {zone.label}."
-        return None
+        return _reason_cannot_take_from(table, zone, actor_seat)
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         pieces = table.pieces_in_zone(self.zone_id)
@@ -453,13 +499,14 @@ class Draw:
         available = table.pieces_in_zone(self.from_zone)
         if len(available) < self.count:
             return f"Only {len(available)} pieces remain in {source.label}."
-        return None
+        return _reason_cannot_take_from(table, source, actor_seat)
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         destination = table.zones[self.to_zone]
         drawn = table.pieces_in_zone(self.from_zone)[-self.count :]
         patches = []
         for piece in drawn:
+            _take_from_holder(piece, actor_seat)
             next_z = table.next_z_in_zone(destination.id)
             index = len(table.pieces_in_zone(destination.id))
             piece.zone_id = destination.id
@@ -503,7 +550,7 @@ class Deal:
                 f"Only {available} pieces remain in {source.label}, "
                 f"but dealing needs {needed}."
             )
-        return None
+        return _reason_cannot_take_from(table, source, actor_seat)
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         patches: list[Patch] = []
@@ -929,7 +976,7 @@ class Despawn:
 
 @dataclass(frozen=True)
 class ResetZone:
-    """Despawn every piece currently in one zone."""
+    """Despawn every piece currently in one zone. Facilitator-only, like Despawn."""
 
     zone_id: str
     op_id: str = field(default_factory=new_op_id)
@@ -937,6 +984,8 @@ class ResetZone:
     def validate(self, table: Table, actor_seat: str) -> str | None:
         if _get_zone(table, self.zone_id) is None:
             return f"There is no zone {self.zone_id!r} on the table."
+        if not table.is_facilitator(actor_seat):
+            return "Only the facilitator may clear a zone."
         return None
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
@@ -1177,6 +1226,32 @@ class AddSeat:
                     "participant_id": seat.participant_id,
                     "is_facilitator": seat.is_facilitator,
                 },
+            )
+        ]
+
+
+@dataclass(frozen=True)
+class AssignSeat:
+    """Set who sits in a seat, or empty it. Only the room service issues this."""
+
+    seat_id: str
+    participant_id: str | None
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        if self.seat_id not in table.seats:
+            return f"There is no seat {self.seat_id!r} at the table."
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        seat = table.seats[self.seat_id]
+        seat.participant_id = self.participant_id
+        return [
+            Patch(
+                kind="seat",
+                op="upsert",
+                entity_id=seat.id,
+                fields={"participant_id": seat.participant_id},
             )
         ]
 

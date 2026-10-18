@@ -13,6 +13,7 @@ from sandbox.games.loader import Game, load_game
 from sandbox.model import Ok, OpOutcome, Reject, Table, TableRng, run_op
 
 FIXTURE_GAMES = Path(__file__).resolve().parent / "games"
+FIXTURE_CONTENT = FIXTURE_GAMES / "content"
 
 
 def two_doors() -> Game:
@@ -20,7 +21,7 @@ def two_doors() -> Game:
 
 
 def hooked() -> Game:
-    return load_game(FIXTURE_GAMES / "hooked")
+    return load_game(FIXTURE_GAMES / "hooked", FIXTURE_CONTENT)
 
 
 def seated(game: Game, people: int, *, seed: int = 0) -> Table:

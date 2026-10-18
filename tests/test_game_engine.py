@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
 
 from _games_support import hooked, press, seated, two_doors
 
 from sandbox.db.snapshot import to_snapshot
+from sandbox.games import Game
+from sandbox.games.definition import GameDefinition
 from sandbox.games.engine import (
     announcement,
     build_macro,
@@ -327,3 +330,35 @@ def test_an_anyone_macro_that_needs_the_facilitator_is_refused_by_the_model() ->
     outcome = press(game, table, "clear_ink", seat="seat-2")
 
     assert outcome == Reject("Only the facilitator may clear everyone's ink.")
+
+
+def _with_deal(steps: list[dict[str, object]]) -> Game:
+    """Two Doors, with its Deal button doing ``steps`` instead."""
+    game = two_doors()
+    raw = game.definition.model_dump(by_alias=True)
+    raw["macros"] = [
+        {**macro, "steps": steps} if macro["id"] == "deal" else macro
+        for macro in raw["macros"]
+    ]
+    return dataclasses.replace(game, definition=GameDefinition.model_validate(raw))
+
+
+def test_a_card_dealt_to_a_public_zone_stays_as_it_came_off_the_deck() -> None:
+    game = _with_deal([{"op": "draw", "from": "deck", "to": "doors", "count": 1}])
+    table = seated(game, 1)
+
+    assert isinstance(press(game, table, "deal"), Ok)
+
+    assert [piece.face_up for piece in table.pieces_in_zone("doors")] == [False]
+
+
+def test_a_deal_that_says_face_down_keeps_a_hand_card_face_down() -> None:
+    game = _with_deal(
+        [{"op": "deal", "from": "deck", "to": "hand", "count": 1, "face_up": False}]
+    )
+    table = seated(game, 1)
+
+    assert isinstance(press(game, table, "deal"), Ok)
+
+    assert [piece.face_up for piece in table.pieces_in_zone("hand-seat-1")] == [False]
+    assert _component_ids_seen(table, "seat-1") == set()

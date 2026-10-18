@@ -40,18 +40,22 @@ in the file is the order they appear on the page.
 ## Exercise content
 
 Each exercise's game content - its deck, its roles, its facilitation
-prompts - lives under `exercises/<exercise>/`, and the exercise's game
-definition (`sandbox/games/<exercise>/game.yaml`) names the files it reads.
-
-`exercises/two-doors/cards.csv` and `prompts.csv` are live: Two Doors is
-the reference game that documents the definition format. It is not on the
-public site; a room can be started for it at `/start?game=two-doors`.
+prompts, and what its buttons say - lives under `exercises/<exercise>/`,
+and the exercise's game definition (`sandbox/games/<exercise>/game.yaml`)
+names the files it reads.
 
 `exercises/value-cards-trading/cards.csv` and
 `exercises/democracy-simulation/roles.csv` are not read yet. Their
 exercises get game definitions in later steps of the build plan
 (`docs/BUILD-PLAN.md`, prompts 10 and 11), which will read exactly these
 files. Fill them in as spreadsheets ahead of that work.
+
+A game's buttons CSV (for example `exercises/<exercise>/buttons.csv`) has
+one row per button: `id` (which button; it matches the game definition),
+`label`, `hint` (shown on hover), `confirm` (the question asked before a
+button that clears or undoes something) and `announce` (what everyone is
+told afterwards; `{name}` is whoever pressed it and `{label}` the button).
+Only `id` and `label` must be filled in.
 
 In a deck, the column the definition names as its `key` (`name` in these
 files) must be unique: it identifies the card. Renaming a card is changing

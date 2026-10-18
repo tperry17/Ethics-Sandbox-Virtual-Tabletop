@@ -108,6 +108,9 @@ Checked against the code on `main`; none of these has been fixed yet.
 
 Where these conflict with a prompt below, these win.
 
+- **Two Doors.** Prompt 9's reference game is a test fixture
+  (`tests/games/two_doors/`), not part of the product, at the author's
+  decision. Button wording is a per-game CSV, not YAML.
 - **Voice.** Prompts 1 and 2 describe the look and voice as a "scholarly
   edition". CLAUDE.md now says to avoid that framing and keep the register
   plain and direct.

@@ -151,9 +151,12 @@ typography, and it has not come to that.
 
 An exercise's table is data. A game is a directory under `sandbox/games/`
 holding a `game.yaml`, an `__init__.py`, and optionally a `rules.py` for
-what the YAML cannot say. `sandbox/games/two_doors/` is the worked example:
-read it alongside this section. Its cards and prompts are CSV under
-`content/exercises/two-doors/`.
+what the YAML cannot say. No exercise has one yet. The worked example is
+Two Doors, a test fixture in `tests/games/two_doors/` whose CSV files are in
+`tests/games/content/exercises/two-doors/`: read it alongside this section.
+It is not part of the product; the app loads it only when
+`SANDBOX_EXTRA_GAMES` names `tests/games`, as pytest and the Playwright
+server do.
 
 `game.yaml` has these sections, checked by `sandbox/games/definition.py`:
 
@@ -172,20 +175,22 @@ read it alongside this section. Its cards and prompts are CSV under
   `<id>-<seat id>`, owned by that seat and moved by `step: [dx, dy]` per
   seat. A `private_to_owner` zone must be per-seat.
 - `setup` — steps that build the starting table when a room is created.
-- `macros` — buttons: `id`, `label`, `hint`, `who` (facilitator or
-  anyone), `confirm` (asked first; give one to anything destructive),
-  `announce` (`{name}` and `{label}`), and either `steps` or
-  `python: <function>`. Every game has `setup`, `deal`, `reset`,
-  `shuffle`, `collect` and `clear_ink`.
+- `macros` — buttons: `id`, `who` (facilitator or anyone), and either
+  `steps` or `python: <function>`. Every game has `setup`, `deal`,
+  `reset`, `shuffle`, `collect` and `clear_ink`.
+- `buttons` — `source:` a CSV saying what each macro's button says, one
+  row per macro: `id`, `label`, `hint`, `confirm` (asked first; give one to
+  anything destructive) and `announce` (`{name}` and `{label}`).
 - `prompts` — `source:` a CSV with `id` and `text` columns.
 
 Steps are `{op: ..., ...}`: `setup` (run the setup steps here),
 `spawn_deck`, `spawn`, `shuffle`, `deal` and `draw` (`from`, `to`,
 `count`, `face_up`), `collect` (`to`, optional `kinds`, `from`,
 `face_up`), `flip`, `reset_table`, `reset_zone`, `clear_ink`. Naming a
-per-seat zone means every seat's copy, in seat order. A card dealt from a
-face-down deck stays face down - unreadable even to its owner - unless the
-deal says `face_up: true`.
+per-seat zone means every seat's copy, in seat order. A card dealt or
+drawn into its owner's private hand lands face up, so its owner can read
+it; anywhere else it stays as it came off the pile. `face_up` in the step
+overrides either.
 
 `sandbox/games/engine.py` turns a macro, a new seat, or a new table into
 one `Transaction` of concrete operations, trying each against a copy of the
@@ -237,6 +242,24 @@ runs the same check. `/games/{slug}/preview` draws a game's table after
 setup from the spectator projection, and an exercise page shows it once
 the exercise has a definition. `/start?game={slug}` starts an unlisted
 game. Definitions and content hot-reload under `uv run dev`.
+
+### Who may move what
+
+The facilitator may take any piece from anywhere: a locked one, one
+someone else is holding mid-drag, one in someone's hand. A participant may
+not touch a locked piece, a piece someone else is holding, or a piece in
+another seat's private zone; they may give a piece to someone's hand, but
+not take one out of it. Only the facilitator may clear a zone, despawn a
+piece or reset the table. When the facilitator takes a piece out of
+someone's drag, that person's drag so far is logged first, and what they
+send for the piece afterwards is refused until they pick it up again.
+
+A rolled die's face (`value` on the wire) is sent only to viewers who may
+see the die's face, like its `component_id`. When the last person leaves a
+live room, its table is saved as it was left. Who sits where belongs to the
+room service: callers of `rooms.claim_seat`, `release_seat`,
+`make_observer` and `remove_participant` call `hub.seats_changed(code)`
+after committing, and a live room's snapshots never overwrite it.
 
 ## Rules of engagement
 

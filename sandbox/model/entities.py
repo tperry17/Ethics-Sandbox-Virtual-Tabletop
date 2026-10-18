@@ -70,6 +70,17 @@ class Piece:
     props: dict[str, object] = field(default_factory=dict)
 
 
+def rolled_value(piece: Piece) -> str | None:
+    """The face a die is showing, as text, or None for anything unrolled.
+
+    A rolled die keeps its result in ``props["value"]``. Unlike the rest of
+    ``props`` it is sent to browsers, but only to those entitled to the
+    die's face, the same as its ``component_id``.
+    """
+    value = piece.props.get("value")
+    return None if value is None else str(value)
+
+
 @dataclass
 class Zone:
     """A named area of the table with its own visibility and layout rule."""

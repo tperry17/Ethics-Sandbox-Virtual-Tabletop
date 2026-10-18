@@ -20,10 +20,13 @@ setup:
   - {op: spawn, component: d6, zone: table}
 
 macros:
-  - {id: setup, label: Set up, steps: [{op: reset_table}, {op: setup}]}
-  - {id: deal, label: Deal, python: marker_each}
-  - {id: reset, label: Reset, steps: [{op: reset_table}]}
-  - {id: shuffle, label: Shuffle, steps: [{op: shuffle, zone: table}]}
-  - {id: collect, label: Collect, steps: [{op: collect, to: table}]}
-  - {id: clear_ink, label: Clear ink, who: anyone, steps: [{op: clear_ink}]}
-  - {id: refuse, label: Refuse, who: anyone, python: always_refuse}
+  - {id: setup, steps: [{op: reset_table}, {op: setup}]}
+  - {id: deal, python: marker_each}
+  - {id: reset, steps: [{op: reset_table}]}
+  - {id: shuffle, steps: [{op: shuffle, zone: table}]}
+  - {id: collect, steps: [{op: collect, to: table}]}
+  - {id: clear_ink, who: anyone, steps: [{op: clear_ink}]}
+  - {id: refuse, who: anyone, python: always_refuse}
+
+buttons:
+  source: exercises/hooked/buttons.csv

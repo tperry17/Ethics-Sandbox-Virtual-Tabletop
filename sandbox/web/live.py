@@ -48,6 +48,7 @@ from sandbox.games.engine import announcement, build_macro
 from sandbox.model import (
     AddSeat,
     AddZone,
+    AssignSeat,
     ClearInk,
     Deal,
     Despawn,
@@ -197,6 +198,7 @@ class PieceView(BaseModel):
     component_id: str | None
     revealed_to: list[str] = Field(default_factory=list)
     revealed_by: str | None = None
+    value: str | None = None
 
 
 class RectView(BaseModel):
@@ -524,10 +526,10 @@ def macro_views(game: Game | None) -> tuple[MacroView, ...]:
     return tuple(
         MacroView(
             id=macro.id,
-            label=macro.label,
-            hint=macro.hint,
+            label=game.buttons[macro.id].label,
+            hint=game.buttons[macro.id].hint,
             facilitator_only=macro.who == "facilitator",
-            confirm=macro.confirm,
+            confirm=game.buttons[macro.id].confirm,
         )
         for macro in game.definition.macros
     )
@@ -645,13 +647,21 @@ class _Inbound:
 
 
 @dataclass(frozen=True)
+class _SeatsChanged:
+    """Who sits where changed in the database; here is every stored seat."""
+
+    occupants: dict[str, str | None]
+    names: dict[str, str]
+
+
+@dataclass(frozen=True)
 class _SeatTaken:
     """Someone sat down while the room was live; here is their stored seat."""
 
     stored: tuple[Seat, tuple[Zone, ...]]
 
 
-_Command = _Join | _Leave | _Inbound | _SeatTaken
+_Command = _Join | _Leave | _Inbound | _SeatTaken | _SeatsChanged
 
 
 @dataclass(frozen=True)
@@ -732,6 +742,24 @@ def _load_seat(
         return _stored_seat(session, room, participant.seat_id)
 
 
+def _load_occupants(
+    factory: sessionmaker[Session], code: str
+) -> tuple[dict[str, str | None], dict[str, str]] | None:
+    """Every stored seat's occupant, and the names of the people seated."""
+    with session_scope(factory) as session:
+        room = rooms.get_room_by_code(session, code)
+        if room is None:
+            return None
+        table = rooms.load_table(session, room)
+        occupants = {seat.id: seat.participant_id for seat in table.seats.values()}
+        names = {
+            person.seat_id: person.display_name
+            for person in room.participants
+            if person.seat_id is not None
+        }
+        return occupants, names
+
+
 def _load_participant(
     factory: sessionmaker[Session], code: str, cookie_id: str
 ) -> tuple[Room, Participant, tuple[Seat, tuple[Zone, ...]] | None] | None:
@@ -793,6 +821,10 @@ class RoomRuntime:
         self._pending_moves: dict[str, tuple[str, Move]] = {}
         self._unlogged_moves: dict[str, _PendingEvent] = {}
         self._holds: dict[str, tuple[str, float]] = {}
+        # Pieces the facilitator took out of someone's hand mid-drag, and
+        # whose hand it was. That person's drag is over: what they send for
+        # the piece next is refused, until they pick it up afresh.
+        self._taken: dict[str, str] = {}
         self._pending_events: list[_PendingEvent] = []
         self._events_since_snapshot = 0
         self._snapshot_due = False
@@ -808,12 +840,22 @@ class RoomRuntime:
             self._task = asyncio.create_task(self._run(), name=f"room:{self.code}")
 
     async def stop(self) -> None:
+        """Stop the room task, then save the table exactly as it was left.
+
+        A room's snapshot is otherwise written only every 200 events or after
+        a macro, so without this last save a room everyone has left would
+        come back as it stood at its last snapshot, losing every move since.
+        """
         if self._task is None:
             return
         self._task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await self._task
         self._task = None
+        for piece_id in list(self._pending_moves) + list(self._unlogged_moves):
+            self._settle_piece(piece_id)
+        self._snapshot_due = True
+        await self._flush_persistence()
 
     @property
     def connection_count(self) -> int:
@@ -832,6 +874,11 @@ class RoomRuntime:
 
     async def seat_taken(self, stored: tuple[Seat, tuple[Zone, ...]]) -> None:
         await self._commands.put(_SeatTaken(stored))
+
+    async def seats_changed(
+        self, occupants: dict[str, str | None], names: dict[str, str]
+    ) -> None:
+        await self._commands.put(_SeatsChanged(occupants, names))
 
     async def drain(self) -> None:
         """Wait until every queued command has been handled. For tests."""
@@ -885,6 +932,9 @@ class RoomRuntime:
             self._bring_seat(command.stored)
             self._presence_due = True
             return
+        if isinstance(command, _SeatsChanged):
+            self._seat_occupants(command.occupants, command.names)
+            return
         if isinstance(command, _Leave):
             self._on_leave(command.connection)
             return
@@ -936,10 +986,32 @@ class RoomRuntime:
             if other.ready:
                 self._send_snapshot(other)
 
+    def _seat_occupants(
+        self, occupants: dict[str, str | None], names: dict[str, str]
+    ) -> None:
+        """Take who sits where from the database, which owns it."""
+        for seat_id, participant_id in occupants.items():
+            seat = self.table.seats.get(seat_id)
+            if seat is None or seat.participant_id == participant_id:
+                continue
+            # Not logged: the room service logs seat changes, if anything does.
+            outcome = run_op(
+                self.table,
+                seat_id,
+                AssignSeat(seat_id=seat_id, participant_id=participant_id),
+            )
+            if isinstance(outcome, Ok) and outcome.patches:
+                self._broadcast_patches(outcome.patches)
+        self._names = dict(names)
+        self._presence_due = True
+
     def _on_leave(self, connection: Connection) -> None:
         self._connections.pop(connection.id, None)
         seat_id = connection.seat_id
         if seat_id is not None:
+            for piece_id, holder in list(self._taken.items()):
+                if holder == seat_id:
+                    del self._taken[piece_id]
             self._cursors.pop(seat_id, None)
             self._release_seat_holds(seat_id)
         self._presence_due = True
@@ -1010,6 +1082,15 @@ class RoomRuntime:
             self._reject(connection, message.client_id, str(error))
             return
 
+        piece_id = getattr(operation, "piece_id", None)
+        if isinstance(piece_id, str) and self._taken.get(piece_id) == seat_id:
+            if not isinstance(operation, Grab):
+                self._reject(
+                    connection, message.client_id, "The facilitator took that piece."
+                )
+                return
+            del self._taken[piece_id]
+
         # Legality is judged now, against the current table, so the person
         # who tried gets an immediate, honest answer even for a move whose
         # broadcast is coalesced.
@@ -1061,8 +1142,7 @@ class RoomRuntime:
         if isinstance(op_id, str) and op_id:
             built = dataclasses.replace(built, op_id=op_id)
         # A drag still being coalesced lands before the macro, not after it.
-        for piece_id in list(self._pending_moves):
-            self._settle_piece(piece_id)
+        self._land_drags(list(self._pending_moves))
         outcome = self._apply(seat_id, built, log=True)
         if not isinstance(outcome, Ok):
             self._reject(connection, message.client_id, outcome.reason)
@@ -1111,9 +1191,28 @@ class RoomRuntime:
         # A retried intent carries the op_id of one already applied. The
         # model absorbs it silently; the log must not gain a second copy.
         already_applied = operation.op_id in self.table.applied_op_ids
+        # The facilitator may take a piece someone else is holding. Their
+        # drag so far is landed and logged first, so the log reads in order.
+        held_by_others = (
+            {
+                piece.id: piece.held_by
+                for piece in self.table.pieces.values()
+                if piece.held_by is not None and piece.held_by != seat_id
+            }
+            if self.table.is_facilitator(seat_id)
+            else {}
+        )
+        if held_by_others:
+            self._land_drags(list(held_by_others))
         outcome = run_op(self.table, seat_id, operation)
         if not isinstance(outcome, Ok):
             return outcome
+        for piece_id, holder in held_by_others.items():
+            piece = self.table.pieces.get(piece_id)
+            if piece is None or piece.held_by != holder:
+                self._taken[piece_id] = holder
+                self._holds.pop(piece_id, None)
+                self._pending_moves.pop(piece_id, None)
         if log and not already_applied:
             self._pending_events.append(
                 _PendingEvent(actor_seat=seat_id, operation=operation)
@@ -1128,6 +1227,21 @@ class RoomRuntime:
         if outcome.patches:
             self._broadcast_patches(outcome.patches)
         return outcome
+
+    def _land_drags(self, piece_ids: list[str]) -> None:
+        """Apply and log where these drags have got to, leaving them held."""
+        for piece_id in piece_ids:
+            pending = self._pending_moves.pop(piece_id, None)
+            if pending is not None:
+                holder, move = pending
+                if isinstance(self._apply(holder, move, log=False), Ok):
+                    self._unlogged_moves[piece_id] = _PendingEvent(
+                        actor_seat=holder, operation=move
+                    )
+            landed = self._unlogged_moves.pop(piece_id, None)
+            if landed is not None:
+                self._pending_events.append(landed)
+                self._events_since_snapshot += 1
 
     def _flush_moves(self) -> None:
         """Apply at most one move per piece per tick: the latest position wins.
@@ -1241,6 +1355,7 @@ class RoomRuntime:
                     component_id=piece.component_id,
                     revealed_to=list(piece.revealed_to),
                     revealed_by=piece.revealed_by,
+                    value=piece.value,
                 )
                 for piece in view.pieces
             ],
@@ -1449,6 +1564,22 @@ class LiveHub:
         )
         if stored is not None:
             await runtime.seat_taken(stored)
+
+    async def seats_changed(self, code: str) -> None:
+        """Tell a live room that who sits where has changed in the database.
+
+        Whoever calls ``rooms.claim_seat``, ``release_seat``,
+        ``make_observer`` or ``remove_participant`` while a room may be live
+        calls this once the change is committed. A room nobody has open
+        reads its seats from the database when it starts.
+        """
+        async with self._lock:
+            runtime = self._rooms.get(code)
+        if runtime is None:
+            return
+        loaded = await asyncio.to_thread(_load_occupants, self.session_factory, code)
+        if loaded is not None:
+            await runtime.seats_changed(*loaded)
 
     async def close_room(self, code: str) -> None:
         async with self._lock:

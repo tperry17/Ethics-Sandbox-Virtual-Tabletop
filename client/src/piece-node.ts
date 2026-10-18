@@ -207,6 +207,7 @@ export class PieceNode {
             component?.body ?? "",
             component?.folio ?? "",
             component?.image ?? "",
+            piece.value ?? "",
             label,
           ].join("\u0000");
     if (signature === this.faceSignature) return;
@@ -221,12 +222,19 @@ export class PieceNode {
       "aria-label",
       component?.title ?? label ?? `A ${piece.kind}`,
     );
-    if (component === undefined) {
-      // The server named a component this client has not been sent. Draw a
-      // blank face rather than inventing one.
-      return;
+    if (component !== undefined) appendFace(this.body, component);
+    // A component the client has not been sent gets a blank face rather
+    // than an invented one; a rolled die still shows what it landed on.
+    if (piece.value !== undefined && piece.value !== null) {
+      const value = document.createElement("span");
+      value.className = "piece__value";
+      value.textContent = piece.value;
+      this.body.append(value);
+      this.element.setAttribute(
+        "aria-label",
+        `${component?.title ?? `A ${piece.kind}`} showing ${piece.value}`,
+      );
     }
-    appendFace(this.body, component);
   }
 
   /** The little badge showing whose hand is on this piece. */

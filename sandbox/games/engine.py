@@ -300,14 +300,29 @@ class _Builder:
         self.run(
             Deal(from_zone=step.from_zone, to_zones=destinations, count_each=step.count)
         )
-        self._turn(dealt, step.face_up)
+        self._land(dealt, step.face_up)
 
     def _draw(
         self, source: str, destination: str, count: int, face_up: bool | None
     ) -> None:
         drawn = [piece.id for piece in self.trial.pieces_in_zone(source)[-count:]]
         self.run(Draw(count=count, from_zone=source, to_zone=destination))
-        self._turn(drawn, face_up)
+        self._land(drawn, face_up)
+
+    def _land(self, piece_ids: Sequence[str], face_up: bool | None) -> None:
+        """Turn dealt or drawn pieces as they land.
+
+        With no ``face_up`` in the step, a piece dealt into its owner's
+        private hand is turned face up, so the owner can read it and nobody
+        else can. Anywhere else it stays as it came off the pile.
+        """
+        if face_up is not None:
+            self._turn(piece_ids, face_up)
+            return
+        for piece_id in piece_ids:
+            zone = self.trial.zones[self.trial.pieces[piece_id].zone_id]
+            if zone.visibility is Visibility.PRIVATE_TO_OWNER:
+                self._turn([piece_id], True)
 
     def _collect(self, step: CollectStep) -> None:
         if step.from_zones:
@@ -372,7 +387,8 @@ def build_macro(
     if spec is None:
         return Reject(f"This exercise has no button called {macro_id!r}.")
     if spec.who == "facilitator" and not table.is_facilitator(actor_seat):
-        return Reject(f"Only the facilitator can use “{spec.label}”.")
+        label = game.buttons[macro_id].label
+        return Reject(f"Only the facilitator can use “{label}”.")
     builder = _Builder(game, table, actor_seat)
     try:
         builder.hooks("before_macro", builder.context(macro_id=macro_id))
@@ -386,15 +402,17 @@ def build_macro(
             )
     except _Refused as refusal:
         return Reject(refusal.reason)
-    return builder.transaction(name=f"macro:{macro_id}", label=spec.label)
+    return builder.transaction(
+        name=f"macro:{macro_id}", label=game.buttons[macro_id].label
+    )
 
 
 def announcement(game: Game, macro_id: str, name: str) -> str:
     """What the table is told after ``name`` pressed ``macro_id``."""
-    spec = game.definition.macro(macro_id)
-    if spec is None:
+    button = game.buttons.get(macro_id)
+    if button is None:
         return ""
-    return spec.announce.format(name=name, label=spec.label)
+    return button.announce.format(name=name, label=button.label)
 
 
 __all__ = [

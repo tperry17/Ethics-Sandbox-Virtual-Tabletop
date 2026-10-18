@@ -142,12 +142,14 @@ def save_table_state(session: Session, room: Room, table: Table) -> None:
 
 
 def save_live_table_state(session: Session, room: Room, table: Table) -> None:
-    """Persist a live room's table, keeping seats it has not heard of yet.
+    """Persist a live room's table, keeping what the room service owns.
 
-    A seat taken while the room is live is written to the stored table by
-    ``join_room`` and reaches the room task's table only when that person
-    connects. Until then the stored seat, and the zones it owns, must
-    survive the room task's own snapshots.
+    Who sits where is the room service's to change (``join_room``,
+    ``claim_seat``, ``release_seat`` and the rest), and it writes those
+    changes to the stored table, not to the live one. So a live room's
+    snapshot keeps the stored seats it has not heard of yet, with the zones
+    they own, and every stored seat's occupant, rather than writing back
+    its own older copy over them.
     """
     state = session.get(TableState, room.id)
     snapshot = to_snapshot(table)
@@ -160,6 +162,9 @@ def save_live_table_state(session: Session, room: Room, table: Table) -> None:
         assert isinstance(stored_seats, dict) and isinstance(stored_zones, dict)
         for seat_id, seat in stored_seats.items():
             if seat_id in seats:
+                live_seat = seats[seat_id]
+                if isinstance(live_seat, dict) and isinstance(seat, dict):
+                    live_seat["participant_id"] = seat.get("participant_id")
                 continue
             seats[seat_id] = seat
             for zone_id, zone in stored_zones.items():

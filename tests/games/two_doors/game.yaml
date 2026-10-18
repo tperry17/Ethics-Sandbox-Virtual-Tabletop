@@ -1,4 +1,4 @@
-# Two Doors - the worked example of a game definition.
+# Two Doors - the worked example of a game definition, kept with the tests.
 # CLAUDE.md, "Game definitions", explains every section of this file.
 
 meta:
@@ -7,7 +7,7 @@ meta:
   players: {min: 2, max: 2}
   duration_minutes: 10
   facilitator: optional
-  listed: false            # a worked example, not on the public site
+  listed: false            # a test fixture, never on the public site
 
 components:
   decks:
@@ -52,51 +52,32 @@ zones:
 setup:
   - {op: spawn_deck, deck: doors, zone: deck}   # a hidden deck is shuffled as it is made
 
-macros:
+macros:                    # what each button says: content/.../buttons.csv
   - id: setup
-    label: Set up
-    hint: Clear the table and lay out a fresh, shuffled deck.
-    confirm: This clears the table and sets it up again. Continue?
-    announce: "{name} set up the table."
     steps:
       - {op: reset_table}
       - {op: setup}
   - id: deal
-    label: Deal one each
-    hint: One card, face up, into each seat's hand.
-    announce: "{name} dealt one card to each seat."
     steps:
-      - {op: deal, from: deck, to: hand, count: 1, face_up: true}
+      - {op: deal, from: deck, to: hand, count: 1}   # into a private hand, so face up
   - id: reveal
-    label: Reveal
-    hint: Lay each seat's card face up on the doors.
-    announce: "{name} revealed both doors."
     python: reveal
   - id: reset
-    label: Reset
-    hint: Remove every card and all ink.
-    confirm: This removes every card and all ink from the table. Continue?
-    announce: "{name} cleared the table."
     steps:
       - {op: reset_table}
   - id: shuffle
-    label: Shuffle deck
-    announce: "{name} shuffled the deck."
     steps:
       - {op: shuffle, zone: deck}
   - id: collect
-    label: Collect all cards
-    hint: Every card back into the deck, face down, shuffled.
-    announce: "{name} collected every card into the deck."
     steps:
       - {op: collect, to: deck, kinds: [card], face_up: false}
       - {op: shuffle, zone: deck}
   - id: clear_ink
-    label: Clear ink
-    confirm: This erases everyone's ink. Continue?
-    announce: "{name} cleared all ink."
     steps:
       - {op: clear_ink}
+
+buttons:
+  source: exercises/two-doors/buttons.csv
 
 prompts:
   source: exercises/two-doors/prompts.csv

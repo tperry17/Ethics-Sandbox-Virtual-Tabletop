@@ -13,7 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from sandbox.content_loading import read_rows
+from sandbox.content_loading import CONTENT_ROOT, read_rows
 from sandbox.games.engine import build_macro, build_seat, build_table
 from sandbox.games.loader import (
     GAMES_ROOT,
@@ -73,14 +73,24 @@ def play_through(game: Game, seed: int = 0) -> None:
                     ) from error
 
 
-def validate_games(root: Path = GAMES_ROOT) -> Report:
-    """Load, cross-check and play every game under ``root``."""
+def validate_games(
+    root: Path = GAMES_ROOT,
+    content_root: Path = CONTENT_ROOT,
+    *,
+    catalog_notes: bool = True,
+) -> Report:
+    """Load, cross-check and play every game under ``root``.
+
+    ``catalog_notes`` adds a note for each catalog exercise with no game
+    here; it is off for a folder of extra games, which the catalog is not
+    about.
+    """
     report = Report()
     catalog = {row["slug"]: row for row in read_rows(EXERCISES_CSV)}
     slugs: dict[str, str] = {}
     for directory in game_directories(root):
         try:
-            game = load_game(directory)
+            game = load_game(directory, content_root)
         except GameDefinitionError as error:
             report.errors.append(str(error))
             continue
@@ -107,7 +117,7 @@ def validate_games(root: Path = GAMES_ROOT) -> Report:
             play_through(game)
         except GameDefinitionError as error:
             report.errors.append(f"{directory.name}: {error}")
-    for slug in sorted(set(catalog) - set(slugs)):
+    for slug in sorted(set(catalog) - set(slugs)) if catalog_notes else ():
         report.notes.append(
             f"{slug} is in content/{EXERCISES_CSV} but has no game definition "
             "yet; its tables start empty."

@@ -14,6 +14,7 @@ from sqlalchemy.orm import sessionmaker
 from sandbox.db.engine import session_scope
 from sandbox.db.models import Event, TableState
 from sandbox.db.snapshot import from_snapshot
+from sandbox.model import Table
 from sandbox.web import rooms
 from sandbox.web.live import LiveHub, _load_participant
 
@@ -243,3 +244,50 @@ async def test_a_seat_reaches_the_live_table_as_soon_as_it_is_taken() -> None:
         await room.press(host, "deal")
 
         assert len(room.runtime.table.pieces_in_zone("hand-seat-2")) == 1
+
+
+# -- what survives a live room ------------------------------------------------------
+
+
+def _stored(room: GameRoom) -> Table:
+    with session_scope(room.factory) as session:
+        state = session.get(TableState, room.runtime.room_id)
+        assert state is not None
+        return from_snapshot(state.snapshot)
+
+
+async def test_the_table_is_saved_as_it_was_left_when_the_last_person_goes() -> None:
+    async with two_doors_room() as room:
+        host = await room.arrive(FACILITATOR_COOKIE)
+        await room.press(host, "deal")
+        card = room.runtime.table.pieces_in_zone("hand-seat-1")[0].id
+        await room.intent(host, "grab", {"piece_id": card}, client_id="g")
+        await room.intent(
+            host, "move", {"piece_id": card, "x": 11, "y": 22}, client_id="m"
+        )
+        await room.settle()
+        assert _stored(room).pieces[card].x != 11  # only the deal's snapshot so far
+
+        room.clients.remove(host)
+        await room.hub.detach(room.runtime, host.connection, host.writer)
+
+        assert (_stored(room).pieces[card].x, _stored(room).pieces[card].y) == (11, 22)
+
+
+async def test_a_seat_change_made_while_the_room_is_live_reaches_it_and_is_kept() -> (
+    None
+):
+    async with two_doors_room() as room:
+        host, guest = await _two_seated(room)
+        with session_scope(room.factory) as session:
+            db_room = rooms.get_room_by_code(session, room.runtime.code)
+            assert db_room is not None
+            leaving = rooms.get_participant(session, db_room.id, GUEST_COOKIE)
+            assert leaving is not None
+            rooms.release_seat(session, db_room, leaving)
+
+        await room.hub.seats_changed(room.runtime.code)
+        await room.press(host, "deal")  # a macro writes a snapshot
+
+        assert room.runtime.table.seats["seat-2"].participant_id is None
+        assert _stored(room).seats["seat-2"].participant_id is None

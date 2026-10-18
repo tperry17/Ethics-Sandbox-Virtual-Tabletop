@@ -28,6 +28,7 @@ from pydantic import ValidationError
 
 from sandbox.content_loading import CONTENT_ROOT, read_rows
 from sandbox.games.definition import (
+    ANNOUNCE_FIELDS,
     CollectStep,
     DealStep,
     DrawStep,
@@ -39,6 +40,7 @@ from sandbox.games.definition import (
     SpawnDeckStep,
     SpawnStep,
     Step,
+    announce_fields,
 )
 from sandbox.games.hatch import (
     HOOK_ATTRIBUTE,
@@ -87,6 +89,16 @@ class Prompt:
 
 
 @dataclass(frozen=True)
+class Button:
+    """What one macro's button says, from the game's buttons CSV."""
+
+    label: str
+    hint: str | None
+    confirm: str | None
+    announce: str
+
+
+@dataclass(frozen=True)
 class Game:
     """A loaded, checked game definition and everything it names."""
 
@@ -94,6 +106,7 @@ class Game:
     directory: Path
     decks: dict[str, tuple[Card, ...]]
     prompts: tuple[Prompt, ...]
+    buttons: dict[str, Button]
     macro_functions: dict[str, GameFunction] = field(default_factory=dict)
     hooks: dict[Moment, tuple[GameFunction, ...]] = field(default_factory=dict)
 
@@ -132,18 +145,18 @@ def card_component_id(deck_id: str, key: str) -> str:
     return f"{deck_id}:{slug}"
 
 
-def _content_path(relative: str, *, what: str) -> Path:
-    path = (CONTENT_ROOT / relative).resolve()
-    if not path.is_relative_to(CONTENT_ROOT.resolve()):
+def _content_path(root: Path, relative: str, *, what: str) -> Path:
+    path = (root / relative).resolve()
+    if not path.is_relative_to(root.resolve()):
         raise GameDefinitionError(f"{what} {relative!r} is outside content/.")
     if not path.is_file():
         raise GameDefinitionError(f"{what} content/{relative} does not exist.")
     return path
 
 
-def image_url(path: Path) -> str:
+def image_url(path: Path, root: Path = CONTENT_ROOT) -> str:
     """The URL the content route serves ``path`` at."""
-    return "/content/" + path.relative_to(CONTENT_ROOT.resolve()).as_posix()
+    return "/content/" + path.relative_to(root.resolve()).as_posix()
 
 
 def _cell(row: dict[str, str], column: str | None) -> str | None:
@@ -153,10 +166,12 @@ def _cell(row: dict[str, str], column: str | None) -> str | None:
     return value or None
 
 
-def _load_deck(definition: GameDefinition, deck_index: int) -> tuple[Card, ...]:
+def _load_deck(
+    definition: GameDefinition, deck_index: int, root: Path
+) -> tuple[Card, ...]:
     deck = definition.components.decks[deck_index]
-    source = _content_path(deck.source, what=f"Deck {deck.id!r}'s source")
-    rows = read_rows(deck.source)
+    source = _content_path(root, deck.source, what=f"Deck {deck.id!r}'s source")
+    rows = read_rows(deck.source, root=root)
     if not rows:
         raise GameDefinitionError(f"Deck {deck.id!r} (content/{deck.source}) is empty.")
     named = [deck.key, deck.title, deck.body, deck.folio, deck.image]
@@ -191,7 +206,7 @@ def _load_deck(definition: GameDefinition, deck_index: int) -> tuple[Card, ...]:
                     f"content/{deck.source} line {line} names an image "
                     f"{row[deck.image].strip()!r} that is not in its images/ folder."
                 )
-            image = image_url(file.resolve())
+            image = image_url(file.resolve(), root)
 
         cards.append(
             Card(
@@ -211,16 +226,58 @@ def _load_deck(definition: GameDefinition, deck_index: int) -> tuple[Card, ...]:
     return tuple(cards)
 
 
-def _load_prompts(definition: GameDefinition) -> tuple[Prompt, ...]:
+def _load_prompts(definition: GameDefinition, root: Path) -> tuple[Prompt, ...]:
     if definition.prompts is None:
         return ()
-    _content_path(definition.prompts.source, what="Prompts")
-    rows = read_rows(definition.prompts.source)
+    _content_path(root, definition.prompts.source, what="Prompts")
+    rows = read_rows(definition.prompts.source, root=root)
     if rows and not {"id", "text"} <= set(rows[0]):
         raise GameDefinitionError(
             f"content/{definition.prompts.source} needs 'id' and 'text' columns."
         )
     return tuple(Prompt(id=row["id"].strip(), text=row["text"].strip()) for row in rows)
+
+
+def _load_buttons(definition: GameDefinition, root: Path) -> dict[str, Button]:
+    """One row per macro, no more and no fewer."""
+    source = definition.buttons.source
+    _content_path(root, source, what="Buttons")
+    rows = read_rows(source, root=root)
+    if not rows or not {"id", "label"} <= set(rows[0]):
+        raise GameDefinitionError(f"content/{source} needs 'id' and 'label' columns.")
+    buttons: dict[str, Button] = {}
+    for line, row in enumerate(rows, start=2):
+        macro_id = row["id"].strip()
+        label = row["label"].strip()
+        if macro_id in buttons:
+            raise GameDefinitionError(
+                f"content/{source} has two rows for {macro_id!r}."
+            )
+        if not label:
+            raise GameDefinitionError(f"content/{source} line {line} has no label.")
+        announce = (row.get("announce") or "").strip() or "{name} pressed “{label}”."
+        unknown = announce_fields(announce) - ANNOUNCE_FIELDS
+        if unknown:
+            raise GameDefinitionError(
+                f"content/{source} line {line} announces with {sorted(unknown)}; "
+                "use {name} and {label} only."
+            )
+        buttons[macro_id] = Button(
+            label=label,
+            hint=(row.get("hint") or "").strip() or None,
+            confirm=(row.get("confirm") or "").strip() or None,
+            announce=announce,
+        )
+    macro_ids = {macro.id for macro in definition.macros}
+    missing = sorted(macro_ids - set(buttons))
+    if missing:
+        raise GameDefinitionError(f"content/{source} has no row for {missing}.")
+    extra = sorted(set(buttons) - macro_ids)
+    if extra:
+        raise GameDefinitionError(
+            f"content/{source} has rows for {extra}, which game.yaml does not define."
+        )
+    return buttons
 
 
 def _check_references(definition: GameDefinition) -> None:
@@ -328,8 +385,12 @@ def _load_rules(
     return macros, {moment: tuple(found) for moment, found in hooks.items()}
 
 
-def load_game(directory: Path) -> Game:
-    """Load and check the game in ``directory``, or raise ``GameDefinitionError``."""
+def load_game(directory: Path, content_root: Path = CONTENT_ROOT) -> Game:
+    """Load and check the game in ``directory``, or raise ``GameDefinitionError``.
+
+    The CSV files it names are read from ``content_root``: the project's
+    ``content/`` folder, or a test's own.
+    """
     path = directory / DEFINITION_FILE
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -349,10 +410,11 @@ def load_game(directory: Path) -> Game:
     try:
         _check_references(definition)
         decks = {
-            deck.id: _load_deck(definition, index)
+            deck.id: _load_deck(definition, index, content_root)
             for index, deck in enumerate(definition.components.decks)
         }
-        prompts = _load_prompts(definition)
+        prompts = _load_prompts(definition, content_root)
+        buttons = _load_buttons(definition, content_root)
         macro_functions, hooks = _load_rules(directory, definition)
     except GameDefinitionError as error:
         raise GameDefinitionError(f"{directory.name}: {error}") from error
@@ -361,6 +423,7 @@ def load_game(directory: Path) -> Game:
         directory=directory,
         decks=decks,
         prompts=prompts,
+        buttons=buttons,
         macro_functions=macro_functions,
         hooks=hooks,
     )
@@ -373,11 +436,13 @@ def game_directories(root: Path = GAMES_ROOT) -> list[Path]:
     )
 
 
-def load_games(root: Path = GAMES_ROOT) -> dict[str, Game]:
+def load_games(
+    root: Path = GAMES_ROOT, content_root: Path = CONTENT_ROOT
+) -> dict[str, Game]:
     """Every game under ``root``, keyed by slug. Raises on the first bad one."""
     games: dict[str, Game] = {}
     for directory in game_directories(root):
-        game = load_game(directory)
+        game = load_game(directory, content_root)
         if game.slug in games:
             raise GameDefinitionError(
                 f"Two games use the slug {game.slug!r}: "
@@ -388,6 +453,7 @@ def load_games(root: Path = GAMES_ROOT) -> dict[str, Game]:
 
 
 __all__ = [
+    "Button",
     "Card",
     "DEFINITION_FILE",
     "Face",

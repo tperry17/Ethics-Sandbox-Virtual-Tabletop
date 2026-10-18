@@ -1,0 +1,8 @@
+id,label,hint,confirm,announce
+setup,Set up,,,
+deal,Deal,,,
+reset,Reset,,,
+shuffle,Shuffle,,,
+collect,Collect,,,
+clear_ink,Clear ink,,,
+refuse,Refuse,,,

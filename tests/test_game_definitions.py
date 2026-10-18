@@ -8,17 +8,15 @@ from typing import Any
 
 import pytest
 import yaml
-from _games_support import FIXTURE_GAMES, hooked, two_doors
+from _games_support import FIXTURE_CONTENT, FIXTURE_GAMES, hooked, two_doors
 from pydantic import ValidationError
 
-import sandbox.content_loading
-import sandbox.games.loader
 from sandbox.cli import main
 from sandbox.games.definition import GameDefinition
 from sandbox.games.loader import GameDefinitionError, card_component_id, load_game
 from sandbox.games.validation import validate_games
 
-TWO_DOORS_DIR = Path(sandbox.games.loader.GAMES_ROOT) / "two_doors"
+TWO_DOORS_DIR = FIXTURE_GAMES / "two_doors"
 
 
 def _two_doors_raw() -> dict[str, Any]:
@@ -98,10 +96,6 @@ def test_a_hook_game_registers_every_moment() -> None:
             "zone ids used more than once",
         ),
         (
-            lambda raw: raw["macros"][0].update(announce="{who} did it"),
-            "unknown field",
-        ),
-        (
             lambda raw: raw["macros"][1].update(python="reveal"),
             "exactly one of 'steps' or 'python'",
         ),
@@ -158,14 +152,14 @@ def test_loading_refuses_a_step_that_names_something_undefined(
     )
 
     with pytest.raises(GameDefinitionError, match=message):
-        load_game(directory)
+        load_game(directory, FIXTURE_CONTENT)
 
 
 def test_loading_refuses_a_python_macro_with_no_function(tmp_path: Path) -> None:
     directory = _game_dir(tmp_path, _two_doors_raw())
 
     with pytest.raises(GameDefinitionError, match="registers no @macro"):
-        load_game(directory)
+        load_game(directory, FIXTURE_CONTENT)
 
 
 def test_loading_refuses_a_function_no_macro_uses(tmp_path: Path) -> None:
@@ -174,19 +168,16 @@ def test_loading_refuses_a_function_no_macro_uses(tmp_path: Path) -> None:
     directory = _game_dir(tmp_path, _two_doors_raw(), rules)
 
     with pytest.raises(GameDefinitionError, match="no macro in game.yaml"):
-        load_game(directory)
+        load_game(directory, FIXTURE_CONTENT)
 
 
 @pytest.fixture
-def content_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A content/ folder of the test's own, holding a copy of Two Doors' text."""
+def content_root(tmp_path: Path) -> Path:
+    """A content folder of the test's own, holding a copy of Two Doors' text."""
     root = tmp_path / "content"
     shutil.copytree(
-        sandbox.content_loading.CONTENT_ROOT / "exercises" / "two-doors",
-        root / "exercises" / "two-doors",
+        FIXTURE_CONTENT / "exercises" / "two-doors", root / "exercises" / "two-doors"
     )
-    monkeypatch.setattr(sandbox.content_loading, "CONTENT_ROOT", root)
-    monkeypatch.setattr(sandbox.games.loader, "CONTENT_ROOT", root)
     return root
 
 
@@ -199,21 +190,21 @@ def test_loading_refuses_two_cards_with_the_same_key(content_root: Path) -> None
     _rewrite_deck(content_root, "name,text,image\nSame,a,\nSame,b,\n")
 
     with pytest.raises(GameDefinitionError, match="lines 2 and 3 both make"):
-        load_game(TWO_DOORS_DIR)
+        load_game(TWO_DOORS_DIR, content_root)
 
 
 def test_loading_refuses_an_image_that_is_not_there(content_root: Path) -> None:
     _rewrite_deck(content_root, "name,text,image\nOne,a,missing.png\n")
 
     with pytest.raises(GameDefinitionError, match="not in its images/ folder"):
-        load_game(TWO_DOORS_DIR)
+        load_game(TWO_DOORS_DIR, content_root)
 
 
 def test_loading_refuses_a_column_the_deck_does_not_have(content_root: Path) -> None:
     _rewrite_deck(content_root, "title,text,image\nOne,a,\n")
 
     with pytest.raises(GameDefinitionError, match="column 'name'"):
-        load_game(TWO_DOORS_DIR)
+        load_game(TWO_DOORS_DIR, content_root)
 
 
 def test_an_image_card_is_served_from_the_content_route(content_root: Path) -> None:
@@ -221,7 +212,7 @@ def test_an_image_card_is_served_from_the_content_route(content_root: Path) -> N
     (images / "door.png").write_bytes(b"\x89PNG")
     _rewrite_deck(content_root, "name,text,image\nOne,a,door.png\n")
 
-    card = load_game(TWO_DOORS_DIR).decks["doors"][0]
+    card = load_game(TWO_DOORS_DIR, content_root).decks["doors"][0]
 
     assert card.face.image == "/content/exercises/two-doors/images/door.png"
 
@@ -230,10 +221,20 @@ def test_an_image_card_is_served_from_the_content_route(content_root: Path) -> N
 
 
 def test_every_game_in_the_repo_is_valid() -> None:
-    report = validate_games()
+    assert validate_games().errors == []
+
+
+def test_every_fixture_game_is_valid() -> None:
+    report = validate_games(FIXTURE_GAMES, FIXTURE_CONTENT, catalog_notes=False)
 
     assert report.errors == []
-    assert "two-doors" in report.checked
+    assert sorted(report.checked) == ["hooked", "two-doors"]
+
+
+def test_two_doors_is_not_part_of_the_product() -> None:
+    from sandbox.games.loader import load_games
+
+    assert "two-doors" not in load_games()
 
 
 def test_validate_games_notes_catalog_exercises_without_a_definition() -> None:
@@ -248,7 +249,7 @@ def test_validate_games_reports_a_broken_definition(tmp_path: Path) -> None:
     raw["setup"].append({"op": "shuffle", "zone": "attic"})
     _game_dir(tmp_path, raw)
 
-    report = validate_games(tmp_path)
+    report = validate_games(tmp_path, FIXTURE_CONTENT, catalog_notes=False)
 
     assert not report.ok
     assert any("attic" in error for error in report.errors)
@@ -260,3 +261,47 @@ def test_the_cli_exits_zero_when_every_game_is_valid(
 ) -> None:
     assert main(["validate-games"]) == 0
     assert "checked two-doors" in capsys.readouterr().out
+
+
+# -- what the buttons say ----------------------------------------------------------
+
+
+def _rewrite_buttons(content_root: Path, text: str) -> None:
+    buttons = content_root / "exercises" / "two-doors" / "buttons.csv"
+    buttons.write_text(text, encoding="utf-8")
+
+
+def test_button_wording_comes_from_the_games_csv() -> None:
+    button = two_doors().buttons["reset"]
+
+    assert button.label == "Reset"
+    assert button.confirm is not None and button.confirm.startswith("This removes")
+    assert two_doors().buttons["shuffle"].hint is None
+
+
+def test_a_button_with_no_announcement_gets_the_plain_one() -> None:
+    assert hooked().buttons["deal"].announce == "{name} pressed “{label}”."
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (lambda rows: rows[:-1], r"has no row for \['clear_ink'\]"),
+        (lambda rows: [*rows, "spare,Spare,,,"], "which game.yaml does not define"),
+        (lambda rows: [*rows[:-1], "clear_ink,,,,"], "has no label"),
+        (
+            lambda rows: [*rows[:-1], "clear_ink,Clear ink,,,{who} cleared it"],
+            r"announces with \['who'\]",
+        ),
+        (lambda rows: [*rows, rows[-1]], "two rows for 'clear_ink'"),
+    ],
+)
+def test_loading_refuses_a_buttons_csv_that_does_not_match(
+    content_root: Path, change: Any, message: str
+) -> None:
+    path = content_root / "exercises" / "two-doors" / "buttons.csv"
+    header, *rows = path.read_text(encoding="utf-8").splitlines()
+    _rewrite_buttons(content_root, "\n".join([header, *change(rows)]) + "\n")
+
+    with pytest.raises(GameDefinitionError, match=message):
+        load_game(TWO_DOORS_DIR, content_root)

@@ -48,7 +48,7 @@ from sandbox.model.ops import (
 )
 from sandbox.model.results import Ok, Reject
 from sandbox.model.types import Layout, PieceKind, Visibility, ZoneKind
-from sandbox.model.visibility import project
+from sandbox.model.visibility import project, project_patches
 
 # -- grabbing, releasing --------------------------------------------------------
 
@@ -822,3 +822,109 @@ def test_a_transaction_is_judged_step_by_step_against_its_own_earlier_steps() ->
 
     assert isinstance(outcome, Ok)
     assert table.pieces["card-3"].zone_id == HAND_A
+
+
+# -- who may take a piece from where ------------------------------------------------
+
+
+def _card_in_hand_b(table: Table) -> str:
+    outcome = run_op(table, FACILITATOR, Draw(count=1, from_zone=DECK, to_zone=HAND_B))
+    assert isinstance(outcome, Ok)
+    return table.pieces_in_zone(HAND_B)[-1].id
+
+
+def test_the_facilitator_may_take_a_piece_someone_is_holding() -> None:
+    table = build_sample_table(deck_size=1)
+    run_op(table, SEAT_A, Grab(piece_id="card-0"))
+
+    outcome = run_op(table, FACILITATOR, MoveToZone(piece_id="card-0", zone_id=DISCARD))
+
+    assert isinstance(outcome, Ok)
+    assert table.pieces["card-0"].zone_id == DISCARD
+    assert table.pieces["card-0"].held_by is None
+
+
+def test_the_facilitator_may_take_a_piece_out_of_someones_hand() -> None:
+    table = build_sample_table(deck_size=2)
+    card = _card_in_hand_b(table)
+
+    outcome = run_op(table, FACILITATOR, MoveToZone(piece_id=card, zone_id=DISCARD))
+
+    assert isinstance(outcome, Ok)
+
+
+def test_a_participant_may_not_take_a_piece_out_of_someone_elses_hand() -> None:
+    table = build_sample_table(deck_size=2)
+    card = _card_in_hand_b(table)
+
+    for operation in (
+        MoveToZone(piece_id=card, zone_id=HAND_A),
+        Move(piece_id=card, x=0, y=0),
+        Flip(piece_id=card),
+        Grab(piece_id=card),
+    ):
+        assert run_op(table, SEAT_A, operation) == Reject(
+            "That piece is in someone else's hand."
+        )
+    assert run_op(table, SEAT_A, Draw(count=1, from_zone=HAND_B, to_zone=HAND_A)) == (
+        Reject("Only its owner or the facilitator may take from B's hand.")
+    )
+    assert table.pieces[card].zone_id == HAND_B
+
+
+def test_a_participant_may_still_give_a_piece_to_someone_elses_hand() -> None:
+    table = build_sample_table(deck_size=1)
+
+    outcome = run_op(table, SEAT_A, MoveToZone(piece_id="card-0", zone_id=HAND_B))
+
+    assert isinstance(outcome, Ok)
+
+
+def test_only_the_facilitator_may_clear_a_zone() -> None:
+    table = build_sample_table(deck_size=2)
+
+    assert run_op(table, SEAT_A, ResetZone(zone_id=DECK)) == Reject(
+        "Only the facilitator may clear a zone."
+    )
+    assert isinstance(run_op(table, FACILITATOR, ResetZone(zone_id=DECK)), Ok)
+
+
+# -- what a rolled die shows ----------------------------------------------------------
+
+
+def _rolled_die(table: Table, zone_id: str) -> str:
+    run_op(
+        table,
+        FACILITATOR,
+        Spawn(
+            component_id="d6", kind=PieceKind.DIE, zone_id=zone_id, piece_ids=("die",)
+        ),
+    )
+    run_op(
+        table, FACILITATOR, SetProp(piece_id="die", key="faces", value=["1", "2", "3"])
+    )
+    assert isinstance(run_op(table, FACILITATOR, Roll(target_id="die")), Ok)
+    return "die"
+
+
+def test_a_rolled_die_shows_its_value_to_everyone_who_can_see_it() -> None:
+    table = build_sample_table(deck_size=0)
+    die = _rolled_die(table, PUBLIC_TABLE)
+    rolled = table.pieces[die].props["value"]
+
+    for viewer in (None, SEAT_A, FACILITATOR):
+        view = next(p for p in project(table, viewer).pieces if p.id == die)
+        assert view.value == rolled
+
+
+def test_a_die_in_a_hidden_zone_shows_no_value_to_anyone() -> None:
+    table = build_sample_table(deck_size=0)
+    die = _rolled_die(table, DECK)
+
+    for viewer in (None, SEAT_A, FACILITATOR):
+        view = next(p for p in project(table, viewer).pieces if p.id == die)
+        assert view.value is None
+    patch = run_op(table, FACILITATOR, Roll(target_id=die))
+    assert isinstance(patch, Ok)
+    projected = project_patches(table, patch.patches, SEAT_A)
+    assert projected[0].fields["value"] is None
