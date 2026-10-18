@@ -165,6 +165,13 @@ typography, and it has not come to that.
   assumption made where the request, the plan or the content was unclear,
   and anything the author should double-check, numbered. If there is
   genuinely nothing, it says "None" and why.
+- Claim a build-plan step before starting it, with
+  `scripts/claim-step.sh <number>` (see "Claiming a step" in
+  `docs/BUILD-PLAN.md`), and open a draft pull request for its branch at
+  once. A step whose branch already exists on GitHub, or that has an open
+  pull request, is taken: do not work on it, even if the status table on
+  `main` says otherwise. Work on a claimed step goes on the branch named for
+  it in the status table, which takes the place of a descriptive name.
 - `docs/BUILD-PLAN.md` is the build plan and its status. A pull request
   that completes or advances a step updates the status in the same pull
   request. Where the plan and this file disagree, this file wins.

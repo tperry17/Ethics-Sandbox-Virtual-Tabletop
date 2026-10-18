@@ -13,28 +13,67 @@ table below in the same pull request.
 
 ## Where we are
 
-Prompts 1–8 are done. **Next: Prompt 9, game definitions and macro buttons.**
-Prompts 10 and 11 need written rules from the author before they can run
-(see "Waiting on the author").
+Prompts 1–8 are done. Prompt 9, game definitions and macro buttons, is
+claimed and in review in PR #9. Prompts 10 and 11 need written rules from
+the author before they can run (see "Waiting on the author"). Prompts 12–16
+are unclaimed, but Prompt 12 says it is built after the games, so it is
+best left until 10 and 11 can run.
 
-| # | Step | Status | Commit or PR |
-|---|------|--------|--------------|
-| 1 | Repo scaffold and project constitution | Done | `2006c3c` |
-| 2 | Design system | Done; palette revised to the Center's brand guide | `5834435`, then the `claude/center-brand-palette` PR |
-| 3 | The public site | Done, with gaps (below) | `5fc34dd`, then `d491312`, `108a5cb` |
-| 4 | The tabletop model | Done | `47c6c80` |
-| 5 | Rooms, identity and persistence | Done, with gaps (below) | `08cfbe8` |
-| 6 | The realtime layer | Done | `d852f75` |
-| 7 | The table client — rendering | Done | `9c86f37` |
-| 8 | The table client — interaction | Done | `d8c383d` (PR #1) |
-| 9 | Game definitions and macro buttons | **Next** | |
-| 10 | Value Cards Trading | Waiting on the author's rules | |
-| 11 | Democracy Simulation | Waiting on the author's rules | |
-| 12 | Facilitator controls and the shared view | Not started | |
-| 13 | Reflection, debrief and the playtest record | Not started | |
-| 14 | Access, tablets and resilience | Not started | |
-| 15 | Tests | Not started | |
-| 16 | Launch pass | Not started; deployment target has changed (below) | |
+Before starting a step, claim it (see "Claiming a step"). A claimed step
+shows "Claimed" in this table on `main`.
+
+| # | Step | Status | Branch | Commit or PR |
+|---|------|--------|--------|--------------|
+| 1 | Repo scaffold and project constitution | Done | | `2006c3c` |
+| 2 | Design system | Done; palette revised to the Center's brand guide | | `5834435`, then the `claude/center-brand-palette` PR |
+| 3 | The public site | Done, with gaps (below) | | `5fc34dd`, then `d491312`, `108a5cb` |
+| 4 | The tabletop model | Done | | `47c6c80` |
+| 5 | Rooms, identity and persistence | Done, with gaps (below) | | `08cfbe8` |
+| 6 | The realtime layer | Done | | `d852f75` |
+| 7 | The table client — rendering | Done | | `9c86f37` |
+| 8 | The table client — interaction | Done | | `d8c383d` (PR #1) |
+| 9 | Game definitions and macro buttons | Claimed; in review | `claude/game-definitions` | PR #9 |
+| 10 | Value Cards Trading | Waiting on the author's rules | `claude/step-10-value-cards-trading` | |
+| 11 | Democracy Simulation | Waiting on the author's rules | `claude/step-11-democracy-simulation` | |
+| 12 | Facilitator controls and the shared view | Not started | `claude/step-12-facilitator-controls` | |
+| 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
+| 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
+| 15 | Tests | Not started | `claude/step-15-tests` | |
+| 16 | Launch pass | Not started; deployment target has changed (below) | `claude/step-16-launch-pass` | |
+
+### Claiming a step
+
+A step is claimed by the existence of its branch on GitHub. Each unfinished
+step has one fixed branch name in the table above, so two people (or two
+Claude sessions) starting the same step reach for the same branch, and
+GitHub accepts only the first push to it.
+
+To claim a step, run `scripts/claim-step.sh <number>` from a clean checkout.
+It:
+
+1. refuses if the step is Done, waiting on the author, or already Claimed
+   on `main`;
+2. refuses if the step's branch already exists on GitHub - someone has it;
+3. creates the branch from `origin/main`, marks the step "Claimed" in this
+   table, commits, and pushes without force. If someone else pushed the
+   branch first, the push is rejected and the claim fails;
+4. marks the step "Claimed" in this table on `main` too, with a one-line
+   commit pushed straight to `main`, so anyone reading the table there sees
+   the claim. If that push keeps failing, the claim still holds and the
+   script says to mark the row by hand.
+
+Then open a draft pull request for the branch at once, titled
+`Prompt <number>: <step>`, so the claim is visible to anyone looking at
+the pull requests. Do the work on that branch only.
+
+If the claim fails, the step is taken: do not work on it, and do not push
+to its branch. To give a claim up, close its pull request and delete its
+branch; the step is then free again.
+
+Without the script, the check is the same by hand: look at the step's row
+on `main`, for the step's branch (`git ls-remote --heads origin <branch>`)
+and for an open pull request naming the step. If any of them shows a claim,
+the step is taken.
 
 Work outside the numbered prompts, already merged:
 
@@ -625,7 +664,7 @@ Commit.
 
 ## 9. Game definitions and macro buttons
 
-**Status: Next.**
+**Status: Claimed; in review in PR #9.**
 
 The prompt that makes a third exercise cheap. Data-driven, with a Python escape hatch for mechanics the generic format cannot express.
 
