@@ -23,9 +23,7 @@ def load_exercise(slug: str) -> Exercise:
     """The ``Exercise`` named ``slug``, built from its content CSV rows."""
     matches = [row for row in read_rows(EXERCISES_CSV) if row["slug"] == slug]
     if not matches:
-        raise KeyError(
-            f"No row for slug {slug!r} in content/{EXERCISES_CSV}."
-        )
+        raise KeyError(f"No row for slug {slug!r} in content/{EXERCISES_CSV}.")
     fields = matches[0]
 
     preview_cards = tuple(

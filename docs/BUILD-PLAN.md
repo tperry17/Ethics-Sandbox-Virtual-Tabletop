@@ -100,10 +100,9 @@ Checked against the code on `main`; none of these has been fixed yet.
   purged after 30 days, and the UI does not announce either.
 - **Prompt 2.** `/styleguide` still describes the design as a "scholarly
   edition", which CLAUDE.md now rules out. Being removed in a separate PR.
-- **CI.** `.github/workflows/ci.yml` runs Ruff, mypy, pytest and the
-  Playwright suite on every pull request. It does not run
-  `ruff format --check`, which fails on `main` for two files. Prompt 15
-  still adds the load check and the recorded-session security test.
+- **CI.** `.github/workflows/ci.yml` runs Ruff (lint and format), mypy,
+  pytest and the Playwright suite on every pull request. Prompt 15 still
+  adds the load check and the recorded-session security test.
 
 ## Changes since the plan was written
 

@@ -46,7 +46,7 @@ Do not substitute the stack.
 - `static/` — compiled client output, CSS, and fonts
 - `tests/` — automated tests
 - `docs/BUILD-PLAN.md` — the build plan, and where the build stands
-- `.github/workflows/ci.yml` — CI: Ruff, mypy, pytest and the Playwright suite on every pull request and every push to `main`
+- `.github/workflows/ci.yml` — CI: Ruff (lint and format), mypy, pytest and the Playwright suite on every pull request and every push to `main`
 
 ## Identity without sign-in
 
