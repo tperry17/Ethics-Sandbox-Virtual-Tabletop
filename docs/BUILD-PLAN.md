@@ -19,9 +19,8 @@ the author before they can run (see "Waiting on the author"). Prompts 12–16
 are unclaimed, but Prompt 12 says it is built after the games, so it is
 best left until 10 and 11 can run.
 
-This table can lag behind the work: a claim lives on its branch until that
-branch merges. Before starting a step, claim it (see "Claiming a step");
-the claim, not this table, is what says whether a step is free.
+Before starting a step, claim it (see "Claiming a step"). A claimed step
+shows "Claimed" in this table on `main`.
 
 | # | Step | Status | Branch | Commit or PR |
 |---|------|--------|--------|--------------|
@@ -52,11 +51,16 @@ GitHub accepts only the first push to it.
 To claim a step, run `scripts/claim-step.sh <number>` from a clean checkout.
 It:
 
-1. refuses if the step is Done, or waiting on the author, on `main`;
+1. refuses if the step is Done, waiting on the author, or already Claimed
+   on `main`;
 2. refuses if the step's branch already exists on GitHub - someone has it;
 3. creates the branch from `origin/main`, marks the step "Claimed" in this
    table, commits, and pushes without force. If someone else pushed the
-   branch first, the push is rejected and the claim fails.
+   branch first, the push is rejected and the claim fails;
+4. marks the step "Claimed" in this table on `main` too, with a one-line
+   commit pushed straight to `main`, so anyone reading the table there sees
+   the claim. If that push keeps failing, the claim still holds and the
+   script says to mark the row by hand.
 
 Then open a draft pull request for the branch at once, titled
 `Prompt <number>: <step>`, so the claim is visible to anyone looking at
@@ -66,9 +70,10 @@ If the claim fails, the step is taken: do not work on it, and do not push
 to its branch. To give a claim up, close its pull request and delete its
 branch; the step is then free again.
 
-Without the script, the check is the same by hand: look for the step's
-branch (`git ls-remote --heads origin <branch>`) and for an open pull
-request naming the step. If either exists, the step is taken.
+Without the script, the check is the same by hand: look at the step's row
+on `main`, for the step's branch (`git ls-remote --heads origin <branch>`)
+and for an open pull request naming the step. If any of them shows a claim,
+the step is taken.
 
 Work outside the numbered prompts, already merged:
 

@@ -8,7 +8,8 @@
 # claiming a step pushes to the same branch, and GitHub accepts only the
 # first push. This script reads the table from origin/main, refuses a step
 # that is done, waiting on the author, or already claimed, then creates the
-# branch, marks the step "Claimed", commits, and pushes without force.
+# branch, marks the step "Claimed", commits, and pushes without force. It
+# then marks the step "Claimed" on main too, so the table there shows it.
 # Open a draft pull request for the branch straight afterwards.
 # See "Claiming a step" in docs/BUILD-PLAN.md. Written for macOS's bash 3.2.
 
@@ -18,7 +19,7 @@ cd "$(dirname "$0")/.."
 PLAN="docs/BUILD-PLAN.md"
 
 if [ $# -ne 1 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-    sed -n '2,13p' "$0"
+    sed -n '2,14p' "$0"
     [ $# -eq 1 ] && exit 0
     exit 2
 fi
@@ -28,6 +29,13 @@ case "$STEP" in
 esac
 
 fail() { echo "$1" >&2; exit 1; }
+
+# The plan read from a file (or stdin), with this step's status set to Claimed.
+mark_claimed() {
+    awk -v step="$STEP" 'BEGIN { FS = OFS = "|" }
+        $0 ~ "^\\| " step " \\|" { $4 = " Claimed "; print; next }
+        { print }' "$@"
+}
 
 if [ -n "$(git status --porcelain)" ]; then
     fail "Commit or stash your changes first; claiming switches branches."
@@ -63,9 +71,7 @@ ORIGINAL="$(git rev-parse --abbrev-ref HEAD)"
 git switch --quiet -c "$BRANCH" origin/main
 
 # Mark the step claimed in this branch's copy of the table.
-awk -v step="$STEP" 'BEGIN { FS = OFS = "|" }
-    $0 ~ "^\\| " step " \\|" { $4 = " Claimed "; print; next }
-    { print }' "$PLAN" > "$PLAN.tmp"
+mark_claimed "$PLAN" > "$PLAN.tmp"
 mv "$PLAN.tmp" "$PLAN"
 
 CLAIMANT="$(git config user.name || echo unknown) on $(hostname)"
@@ -80,7 +86,39 @@ if ! git push --quiet -u origin "$BRANCH"; then
     fail "The push to $BRANCH failed and the step is still unclaimed. Try again."
 fi
 
-echo "Claimed Prompt $STEP on $BRANCH."
+# Record the claim on main as well, so anyone reading the table there sees
+# it. The branch is the lock; this is the notice. It is built with a
+# throwaway index, so the checkout stays on the claim branch, and retried
+# against a fresh main if someone else pushed to main in between.
+record_on_main() {
+    local index commit
+    index="$(mktemp)"
+    for attempt in 1 2 3 4 5; do
+        git fetch --quiet origin main
+        rm -f "$index"
+        GIT_INDEX_FILE="$index" git read-tree origin/main
+        local blob
+        blob="$(git show origin/main:"$PLAN" | mark_claimed | git hash-object -w --stdin)"
+        GIT_INDEX_FILE="$index" git update-index --cacheinfo "100644,$blob,$PLAN"
+        commit="$(git commit-tree "$(GIT_INDEX_FILE="$index" git write-tree)" -p origin/main \
+            -m "Claim Prompt $STEP: $TITLE" -m "Claimed-by: $CLAIMANT")"
+        if git push --quiet origin "$commit:refs/heads/main" 2>/dev/null; then
+            rm -f "$index"
+            return 0
+        fi
+        sleep "$attempt"
+    done
+    rm -f "$index"
+    return 1
+}
+
+if ! record_on_main; then
+    echo "Claimed Prompt $STEP on $BRANCH, but could not mark it Claimed on main." >&2
+    echo "The claim holds. Mark row $STEP \"Claimed\" in $PLAN on main by hand," >&2
+    echo "so anyone reading the table there sees it." >&2
+else
+    echo "Claimed Prompt $STEP on $BRANCH, and marked it Claimed on main."
+fi
 echo "Now open a draft pull request for $BRANCH against main, titled"
 echo "  Prompt $STEP: $TITLE"
 echo "following .github/pull_request_template.md."

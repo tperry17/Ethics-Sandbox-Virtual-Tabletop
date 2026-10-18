@@ -18,4 +18,4 @@ Run the checks with `uv run ruff check .`, `uv run mypy sandbox tests`, `uv run 
 
 ## Claiming a build-plan step
 
-`scripts/claim-step.sh <number>` claims a step of `docs/BUILD-PLAN.md` so no one else starts it. It refuses a step that is done, waiting on the author, or already claimed, and otherwise pushes the step's branch with the step marked "Claimed". Only the first push to that branch succeeds, so two people claiming at once cannot both win. Open a draft pull request for the branch straight afterwards.
+`scripts/claim-step.sh <number>` claims a step of `docs/BUILD-PLAN.md` so no one else starts it. It refuses a step that is done, waiting on the author, or already claimed, and otherwise pushes the step's branch with the step marked "Claimed", then marks it "Claimed" on `main` as well, so the status table there shows it. Only the first push to that branch succeeds, so two people claiming at once cannot both win. Open a draft pull request for the branch straight afterwards.
