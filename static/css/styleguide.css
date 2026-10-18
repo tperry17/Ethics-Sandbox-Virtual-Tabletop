@@ -89,7 +89,7 @@
 .tag-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 .zoom-test { width: fit-content; zoom: 0.6; }
-.zoom-caption { color: var(--text-inverse); font-family: var(--font-mono); font-size: var(--text-xs); }
+.zoom-caption { color: var(--text-on-felt); font-family: var(--font-mono); font-size: var(--text-xs); }
 
 @media (max-width: 40rem) {
   .styleguide { padding-inline: var(--space-4); }

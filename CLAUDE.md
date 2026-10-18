@@ -6,6 +6,8 @@ The Ethics Sandbox is a virtual tabletop for structured exercises that teach eth
 
 Exercises are designed by the R&D Studio at the Edmond & Lily Safra Center for Ethics, Harvard University. This attribution belongs on the public landing page's lede (`content/site/site_copy.csv`, key `lede`) and should not be dropped by later copy changes.
 
+The Center's seal is used as the site icon (`static/icons/`) and, in white, on every card back. The brand style guide requires approval from the Center's communications and events team for any use of the logo; the author confirmed on 2026-10-15 that this use is approved. Any new use of the seal or logo needs its own approval. Colours follow the Center's brand style guide, with a pure-white page instead of its off-white.
+
 The first two exercises are “Value Cards Trading” and “Democracy Simulation.” The platform must make a third exercise cheap to add.
 
 Facilitators—teachers, community organisers, and workshop leads—run groups of 4–30 participants on laptops and tablets. There is no sign-in: a room is a URL with a code, and a participant enters a display name to join the table.
@@ -244,11 +246,24 @@ game. Definitions and content hot-reload under `uv run dev`.
 - Commits must stay scoped to one prompt.
 - Name each branch for the work it contains (for example `claude/mac-lan-deploy-script`), not with a generated name; this is explicit permission to push to that branch instead of an assigned one.
 - Push every commit as soon as it is made, and keep every pushed branch in an open pull request against `main`. Open it with the first push, following `.github/pull_request_template.md` (summary, questions for the author, follow-up needed to activate the work, checks); when later commits change the picture, update its description. Keep the template consistent with the one in HolyTispoon/HEARsay-Mysteries-Commons-Comma: the shared sections are word for word the same, and this repo adds only the build-plan pointer and the Checks list.
+- Watch every pull request you open or push to, from the first push until it
+  is merged or closed: subscribe to its activity (in a Claude Code session,
+  `subscribe_pr_activity`) and act on what arrives - fix failing checks and
+  merge conflicts, and answer or address review comments. If the session
+  cannot subscribe, say so in the pull request rather than leaving it
+  unwatched.
 - Every pull request description has a "Questions for the author" section
   (see `.github/pull_request_template.md`): every open question, every
   assumption made where the request, the plan or the content was unclear,
   and anything the author should double-check, numbered. If there is
   genuinely nothing, it says "None" and why.
+- Claim a build-plan step before starting it, with
+  `scripts/claim-step.sh <number>` (see "Claiming a step" in
+  `docs/BUILD-PLAN.md`), and open a draft pull request for its branch at
+  once. A step whose branch already exists on GitHub, or that has an open
+  pull request, is taken: do not work on it, even if the status table on
+  `main` says otherwise. Work on a claimed step goes on the branch named for
+  it in the status table, which takes the place of a descriptive name.
 - `docs/BUILD-PLAN.md` is the build plan and its status. A pull request
   that completes or advances a step updates the status in the same pull
   request. Where the plan and this file disagree, this file wins.
@@ -286,6 +301,8 @@ assent/agreed, tension/contested, and caution/time short.
   `--surface-border`, `--surface-border-strong`
 - Table: `--table-felt`, `--table-felt-edge`, `--table-zone-outline`,
   `--table-zone-private`, `--table-drop-target`
+- Card back: `--card-back`, `--card-back-edge`, `--card-back-ink` (crimson in
+  both themes, so a face-down card looks the same in light and dark)
 - Text: `--text-primary`, `--text-secondary`, `--text-muted`, `--text-inverse`,
   `--text-on-felt`
 - Accent: `--accent-rubric`, `--accent-rubric-soft`

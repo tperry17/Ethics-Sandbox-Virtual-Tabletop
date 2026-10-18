@@ -185,7 +185,7 @@
 .seat-3 { --seat-tint: var(--seat-3); }
 .seat-4 { --seat-tint: var(--seat-4); }
 .seat-5 { --seat-tint: var(--seat-5); }
-.seat-6 { --seat-tint: var(--seat-6); --seat-label: var(--text-inverse); }
+.seat-6 { --seat-tint: var(--seat-6); --seat-label: var(--text-on-felt); }
 
 .empty-state {
   display: grid;

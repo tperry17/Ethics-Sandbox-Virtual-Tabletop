@@ -378,6 +378,9 @@ async def styleguide(request: Request) -> HTMLResponse:
                 {"name": "--table-zone-outline"},
                 {"name": "--table-zone-private", "inverse": True},
                 {"name": "--table-drop-target"},
+                {"name": "--card-back", "inverse": True},
+                {"name": "--card-back-edge"},
+                {"name": "--card-back-ink"},
             ],
         },
         {
