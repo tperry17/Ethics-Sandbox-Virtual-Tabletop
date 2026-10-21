@@ -10,6 +10,9 @@ from sandbox.model.actions import MenuEntry, piece_actions
 from sandbox.model.entities import Piece, Polygon, Rect, Seat, Stroke, Table, Zone
 from sandbox.model.layout import place_in_zone
 from sandbox.model.ops import (
+    AddSeat,
+    AddZone,
+    AssignSeat,
     ClearInk,
     Deal,
     Despawn,
@@ -39,6 +42,7 @@ from sandbox.model.ops import (
     Shuffle,
     Spawn,
     StackOnto,
+    Transaction,
     Ungroup,
     Unlock,
     new_op_id,
@@ -60,6 +64,9 @@ from sandbox.model.visibility import (
 )
 
 __all__ = [
+    "AddSeat",
+    "AddZone",
+    "AssignSeat",
     "ClearInk",
     "Deal",
     "Despawn",
@@ -103,6 +110,7 @@ __all__ = [
     "Stroke",
     "Table",
     "TableRng",
+    "Transaction",
     "Ungroup",
     "Unlock",
     "ViewPiece",

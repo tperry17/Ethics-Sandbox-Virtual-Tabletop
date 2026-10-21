@@ -182,6 +182,10 @@ def _assert_no_leak(table: Table) -> None:
                 f"{viewed.id!r}, which they are not entitled to"
             )
             assert viewed.face_up is False
+            assert viewed.value is None, (
+                f"viewer {viewer!r} was handed the rolled value of piece "
+                f"{viewed.id!r}, which they are not entitled to see"
+            )
 
 
 @given(data=st.data())

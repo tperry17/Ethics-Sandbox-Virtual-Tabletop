@@ -11,8 +11,10 @@ from _model_support import (
     build_sample_table,
 )
 
-from sandbox.model.entities import Piece, Table
+from sandbox.model.entities import Piece, Rect, Table
 from sandbox.model.ops import (
+    AddSeat,
+    AddZone,
     Deal,
     Despawn,
     Draw,
@@ -39,13 +41,14 @@ from sandbox.model.ops import (
     ShowTo,
     Shuffle,
     Spawn,
+    Transaction,
     Ungroup,
     Unlock,
     run_op,
 )
 from sandbox.model.results import Ok, Reject
-from sandbox.model.types import PieceKind
-from sandbox.model.visibility import project
+from sandbox.model.types import Layout, PieceKind, Visibility, ZoneKind
+from sandbox.model.visibility import project, project_patches
 
 # -- grabbing, releasing --------------------------------------------------------
 
@@ -222,20 +225,53 @@ def test_shuffle_with_a_fixed_seed_is_reproducible() -> None:
     run_op(first, FACILITATOR, Shuffle(zone_id=DECK))
     run_op(second, FACILITATOR, Shuffle(zone_id=DECK))
 
-    order_one = [p.id for p in first.pieces_in_zone(DECK)]
-    order_two = [p.id for p in second.pieces_in_zone(DECK)]
+    order_one = [p.component_id for p in first.pieces_in_zone(DECK)]
+    order_two = [p.component_id for p in second.pieces_in_zone(DECK)]
     assert order_one == order_two
 
 
 def test_shuffle_can_change_the_order() -> None:
     table = build_sample_table(seed=1, deck_size=8)
-    before = [p.id for p in table.pieces_in_zone(DECK)]
+    before = [p.component_id for p in table.pieces_in_zone(DECK)]
 
     run_op(table, FACILITATOR, Shuffle(zone_id=DECK))
 
-    after = [p.id for p in table.pieces_in_zone(DECK)]
-    assert set(before) == set(after)
+    after = [p.component_id for p in table.pieces_in_zone(DECK)]
+    assert sorted(before) == sorted(after)
     assert before != after
+
+
+def test_a_shuffled_card_cannot_be_followed_by_its_id() -> None:
+    # Anyone who saw card-0's face could otherwise track the piece id
+    # "card-0" through the deck and into whoever's hand it was dealt to.
+    tracked = 0
+    for seed in range(40):
+        table = build_sample_table(seed=seed, deck_size=8)
+        seen = table.pieces["card-0"].component_id
+        run_op(table, FACILITATOR, Shuffle(zone_id=DECK))
+        if table.pieces["card-0"].component_id == seen:
+            tracked += 1
+    # One in eight by chance; never every time.
+    assert tracked < 20
+
+
+def test_shuffle_keeps_every_piece_where_it_was() -> None:
+    table = build_sample_table(seed=3, deck_size=6)
+    places = {p.id: (p.zone_id, p.x, p.y, p.z) for p in table.pieces.values()}
+
+    run_op(table, FACILITATOR, Shuffle(zone_id=DECK))
+
+    assert {p.id: (p.zone_id, p.x, p.y, p.z) for p in table.pieces.values()} == places
+
+
+def test_shuffle_is_refused_while_someone_holds_a_piece_in_the_zone() -> None:
+    table = build_sample_table(deck_size=4)
+    run_op(table, SEAT_A, Grab(piece_id="card-3"))
+
+    outcome = run_op(table, FACILITATOR, Shuffle(zone_id=DECK))
+
+    assert isinstance(outcome, Reject)
+    assert outcome.reason == "Someone is holding a piece from Deck."
 
 
 def test_shuffle_of_an_unknown_zone_is_rejected() -> None:
@@ -687,3 +723,208 @@ def test_table_is_only_mutated_through_run_op_in_this_suite() -> None:
     table = Table()
     assert table.pieces == {}
     assert table.version == 0
+
+
+# -- seats, zones, and transactions ------------------------------------------------
+
+
+def test_add_seat_adds_a_seat_and_refuses_a_second_with_the_same_id() -> None:
+    table = build_sample_table()
+
+    outcome = run_op(
+        table, FACILITATOR, AddSeat(seat_id="seat-c", label="C", tint_index=3)
+    )
+
+    assert isinstance(outcome, Ok)
+    assert table.seats["seat-c"].label == "C"
+    again = run_op(
+        table, FACILITATOR, AddSeat(seat_id="seat-c", label="C", tint_index=3)
+    )
+    assert again == Reject("There is already a seat 'seat-c' at the table.")
+
+
+def test_add_zone_needs_its_owner_to_be_seated() -> None:
+    table = build_sample_table()
+    zone = AddZone(
+        zone_id="hand-c",
+        kind=ZoneKind.HAND,
+        label="Hand",
+        geometry=Rect(x=0, y=0, width=10, height=10),
+        visibility=Visibility.PRIVATE_TO_OWNER,
+        layout=Layout.FAN,
+        owner_seat="seat-c",
+    )
+
+    assert run_op(table, FACILITATOR, zone) == Reject(
+        "There is no seat 'seat-c' at the table."
+    )
+
+
+def test_a_transaction_applies_every_step_in_order() -> None:
+    table = build_sample_table(deck_size=4)
+
+    outcome = run_op(
+        table,
+        FACILITATOR,
+        Transaction(
+            steps=(
+                Draw(count=2, from_zone=DECK, to_zone=HAND_A),
+                Flip(piece_id="card-3", face_up=True),
+            )
+        ),
+    )
+
+    assert isinstance(outcome, Ok)
+    assert {p.id for p in table.pieces_in_zone(HAND_A)} == {"card-2", "card-3"}
+    assert table.pieces["card-3"].face_up
+    assert table.version == 1
+
+
+def test_a_transaction_whose_later_step_fails_changes_nothing() -> None:
+    table = build_sample_table(deck_size=4)
+    version = table.version
+    zones = {p.id: p.zone_id for p in table.pieces.values()}
+    rng_state = table.rng.get_state()
+
+    outcome = run_op(
+        table,
+        FACILITATOR,
+        Transaction(
+            steps=(
+                Shuffle(zone_id=DECK),
+                Draw(count=2, from_zone=DECK, to_zone=HAND_A),
+                Draw(count=9, from_zone=DECK, to_zone=HAND_B),
+            )
+        ),
+    )
+
+    assert outcome == Reject("Only 2 pieces remain in Deck.")
+    assert {p.id: p.zone_id for p in table.pieces.values()} == zones
+    assert table.version == version
+    assert table.rng.get_state() == rng_state
+
+
+def test_a_transaction_is_judged_step_by_step_against_its_own_earlier_steps() -> None:
+    table = build_sample_table(deck_size=4)
+
+    # card-3 is in the deck when the transaction starts; the second step
+    # is only legal because the first one moved it to the discard.
+    outcome = run_op(
+        table,
+        FACILITATOR,
+        Transaction(
+            steps=(
+                MoveToZone(piece_id="card-3", zone_id=DISCARD),
+                Draw(count=1, from_zone=DISCARD, to_zone=HAND_A),
+            )
+        ),
+    )
+
+    assert isinstance(outcome, Ok)
+    assert table.pieces["card-3"].zone_id == HAND_A
+
+
+# -- who may take a piece from where ------------------------------------------------
+
+
+def _card_in_hand_b(table: Table) -> str:
+    outcome = run_op(table, FACILITATOR, Draw(count=1, from_zone=DECK, to_zone=HAND_B))
+    assert isinstance(outcome, Ok)
+    return table.pieces_in_zone(HAND_B)[-1].id
+
+
+def test_the_facilitator_may_take_a_piece_someone_is_holding() -> None:
+    table = build_sample_table(deck_size=1)
+    run_op(table, SEAT_A, Grab(piece_id="card-0"))
+
+    outcome = run_op(table, FACILITATOR, MoveToZone(piece_id="card-0", zone_id=DISCARD))
+
+    assert isinstance(outcome, Ok)
+    assert table.pieces["card-0"].zone_id == DISCARD
+    assert table.pieces["card-0"].held_by is None
+
+
+def test_the_facilitator_may_take_a_piece_out_of_someones_hand() -> None:
+    table = build_sample_table(deck_size=2)
+    card = _card_in_hand_b(table)
+
+    outcome = run_op(table, FACILITATOR, MoveToZone(piece_id=card, zone_id=DISCARD))
+
+    assert isinstance(outcome, Ok)
+
+
+def test_a_participant_may_not_take_a_piece_out_of_someone_elses_hand() -> None:
+    table = build_sample_table(deck_size=2)
+    card = _card_in_hand_b(table)
+
+    for operation in (
+        MoveToZone(piece_id=card, zone_id=HAND_A),
+        Move(piece_id=card, x=0, y=0),
+        Flip(piece_id=card),
+        Grab(piece_id=card),
+    ):
+        assert run_op(table, SEAT_A, operation) == Reject(
+            "That piece is in someone else's hand."
+        )
+    assert run_op(table, SEAT_A, Draw(count=1, from_zone=HAND_B, to_zone=HAND_A)) == (
+        Reject("Only its owner or the facilitator may take from B's hand.")
+    )
+    assert table.pieces[card].zone_id == HAND_B
+
+
+def test_a_participant_may_still_give_a_piece_to_someone_elses_hand() -> None:
+    table = build_sample_table(deck_size=1)
+
+    outcome = run_op(table, SEAT_A, MoveToZone(piece_id="card-0", zone_id=HAND_B))
+
+    assert isinstance(outcome, Ok)
+
+
+def test_only_the_facilitator_may_clear_a_zone() -> None:
+    table = build_sample_table(deck_size=2)
+
+    assert run_op(table, SEAT_A, ResetZone(zone_id=DECK)) == Reject(
+        "Only the facilitator may clear a zone."
+    )
+    assert isinstance(run_op(table, FACILITATOR, ResetZone(zone_id=DECK)), Ok)
+
+
+# -- what a rolled die shows ----------------------------------------------------------
+
+
+def _rolled_die(table: Table, zone_id: str) -> str:
+    run_op(
+        table,
+        FACILITATOR,
+        Spawn(
+            component_id="d6", kind=PieceKind.DIE, zone_id=zone_id, piece_ids=("die",)
+        ),
+    )
+    run_op(
+        table, FACILITATOR, SetProp(piece_id="die", key="faces", value=["1", "2", "3"])
+    )
+    assert isinstance(run_op(table, FACILITATOR, Roll(target_id="die")), Ok)
+    return "die"
+
+
+def test_a_rolled_die_shows_its_value_to_everyone_who_can_see_it() -> None:
+    table = build_sample_table(deck_size=0)
+    die = _rolled_die(table, PUBLIC_TABLE)
+    rolled = table.pieces[die].props["value"]
+
+    for viewer in (None, SEAT_A, FACILITATOR):
+        view = next(p for p in project(table, viewer).pieces if p.id == die)
+        assert view.value == rolled
+
+
+def test_a_die_in_a_hidden_zone_shows_no_value_to_anyone() -> None:
+    table = build_sample_table(deck_size=0)
+    die = _rolled_die(table, DECK)
+
+    for viewer in (None, SEAT_A, FACILITATOR):
+        view = next(p for p in project(table, viewer).pieces if p.id == die)
+        assert view.value is None
+    patch = run_op(table, FACILITATOR, Roll(target_id=die))
+    assert isinstance(patch, Ok)
+    projected = project_patches(table, patch.patches, SEAT_A)
+    assert projected[0].fields["value"] is None

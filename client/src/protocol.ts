@@ -72,6 +72,8 @@ export interface PieceView {
   revealed_to: string[];
   /** Who is showing it, or null when nobody is. */
   revealed_by: string | null;
+  /** A rolled die's face, sent only to a viewer who may see the die's face. */
+  value?: string | null;
 }
 
 export interface ZoneView {
@@ -120,6 +122,8 @@ export interface MacroView {
   label: string;
   hint: string | null;
   facilitator_only: boolean;
+  /** Asked before the button runs, when the server says it is destructive. */
+  confirm: string | null;
 }
 
 export interface YouView {

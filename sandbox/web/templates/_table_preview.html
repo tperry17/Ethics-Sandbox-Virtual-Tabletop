@@ -1,0 +1,29 @@
+{# A still picture of a table after setup, built by sandbox/web/preview.py
+   from the spectator projection. Colours come from the design tokens. #}
+{% macro table_preview(preview) -%}
+<figure class="table-picture">
+  <svg class="table-picture__svg" viewBox="{{ preview.view_box }}" role="img"
+       aria-labelledby="table-picture-title">
+    <title id="table-picture-title">The {{ preview.title }} table after setup, as anyone at it sees it</title>
+    {% for zone in preview.zones %}
+    <g class="table-picture__zone table-picture__zone--{{ zone.visibility }} table-picture__zone--{{ zone.kind }}">
+      <rect x="{{ zone.x }}" y="{{ zone.y }}" width="{{ zone.width }}" height="{{ zone.height }}" rx="12"></rect>
+      <text x="{{ zone.x + 14 }}" y="{{ zone.y + 30 }}">{{ zone.label }}</text>
+    </g>
+    {% endfor %}
+    {% for piece in preview.pieces %}
+    <g class="table-picture__piece table-picture__piece--{{ piece.kind }}{% if piece.title is none %} is-back{% endif %}"
+       transform="rotate({{ piece.rotation }} {{ piece.x + piece.width / 2 }} {{ piece.y + piece.height / 2 }})">
+      <rect x="{{ piece.x }}" y="{{ piece.y }}" width="{{ piece.width }}" height="{{ piece.height }}" rx="10"></rect>
+      {% if piece.title is not none %}
+      <text x="{{ piece.x + 16 }}" y="{{ piece.y + 36 }}">{{ piece.title }}</text>
+      {% endif %}
+    </g>
+    {% endfor %}
+  </svg>
+  <figcaption class="table-picture__caption">
+    Set up for {{ preview.seats }} {{ "seat" if preview.seats == 1 else "seats" }}. Faces
+    nobody may see yet are drawn as backs.
+  </figcaption>
+</figure>
+{%- endmacro %}

@@ -10,7 +10,15 @@ from typing import Any
 import pytest
 from _db_support import make_test_engine
 from _live_support import live_room
-from _model_support import DECK, HAND_A, PUBLIC_TABLE, SEAT_A, SEAT_B
+from _model_support import (
+    DECK,
+    DISCARD,
+    FACILITATOR,
+    HAND_A,
+    PUBLIC_TABLE,
+    SEAT_A,
+    SEAT_B,
+)
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 from starlette.websockets import WebSocketDisconnect
@@ -671,3 +679,57 @@ def test_the_facilitator_socket_answers_hello_with_a_snapshot(
     assert message["type"] == "snapshot"
     assert message["you"]["display_name"] == "Ada"
     assert message["you"]["is_facilitator"] is True
+
+
+# -- the facilitator taking a piece mid-drag -------------------------------------------
+
+
+async def test_the_facilitator_can_take_a_piece_out_of_someones_drag() -> None:
+    async with live_room() as room:
+        ana = await room.connect(SEAT_A, display_name="Ana")
+        host = await room.connect(FACILITATOR, display_name="Ines", is_facilitator=True)
+        await room.intent(ana, "grab", {"piece_id": "card-0"}, client_id="g")
+        await room.intent(
+            ana, "move", {"piece_id": "card-0", "x": 40, "y": 50}, client_id="m1"
+        )
+        await room.settle(0.1)
+
+        await room.intent(
+            host,
+            "move_to_zone",
+            {"piece_id": "card-0", "zone_id": DISCARD},
+            client_id="t",
+        )
+        await room.intent(
+            ana, "move", {"piece_id": "card-0", "x": 90, "y": 90}, client_id="m2"
+        )
+        await room.settle()
+
+        piece = room.runtime.table.pieces["card-0"]
+        assert piece.zone_id == DISCARD
+        assert piece.held_by is None
+        assert ana.socket.of_type("reject")[-1] == {
+            "type": "reject",
+            "client_id": "m2",
+            "reason": "The facilitator took that piece.",
+        }
+        # Ana's drag up to the take is logged before the take itself.
+        assert [op for _seq, op in room.events()] == ["Grab", "Move", "MoveToZone"]
+
+
+async def test_after_a_take_the_same_person_may_pick_the_piece_up_again() -> None:
+    async with live_room() as room:
+        ana = await room.connect(SEAT_A, display_name="Ana")
+        host = await room.connect(FACILITATOR, display_name="Ines", is_facilitator=True)
+        await room.intent(ana, "grab", {"piece_id": "card-0"}, client_id="g1")
+        await room.intent(
+            host,
+            "move_to_zone",
+            {"piece_id": "card-0", "zone_id": DISCARD},
+            client_id="t",
+        )
+        await room.intent(ana, "grab", {"piece_id": "card-0"}, client_id="g2")
+        await room.settle()
+
+        assert room.runtime.table.pieces["card-0"].held_by == SEAT_A
+        assert not [r for r in ana.socket.of_type("reject") if r["client_id"] == "g2"]

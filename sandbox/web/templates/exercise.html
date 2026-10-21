@@ -1,4 +1,5 @@
 {% import "_ui.html" as ui %}
+{% from "_table_preview.html" import table_preview %}
 <!doctype html>
 <html lang="en">
   <head>
@@ -80,22 +81,26 @@
       <section class="site__section" id="preview">
         {{ ui.section_rule("How the table looks") }}
         <p class="prose">{{ exercise.preview_label }}</p>
-        <div class="tabletop">
-          <div class="tabletop__pieces">
-            {% for card in exercise.preview_cards %}
-            <article class="piece piece--card" aria-label="Card: {{ card.title }}">
-              <h3 class="piece__title">{{ card.title }}</h3>
-              <p class="piece__copy">{{ card.copy }}</p>
-              <span class="piece__folio">{{ card.folio }}</span>
-            </article>
-            {% endfor %}
+        {% if preview %}
+        {{ table_preview(preview) }}
+        {% else %}
+          <div class="tabletop">
+            <div class="tabletop__pieces">
+              {% for card in exercise.preview_cards %}
+              <article class="piece piece--card" aria-label="Card: {{ card.title }}">
+                <h3 class="piece__title">{{ card.title }}</h3>
+                <p class="piece__copy">{{ card.copy }}</p>
+                <span class="piece__folio">{{ card.folio }}</span>
+              </article>
+              {% endfor %}
+            </div>
+            <div class="zone-grid">
+              {% for zone in exercise.preview_zones %}
+              <div class="zone"><span class="zone__label">{{ zone }}</span></div>
+              {% endfor %}
+            </div>
           </div>
-          <div class="zone-grid">
-            {% for zone in exercise.preview_zones %}
-            <div class="zone"><span class="zone__label">{{ zone }}</span></div>
-            {% endfor %}
-          </div>
-        </div>
+        {% endif %}
       </section>
     </main>
   </body>

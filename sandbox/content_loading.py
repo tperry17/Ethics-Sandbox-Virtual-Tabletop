@@ -20,9 +20,12 @@ from pathlib import Path
 CONTENT_ROOT = Path(__file__).resolve().parent.parent / "content"
 
 
-def read_rows(relative_path: str) -> list[dict[str, str]]:
-    """Every row of the CSV at ``content/<relative_path>``, in file order."""
-    path = CONTENT_ROOT / relative_path
+def read_rows(relative_path: str, root: Path | None = None) -> list[dict[str, str]]:
+    """Every row of the CSV at ``content/<relative_path>``, in file order.
+
+    ``root`` reads from another content folder instead, such as a test's own.
+    """
+    path = (CONTENT_ROOT if root is None else root) / relative_path
     with path.open(newline="", encoding="utf-8") as handle:
         return [dict(row) for row in csv.DictReader(handle)]
 

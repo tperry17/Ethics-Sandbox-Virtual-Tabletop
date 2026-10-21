@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
-    <title>{{ exercise.title if exercise else "Table" }} · {{ room.code }} · Ethics Sandbox</title>
+    <title>{{ title }} · {{ room.code }} · Ethics Sandbox</title>
     <link rel="icon" href="{{ url_for('static', path='/icons/favicon.ico') }}" sizes="48x48">
     <link rel="icon" href="{{ url_for('static', path='/icons/seal-512.png') }}" type="image/png" sizes="512x512">
     <link rel="apple-touch-icon" href="{{ url_for('static', path='/icons/apple-touch-icon.png') }}">
@@ -16,7 +16,7 @@
     <div class="table-shell">
       <header class="table-shell__header">
         <div class="table-shell__identity">
-          <p class="eyebrow">{{ exercise.title if exercise else room.game_slug }}</p>
+          <p class="eyebrow">{{ title }}</p>
           <div class="table-shell__code-row">
             {{ ui.room_code(room.code) }}
             <button class="button button--quiet button--sm" type="button" id="copy-room-link" data-room-code="{{ room.code }}">

@@ -1,0 +1,8 @@
+id,label,hint,confirm,announce
+setup,Set up,"Clear the table and lay out a fresh, shuffled deck.",This clears the table and sets it up again. Continue?,{name} set up the table.
+deal,Deal one each,"One card, face up, into each seat's hand.",,{name} dealt one card to each seat.
+reveal,Reveal,Lay each seat's card face up on the doors.,,{name} revealed both doors.
+reset,Reset,Remove every card and all ink.,This removes every card and all ink from the table. Continue?,{name} cleared the table.
+shuffle,Shuffle deck,,,{name} shuffled the deck.
+collect,Collect all cards,"Every card back into the deck, face down, shuffled.",,{name} collected every card into the deck.
+clear_ink,Clear ink,,This erases everyone's ink. Continue?,{name} cleared all ink.

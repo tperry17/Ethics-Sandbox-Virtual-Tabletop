@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import anyio.from_thread
 from fastapi import (
     Depends,
     FastAPI,
@@ -18,8 +19,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from sandbox.content_loading import CONTENT_ROOT
 from sandbox.db import init_db, session_scope
-from sandbox.games import EXERCISES, EXERCISES_BY_SLUG
+from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, Game
+from sandbox.games.loader import IMAGE_SUFFIXES
 from sandbox.web.content import PRINCIPLES, SITE_COPY
 from sandbox.web.identity import (
     new_participant_id,
@@ -27,6 +30,7 @@ from sandbox.web.identity import (
     set_participant_cookie,
 )
 from sandbox.web.live import hub
+from sandbox.web.preview import table_preview as picture_of_table
 from sandbox.web.rooms import (
     RoomClosedError,
     RoomNotFoundError,
@@ -55,7 +59,12 @@ templates = Jinja2Templates(directory=PROJECT_ROOT / "sandbox" / "web" / "templa
 
 
 def get_session() -> Iterator[Session]:
-    """One request-scoped database session, committed or rolled back for you."""
+    """One request-scoped database session, committed or rolled back for you.
+
+    Routes that take one are plain ``def``, not ``async def``: FastAPI runs
+    them on a worker thread, so a query waiting on SQLite's write lock waits
+    there, not on the event loop that the lock's holder needs to finish.
+    """
     with session_scope() as session:
         yield session
 
@@ -99,25 +108,78 @@ async def exercise_detail(request: Request, slug: str) -> HTMLResponse:
     exercise = EXERCISES_BY_SLUG.get(slug)
     if exercise is None:
         raise HTTPException(status_code=404, detail="No such exercise.")
+    game = GAMES.get(slug)
     return templates.TemplateResponse(
         request=request,
         name="exercise.html",
-        context={"exercise": exercise},
+        context={
+            "exercise": exercise,
+            "preview": None if game is None else picture_of_table(game),
+        },
     )
 
 
+@app.get("/games/{slug}/preview", response_class=HTMLResponse)
+async def game_preview(request: Request, slug: str) -> HTMLResponse:
+    """The table of any game definition after setup, as a still picture."""
+    game = GAMES.get(slug)
+    if game is None:
+        raise HTTPException(status_code=404, detail="No such game.")
+    return templates.TemplateResponse(
+        request=request,
+        name="game_preview.html",
+        context={"game": game, "preview": picture_of_table(game)},
+    )
+
+
+@app.get("/content/{path:path}")
+async def content_image(path: str) -> FileResponse:
+    """An image under ``content/`` - a card or role drawn from a picture.
+
+    Only image files are served, and only from inside ``content/``: the CSV
+    files beside them hold whole decks, which a browser must never be able
+    to fetch.
+    """
+    root = CONTENT_ROOT.resolve()
+    file = (root / path).resolve()
+    if (
+        not file.is_relative_to(root)
+        or file.suffix.lower() not in IMAGE_SUFFIXES
+        or not file.is_file()
+    ):
+        raise HTTPException(status_code=404, detail="No such image.")
+    return FileResponse(file)
+
+
+def _start_choices(requested: str) -> list[Game]:
+    """Unlisted games offered on the start page: the one asked for by name."""
+    game = GAMES.get(requested)
+    if game is None or game.definition.meta.listed:
+        return []
+    return [game]
+
+
 @app.get("/start", response_class=HTMLResponse)
-async def start_form(request: Request) -> HTMLResponse:
-    """Render the form for choosing an exercise and starting a room."""
+async def start_form(request: Request, game: str = "") -> HTMLResponse:
+    """Render the form for choosing an exercise and starting a room.
+
+    ``?game=<slug>`` also offers a game the public catalog does not list,
+    such as the reference game, already chosen.
+    """
     return templates.TemplateResponse(
         request=request,
         name="start.html",
-        context={"exercises": EXERCISES, "error": None},
+        context={
+            "exercises": EXERCISES,
+            "games": _start_choices(game),
+            "chosen": game,
+            "error": None,
+        },
     )
 
 
 @app.post("/start", response_class=HTMLResponse)
-async def start_room(
+def start_room(
     request: Request,
     game_slug: str = Form(...),
     display_name: str = Form(...),
@@ -133,6 +195,8 @@ async def start_room(
             status_code=400,
             context={
                 "exercises": EXERCISES,
+                "games": _start_choices(game_slug),
+                "chosen": game_slug,
                 "error": "Enter a name for the facilitator.",
             },
         )
@@ -153,6 +217,8 @@ async def start_room(
             status_code=400,
             context={
                 "exercises": EXERCISES,
+                "games": [],
+                "chosen": "",
                 "error": "Choose one of the exercises below.",
             },
         )
@@ -175,7 +241,7 @@ async def join_form(request: Request, code: str = "") -> HTMLResponse:
 
 
 @app.post("/join", response_class=HTMLResponse)
-async def join_room_route(
+def join_room_route(
     request: Request,
     room_code: str = Form(...),
     display_name: str = Form(...),
@@ -200,13 +266,17 @@ async def join_room_route(
         return _error("Enter a name to join with.")
 
     try:
-        join_room(
+        participant = join_room(
             session, code=room_code, cookie_id=cookie_id, display_name=display_name
         )
     except RoomNotFoundError:
         return _error(f"There is no room with the code {room_code.strip().upper()!r}.")
     except RoomClosedError:
         return _error("That room is closed.")
+    if participant.seat_id is not None:
+        # Committed first, so a live room that reads the seat finds it.
+        session.commit()
+        anyio.from_thread.run(hub.seat_taken, room_code.strip().upper(), participant.id)
 
     response = RedirectResponse(url=f"/t/{room_code.strip().upper()}", status_code=303)
     set_participant_cookie(response, request, cookie_id)
@@ -214,7 +284,7 @@ async def join_room_route(
 
 
 @app.get("/t/{code}", response_class=HTMLResponse)
-async def table_shell(
+def table_shell(
     request: Request, code: str, session: Session = Depends(get_session)
 ) -> Response:
     """Render the table page shell: header, seat roster, and the client mount point."""
@@ -228,6 +298,13 @@ async def table_shell(
         return RedirectResponse(url=f"/join?code={room.code}", status_code=307)
 
     exercise = EXERCISES_BY_SLUG.get(room.game_slug)
+    game = GAMES.get(room.game_slug)
+    if exercise is not None:
+        title = exercise.title
+    elif game is not None:
+        title = game.title
+    else:
+        title = room.game_slug
     table = load_table(session, room)
     seats = sorted(table.seats.values(), key=lambda seat: seat.id)
     participants_by_seat = {
@@ -241,6 +318,7 @@ async def table_shell(
         context={
             "room": room,
             "exercise": exercise,
+            "title": title,
             "participant": participant,
             "seats": seats,
             "participants_by_seat": participants_by_seat,

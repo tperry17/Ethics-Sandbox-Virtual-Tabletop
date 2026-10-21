@@ -34,9 +34,19 @@
         {{ ui.section_rule("Exercise") }}
         <fieldset class="exercise-grid exercise-grid--choice">
           <legend class="visually-hidden">Choose an exercise</legend>
+          {% for game in games %}
+          <label class="ui-card ui-card--choice">
+            <input type="radio" name="game_slug" value="{{ game.slug }}" required{% if game.slug == chosen %} checked{% endif %}>
+            <span class="ui-card__header">
+              <span class="eyebrow">{{ game.definition.meta.players.min }}–{{ game.definition.meta.players.max }} people · about {{ game.definition.meta.duration_minutes }} minutes</span>
+              <span class="ui-card__title">{{ game.title }}</span>
+            </span>
+            <span class="ui-card__body prose">Not in the public catalog.</span>
+          </label>
+          {% endfor %}
           {% for exercise in exercises %}
           <label class="ui-card ui-card--choice">
-            <input type="radio" name="game_slug" value="{{ exercise.slug }}" required>
+            <input type="radio" name="game_slug" value="{{ exercise.slug }}" required{% if exercise.slug == chosen %} checked{% endif %}>
             <span class="ui-card__header">
               <span class="eyebrow">{{ exercise.group_size }} · {{ exercise.running_time }}</span>
               <span class="ui-card__title">{{ exercise.title }}</span>

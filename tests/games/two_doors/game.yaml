@@ -1,0 +1,83 @@
+# Two Doors - the worked example of a game definition, kept with the tests.
+# CLAUDE.md, "Game definitions", explains every section of this file.
+
+meta:
+  slug: two-doors
+  title: Two Doors
+  players: {min: 2, max: 2}
+  duration_minutes: 10
+  facilitator: optional
+  listed: false            # a test fixture, never on the public site
+
+components:
+  decks:
+    - id: doors
+      source: exercises/two-doors/cards.csv
+      key: name            # unique per card; part of its component id
+      title: name
+      body: text
+
+seats:
+  labels: [First seat, Second seat]
+
+zones:
+  - id: table
+    kind: table
+    label: The table
+    rect: [0, 0, 1400, 1000]
+    visibility: public
+    layout: free
+  - id: deck
+    kind: deck
+    label: Deck
+    rect: [40, 340, 240, 320]
+    visibility: hidden
+    layout: stack
+  - id: doors
+    kind: slot
+    label: The two doors
+    rect: [420, 340, 560, 320]
+    visibility: public
+    layout: spread
+    capacity: 2
+  - id: hand
+    kind: hand
+    label: Hand
+    rect: [420, 700, 560, 280]
+    visibility: private_to_owner
+    layout: fan
+    per_seat: true
+    step: [0, -680]        # the second seat's hand sits across the table
+
+setup:
+  - {op: spawn_deck, deck: doors, zone: deck}   # a hidden deck is shuffled as it is made
+
+macros:                    # what each button says: content/.../buttons.csv
+  - id: setup
+    steps:
+      - {op: reset_table}
+      - {op: setup}
+  - id: deal
+    steps:
+      - {op: deal, from: deck, to: hand, count: 1}   # into a private hand, so face up
+  - id: reveal
+    python: reveal
+  - id: reset
+    steps:
+      - {op: reset_table}
+  - id: shuffle
+    steps:
+      - {op: shuffle, zone: deck}
+  - id: collect
+    steps:
+      - {op: collect, to: deck, kinds: [card], face_up: false}
+      - {op: shuffle, zone: deck}
+  - id: clear_ink
+    steps:
+      - {op: clear_ink}
+
+buttons:
+  source: exercises/two-doors/buttons.csv
+
+prompts:
+  source: exercises/two-doors/prompts.csv

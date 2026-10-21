@@ -41,6 +41,7 @@ Do not substitute the stack.
 - `sandbox/web/templates/` — Jinja templates
 - `sandbox/db/` — SQLAlchemy models and migrations
 - `sandbox/content_loading.py` — reads the CSV files under `content/` into plain rows
+- `sandbox/cli.py` — the `sandbox` command (`uv run sandbox validate-games`)
 - `content/` — editorial text as CSV, edited as a spreadsheet; see `content/README.md`
 - `client/` — TypeScript table client built by Vite
 - `static/` — compiled client output, CSS, and fonts
@@ -147,6 +148,120 @@ more than it saves. Per-piece shadows were measured at this size and cost
 nothing, so they stay: the instruction is to spend the shadows before the
 typography, and it has not come to that.
 
+## Game definitions
+
+An exercise's table is data. A game is a directory under `sandbox/games/`
+holding a `game.yaml`, an `__init__.py`, and optionally a `rules.py` for
+what the YAML cannot say. No exercise has one yet. The worked example is
+Two Doors, a test fixture in `tests/games/two_doors/` whose CSV files are in
+`tests/games/content/exercises/two-doors/`: read it alongside this section.
+It is not part of the product; the app loads it only when
+`SANDBOX_EXTRA_GAMES` names `tests/games`, as pytest and the Playwright
+server do.
+
+`game.yaml` has these sections, checked by `sandbox/games/definition.py`:
+
+- `meta` — `slug`, `title`, `players: {min, max}` (the seat cap),
+  `duration_minutes`, `facilitator` (required, recommended or optional),
+  and `listed`. A listed game's site copy stays in
+  `content/site/exercises.csv`, and its title there must match.
+- `components` — `decks`, each the rows of a CSV under `content/` (`key`
+  names the unique column, `title`/`body`/`folio` the columns on the face,
+  `image` the column naming a file in that folder's `images/`), and
+  `pieces`: dice with `faces`, tokens, cubes, meeples, notes.
+- `seats` — `labels`, given in the order seats are taken; past the end,
+  "Seat N". Seats are created as people sit down.
+- `zones` — `rect: [x, y, width, height]`, `kind`, `visibility`, `layout`,
+  optional `capacity`. `per_seat: true` gives every seat its own copy,
+  `<id>-<seat id>`, owned by that seat and moved by `step: [dx, dy]` per
+  seat. A `private_to_owner` zone must be per-seat.
+- `setup` — steps that build the starting table when a room is created.
+- `macros` — buttons: `id`, `who` (facilitator or anyone), and either
+  `steps` or `python: <function>`. Every game has `setup`, `deal`,
+  `reset`, `shuffle`, `collect` and `clear_ink`.
+- `buttons` — `source:` a CSV saying what each macro's button says, one
+  row per macro: `id`, `label`, `hint`, `confirm` (asked first; give one to
+  anything destructive) and `announce` (`{name}` and `{label}`).
+- `prompts` — `source:` a CSV with `id` and `text` columns.
+
+Steps are `{op: ..., ...}`: `setup` (run the setup steps here),
+`spawn_deck`, `spawn`, `shuffle`, `deal` and `draw` (`from`, `to`,
+`count`, `face_up`), `collect` (`to`, optional `kinds`, `from`,
+`face_up`), `flip`, `reset_table`, `reset_zone`, `clear_ink`. Naming a
+per-seat zone means every seat's copy, in seat order. A card dealt or
+drawn into its owner's private hand lands face up, so its owner can read
+it; anywhere else it stays as it came off the pile. `face_up` in the step
+overrides either.
+
+`sandbox/games/engine.py` turns a macro, a new seat, or a new table into
+one `Transaction` of concrete operations, trying each against a copy of the
+table as it builds. The transaction applies whole or not at all, is logged
+as one event with every step in it, is snapshotted, and is announced to the
+table. A refusal is the model's own sentence. Spawned pieces get random
+ids, and a hidden deck is shuffled as it is made, because an id that
+follows a card is a way to read it.
+
+### The escape hatch
+
+`rules.py` registers functions with `sandbox.games.hatch`:
+
+```python
+from sandbox.games.hatch import GameContext, MacroRefused, hook, macro
+from sandbox.model import Flip, MoveToZone, Operation, Table
+
+
+@macro("reveal")  # game.yaml: {id: reveal, ..., python: reveal}
+def reveal(table: Table, context: GameContext) -> list[Operation]:
+    if table.pieces_in_zone("doors"):
+        raise MacroRefused("The doors already hold cards. Collect them first.")
+    operations: list[Operation] = []
+    for seat in context.seats:  # seat order
+        hand = table.pieces_in_zone(context.zone("hand", seat))
+        if not hand:
+            raise MacroRefused(f"{table.seats[seat].label} has no card. Deal first.")
+        operations += [
+            MoveToZone(piece_id=hand[-1].id, zone_id="doors"),
+            Flip(piece_id=hand[-1].id, face_up=True),
+        ]
+    return operations
+```
+
+- `@macro(id)` is the body of the macro whose YAML says `python: id`.
+- `@hook("after_setup")`, `@hook("before_macro")` (`context.macro_id`) and
+  `@hook("seat_change")` (`context.seat_id`; fires when a seat is added)
+  run inside the same transaction as what caused them.
+- Each receives a copy of the table and a `GameContext` (`actor_seat`,
+  `seats`, `zone(id, seat)`, `seat_zones(id)`) and returns operations. No
+  I/O, no global randomness, and no mutating the table: return a
+  `Shuffle` or a `Roll` instead. `MacroRefused(sentence)` refuses the
+  whole macro with that sentence.
+- Test them as plain functions; `tests/games/hooked/` exercises every hook.
+
+`uv run sandbox validate-games` loads every definition, checks every name
+it uses, and plays every macro at both ends of the player range; pytest
+runs the same check. `/games/{slug}/preview` draws a game's table after
+setup from the spectator projection, and an exercise page shows it once
+the exercise has a definition. `/start?game={slug}` starts an unlisted
+game. Definitions and content hot-reload under `uv run dev`.
+
+### Who may move what
+
+The facilitator may take any piece from anywhere: a locked one, one
+someone else is holding mid-drag, one in someone's hand. A participant may
+not touch a locked piece, a piece someone else is holding, or a piece in
+another seat's private zone; they may give a piece to someone's hand, but
+not take one out of it. Only the facilitator may clear a zone, despawn a
+piece or reset the table. When the facilitator takes a piece out of
+someone's drag, that person's drag so far is logged first, and what they
+send for the piece afterwards is refused until they pick it up again.
+
+A rolled die's face (`value` on the wire) is sent only to viewers who may
+see the die's face, like its `component_id`. When the last person leaves a
+live room, its table is saved as it was left. Who sits where belongs to the
+room service: callers of `rooms.claim_seat`, `release_seat`,
+`make_observer` and `remove_participant` call `hub.seats_changed(code)`
+after committing, and a live room's snapshots never overwrite it.
+
 ## Rules of engagement
 
 - Every change must keep Ruff, mypy strict, and pytest green before it is called done.
@@ -196,6 +311,9 @@ typography, and it has not come to that.
 - Alembic manages the SQLAlchemy schema as versioned migrations, so production (Postgres) and local development (SQLite) are always brought to the same shape deliberately, never by `create_all` drift.
 - python-multipart is required by Starlette to parse the HTML form submissions on `/start` and `/join`.
 - pytest-asyncio runs the realtime tests, which must await the room task itself rather than a synchronous stand-in for it.
+- PyYAML reads each exercise's `game.yaml`, the definition format the build plan specifies.
+- types-PyYAML gives mypy strict the types for PyYAML.
+- anyio (already installed by Starlette, now imported directly) lets the `/join` route, which runs on a worker thread, tell a live room about a new seat before it answers.
 
 ## Design tokens
 
