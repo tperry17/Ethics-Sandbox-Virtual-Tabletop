@@ -124,6 +124,11 @@ Where these conflict with a prompt below, these win.
   network. Prompt 16's hosting choice is open (see below).
 - **Call.** Section 0 says Zoom; CLAUDE.md says a separate video or phone
   call. Nothing depends on which.
+- **No principles of engagement for now.** The six principles on the
+  landing page were drafted during the build, not taken from the Center,
+  and the author removed them. Prompt 3's PRINCIPLES section and its
+  `/principles` route are on hold until the author supplies the text; do
+  not write new ones.
 - **Branches and pull requests.** CLAUDE.md now requires a descriptive
   branch name, a pull request for every pushed branch, and a "Questions for
   the author" section in every pull request description.

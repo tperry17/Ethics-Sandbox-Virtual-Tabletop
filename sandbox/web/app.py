@@ -23,7 +23,7 @@ from sandbox.content_loading import CONTENT_ROOT
 from sandbox.db import init_db, session_scope
 from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, Game
 from sandbox.games.loader import IMAGE_SUFFIXES
-from sandbox.web.content import PRINCIPLES, SITE_COPY
+from sandbox.web.content import SITE_COPY
 from sandbox.web.identity import (
     new_participant_id,
     read_participant_cookie,
@@ -96,7 +96,6 @@ async def home(request: Request) -> HTMLResponse:
         context={
             "project_name": "Ethics Sandbox",
             "site_copy": SITE_COPY,
-            "principles": PRINCIPLES,
             "exercises": EXERCISES,
         },
     )

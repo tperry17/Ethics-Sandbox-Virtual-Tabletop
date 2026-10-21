@@ -20,9 +20,6 @@ quotes - most spreadsheet apps do this for you automatically when you save.
 
 ## Live on the site today
 
-`site/principles.csv` - the six "Principles of engagement" cards shown on
-the landing page.
-
 `site/exercises.csv` - one row per exercise: title, blurb, premise, group
 size, running time, and the rest of the fields on its catalog and detail
 pages. Add a row here (with a new `slug`) and matching rows in the files

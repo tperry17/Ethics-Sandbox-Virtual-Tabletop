@@ -6,13 +6,6 @@ import pytest
 
 from sandbox.games.content import load_exercise
 from sandbox.games.value_cards import VALUE_CARDS_TRADING
-from sandbox.web.content import PRINCIPLES
-
-
-def test_principles_load_from_csv() -> None:
-    assert len(PRINCIPLES) == 6
-    assert PRINCIPLES[0].title == "Steelman before you object"
-    assert all(p.title and p.copy for p in PRINCIPLES)
 
 
 def test_load_exercise_assembles_every_field() -> None:

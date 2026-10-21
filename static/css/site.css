@@ -37,12 +37,6 @@
 
 .site__footer a { color: inherit; text-underline-offset: var(--space-1); }
 
-.principle-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-  gap: var(--space-4);
-}
-
 .exercise-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
