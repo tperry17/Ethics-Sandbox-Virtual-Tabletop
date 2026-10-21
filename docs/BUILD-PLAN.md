@@ -13,8 +13,7 @@ table below in the same pull request.
 
 ## Where we are
 
-Prompts 1–8 are done. Prompt 9, game definitions and macro buttons, is
-claimed and in review in PR #9. Prompts 10 and 11 need written rules from
+Prompts 1–9 are done. Prompts 10 and 11 need written rules from
 the author before they can run (see "Waiting on the author"). Prompts 12–16
 are unclaimed, but Prompt 12 says it is built after the games, so it is
 best left until 10 and 11 can run.
@@ -32,7 +31,7 @@ shows "Claimed" in this table on `main`.
 | 6 | The realtime layer | Done | | `d852f75` |
 | 7 | The table client — rendering | Done | | `9c86f37` |
 | 8 | The table client — interaction | Done | | `d8c383d` (PR #1) |
-| 9 | Game definitions and macro buttons | Claimed; in review | `claude/game-definitions` | PR #9 |
+| 9 | Game definitions and macro buttons | Done | | PR #9 |
 | 10 | Value Cards Trading | Waiting on the author's rules | `claude/step-10-value-cards-trading` | |
 | 11 | Democracy Simulation | Waiting on the author's rules | `claude/step-11-democracy-simulation` | |
 | 12 | Facilitator controls and the shared view | Not started | `claude/step-12-facilitator-controls` | |
@@ -100,9 +99,9 @@ Checked against the code on `main`; none of these has been fixed yet.
   purged after 30 days, and the UI does not announce either.
 - **Prompt 2.** `/styleguide` still describes the design as a "scholarly
   edition", which CLAUDE.md now rules out. Being removed in a separate PR.
-- **No CI.** There is no `.github/workflows/`. Prompt 9 asks for
-  `validate-games` to fail CI; until there is CI, pytest runs the same
-  check. Prompt 15 wires the suite into CI.
+- **CI.** `.github/workflows/ci.yml` runs Ruff (lint and format), mypy,
+  pytest and the Playwright suite on every pull request. Prompt 15 still
+  adds the load check and the recorded-session security test.
 
 ## Changes since the plan was written
 
@@ -668,7 +667,7 @@ Commit.
 
 ## 9. Game definitions and macro buttons
 
-**Status: Claimed; in review in PR #9.**
+**Status: Done (PR #9).**
 
 The prompt that makes a third exercise cheap. Data-driven, with a Python escape hatch for mechanics the generic format cannot express.
 

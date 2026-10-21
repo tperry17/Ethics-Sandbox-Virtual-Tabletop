@@ -523,7 +523,10 @@ test.describe("the keyboard", () => {
     let proposed = await intents(page);
     expect(proposed.map((intent) => intent.op_type)).toEqual(["move", "release"]);
     expect(proposed[0]!.payload).toMatchObject({ piece_id: "token-1", x: 200, y: 160 });
-    expect((await visual(page, "token-1"))[0]).toBeCloseTo(200, 0);
+    // The override is drawn on the next animation frame, not during the key press.
+    await expect
+      .poll(async () => (await visual(page, "token-1"))[0], { timeout: 2000 })
+      .toBeCloseTo(200, 0);
     await expect(page.locator("[data-announcer]")).toHaveText(/3 moved right\./);
 
     await page.keyboard.press("Shift+ArrowDown");
