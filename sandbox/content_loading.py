@@ -1,6 +1,6 @@
 """Reading CSV content files into plain rows.
 
-Editorial text - principles, exercise copy, and (once an exercise defines
+Editorial text - site copy, exercise copy, and (once an exercise defines
 game content) card and role decks - lives as CSV files under ``content/``
 at the project root rather than as Python literals, so updating what the
 site says is editing a spreadsheet, not touching code. See

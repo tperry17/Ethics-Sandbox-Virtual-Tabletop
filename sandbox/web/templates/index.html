@@ -36,17 +36,6 @@
         </div>
       </section>
 
-      <section class="site__section" id="principles">
-        {{ ui.section_rule("Principles of engagement") }}
-        <div class="principle-grid">
-          {% for principle in principles %}
-          {% call ui.card(principle.title) %}
-            <p class="prose">{{ principle.copy }}</p>
-          {% endcall %}
-          {% endfor %}
-        </div>
-      </section>
-
       <footer class="site__footer">
         <a href="/styleguide">Style guide</a>
       </footer>

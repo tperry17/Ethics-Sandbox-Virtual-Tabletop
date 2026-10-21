@@ -2,7 +2,6 @@ from fastapi.testclient import TestClient
 
 from sandbox.games import EXERCISES
 from sandbox.web.app import app
-from sandbox.web.content import PRINCIPLES
 
 
 def test_home_page() -> None:
@@ -12,15 +11,13 @@ def test_home_page() -> None:
     assert "Ethics Sandbox" in response.text
 
 
-def test_home_page_lists_exercises_and_principles() -> None:
+def test_home_page_lists_exercises() -> None:
     response = TestClient(app).get("/")
 
     assert response.status_code == 200
     for exercise in EXERCISES:
         assert exercise.title in response.text
         assert f"/exercises/{exercise.slug}" in response.text
-    for principle in PRINCIPLES:
-        assert principle.title in response.text
 
 
 def test_exercise_detail_page_renders_each_exercise() -> None:

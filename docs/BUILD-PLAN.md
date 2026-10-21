@@ -91,7 +91,7 @@ Work outside the numbered prompts, already merged:
 
 Checked against the code on `main`; none of these has been fixed yet.
 
-- **Prompt 3.** The `/exercises`, `/principles` and `/about` routes do not
+- **Prompt 3.** The `/exercises` and `/about` routes do not
   exist; the site has `/` and `/exercises/{slug}` only. No page sets OG
   meta tags. The exercise page's "preview image" is an HTML mock-up built
   from `content/site/exercise_preview_*.csv`, not an image of a real table.
@@ -124,6 +124,10 @@ Where these conflict with a prompt below, these win.
   network. Prompt 16's hosting choice is open (see below).
 - **Call.** Section 0 says Zoom; CLAUDE.md says a separate video or phone
   call. Nothing depends on which.
+- **No principles of engagement.** The six principles that were on the
+  landing page were drafted during the build, not taken from the Center,
+  and the author removed them for good. Prompt 3 no longer asks for them;
+  do not write new ones or add a `/principles` page.
 - **Branches and pull requests.** CLAUDE.md now requires a descriptive
   branch name, a pull request for every pushed branch, and a "Questions for
   the author" section in every pull request description.
@@ -329,7 +333,6 @@ ROUTES
 /                  Landing
 /exercises         The library
 /exercises/{slug}  One exercise in detail
-/principles        House rules for discourse
 /about             What this is and who made it
 
 LANDING
@@ -338,8 +341,8 @@ Sandbox is, one on what a session is actually like - a group on a call
 together, moving cards on a shared table, arguing - and two actions,
 "Start a table" and "See the exercises". Then a short section on the shape
 of every exercise here: play, then argue, then look at what you did. Then
-the two exercise cards. Then the principles, condensed. No hero image, no
-viewport-height opener, no testimonials.
+the two exercise cards. No hero image, no viewport-height opener, no
+testimonials.
 
 EXERCISE DETAIL - this page decides whether someone runs it, so it carries
   the premise in one paragraph
@@ -355,12 +358,6 @@ Drive every page from the exercise definition files, not from hand-written
 templates, so a new exercise appears here automatically. Write real copy
 for both exercises from the descriptions in CLAUDE.md and mark anything
 invented with a TODO comment.
-
-PRINCIPLES
-Five to seven short norms for discourse in a session - steelman before you
-object, disagree with the position not the person, change your mind out
-loud. These are shown again at the table, so keep them in one data file
-and render from it.
 
 Responsive to 380px. Semantic landmarks. Metadata and OG tags per route.
 Commit.

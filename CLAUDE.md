@@ -16,8 +16,6 @@ The experience is real time but unhurried. Dragging must feel immediate to the p
 
 The voice and feel should be academic in the good sense: an atmosphere of exploration and learning, and of Socratic exchange where disagreement is expected and safe. It should feel like a seminar room, not a game show or corporate SaaS. There are no points, streaks, confetti, badges, or leaderboards. Nobody wins an ethics exercise. Avoid framing this as a “scholarly edition” or otherwise gilding the tone - keep the register plain and direct.
 
-On the landing page, exercises are shown before the principles of engagement: a visitor sees what they can actually run before they see the norms for running it.
-
 ## Stack
 
 - Python 3.12
