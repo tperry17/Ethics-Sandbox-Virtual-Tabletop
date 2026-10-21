@@ -15,6 +15,7 @@
 ## Checks
 
 - [ ] `uv run ruff check .`
+- [ ] `uv run ruff format --check .`
 - [ ] `uv run mypy sandbox tests`
 - [ ] `uv run pytest`
 - [ ] `npm run test:e2e` (if the table client or a page changed)
