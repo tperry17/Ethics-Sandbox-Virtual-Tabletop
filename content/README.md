@@ -41,7 +41,7 @@ prompts, and what its buttons say - lives under `exercises/<exercise>/`,
 and the exercise's game definition (`sandbox/games/<exercise>/game.yaml`)
 names the files it reads.
 
-`exercises/value-cards-trading/cards.csv` and the Democracy Simulation's
+`decks/value-cards/cards.csv` and the Democracy Simulation's
 `roles.csv`, `jobs.csv` and `features.csv` are not read yet. Their
 exercises get game definitions in later steps of the build plan
 (`docs/BUILD-PLAN.md`, prompts 10 and 11), which will read exactly these
@@ -54,6 +54,12 @@ lives by the river, has heard the rumour, or sits on the council.
 `jobs.csv` holds the knowledge and interest text for each job in each
 phase. `features.csv` holds the extra line that the river, rumour and
 council marks add to a card.
+
+`decks/value-cards/cards.csv` is the Value Cards deck as printed, copied
+from the "deck" sheet of the author's "values cards - the spreadsheet".
+It sits under `decks/` rather than under one exercise because several
+exercises will use it. `art` names the card's picture and `schwartz` the
+category whose icon is printed in its corner.
 
 A game's buttons CSV (for example `exercises/<exercise>/buttons.csv`) has
 one row per button: `id` (which button; it matches the game definition),

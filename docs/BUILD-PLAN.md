@@ -136,9 +136,12 @@ Where these conflict with a prompt below, these win.
   people per city, with a simple majority or a secret council vote. Where
   the site copy in `content/site/exercises.csv` says otherwise, Prompts 10
   and 11 correct it.
-- **A room is a table, not a class.** CLAUDE.md's "groups of 4–30" is the
-  size of a class. One Value Cards table seats 3 and one Democracy city
-  seats 9–20, so a class runs several rooms. Prompt 12 adds the class.
+- **A room is sized by its exercise.** CLAUDE.md's "groups of 4–30"
+  describes the tabletop in general, not any one exercise (the author,
+  2026-10-30). Each game sets its own seat range. Value Cards Trading
+  seats 3, and later Value Cards exercises may seat more. A Democracy
+  city seats 9–20. A class that is larger than one table runs several
+  rooms, which Prompt 12 adds.
 - **Call.** Section 0 says Zoom; CLAUDE.md says a separate video or phone
   call. Nothing depends on which.
 - **No principles of engagement.** The six principles that were on the
@@ -151,11 +154,13 @@ Where these conflict with a prompt below, these win.
 
 ## Waiting on the author
 
-- **Prompt 10:** nothing blocks it. One small check is open: how the
-  card names are capitalised.
-- **Prompt 11:** the role cards are now in the repo. The elite sheets and
-  invitations are in the author's Drive folder. A few corrections to that
-  material are listed under Prompt 11, "Open before this prompt runs".
+- **Prompt 10:** nothing blocks the rules or the text. The card pictures
+  ("Value Cards/images 2.1") and the Schwartz icons ("Value Cards/icons")
+  need exporting from Drive into the repo before the faces can match the
+  printed cards.
+- **Prompt 11:** the role cards are in the repo. Three things are left in
+  the printouts; they are listed under Prompt 11, "Open before this prompt
+  runs".
 
 ---
 
@@ -744,12 +749,20 @@ them in a browser (or headless Chromium) to check them.
 
 - Rules: "Core Value Cards Activity: Trading & Sorting",
   <https://harvard-ethics.notion.site/Core-Value-Cards-Activity-Trading-Sorting-3b9fa270aa9380a0a889f27be7fdae5d>
-- Deck: "Value Cards Kit",
-  <https://harvard-ethics.notion.site/Value-Cards-Kit-372fa270aa9380e184d2fbe263ce96d2>.
-  The Kit says the deck has 36 cards. Its gallery has three groups: "Deck"
-  (18), "Sidebar" (18) and "Archive" (9). The author confirmed on
-  2026-10-30 that the 36 are Deck plus Sidebar, and that Archive is left
-  out.
+- Deck: the printed cards (the author's decision, 2026-10-30). They are
+  printed with nanDECK from the "deck" sheet of the author's Google Sheet
+  "values cards - the spreadsheet"
+  (<https://docs.google.com/spreadsheets/d/1bsJuX048BY9O0T0C2chUs7qZin4K5ibCWq4ek1lDvT4/edit>).
+  The print script, `valuecards.txt` in the Drive folder "Value Cards",
+  prints the rows marked Deck (18) and Sidebar (18) and leaves out
+  Archive. The resulting file is `valuescards.pdf` in the same folder.
+  The 36 cards are now in `content/decks/value-cards/cards.csv`. They live
+  outside any one exercise because later exercises will use the same
+  deck. The Kit page on Notion
+  (<https://harvard-ethics.notion.site/Value-Cards-Kit-372fa270aa9380e184d2fbe263ce96d2>)
+  lists the same 36. Its "+ 1" marks are a Notion link to a second Schwartz
+  category, not something printed on the card, and the deck does not
+  carry them.
 - The Kit also links a digital version on Screentop
   (<https://screentop.gg/@tperry/value-cards/play/skwb>). It is useful for
   comparing layouts. Do not copy it.
@@ -804,52 +817,28 @@ Additional questions:
 11. What is one value you want to be more intentional about upholding?
 12. Did the group make any decisions that reflected shared values?
 
-### The deck: 36 cards, as the Kit page lists them
+### The deck as printed
 
-Names are copied as the page writes them. Three are capitalised and the
-rest are not; ask the author which form the printed cards use.
+`content/decks/value-cards/cards.csv` has one row per printed card: key,
+name, definition, group (Deck or Sidebar), number (the number printed in
+the card's corner), schwartz (the Schwartz category whose icon is printed
+beside the number), art and image.
 
-| Group | Name | Definition |
-|---|---|---|
-| Deck | joy | Experiencing exuberance, enjoying life's pleasures |
-| Deck | tradition | Honoring cultural practices and meanings that connect our past to our future |
-| Deck | excellence | Striving towards exceptional achievements, not compromising on quality |
-| Deck | power | Capacity to shape the course of events or influence others |
-| Deck | justice | Ensuring everyone gets their due and receives fair treatment |
-| Deck | sustainability | Preserving and protecting the environment for present and future generations |
-| Deck | faith | Drawing motivation and inspiration from belief in something greater than oneself |
-| Deck | love | Experiencing deep affection, connection and care for something or someone |
-| Deck | kindness | Being considerate, helpful, and caring to oneself and others |
-| Deck | freedom | Acting and making choices without interventions by others |
-| Deck | diversity | Engaging people with a wide array of experiences, backgrounds, and perspectives |
-| Deck | dignity | Maintaining a sense of self-worth and self-respect |
-| Deck | community | Feeling of belonging to a group that has shared sensibility |
-| Deck | integrity | Remaining loyal to one's deeply held commitments, applying them consistently |
-| Deck | order | Maintaining a stable system of clear and established rules where authority is respected |
-| Deck | family | Love, closeness, and loyalty among people bound by upbringing or blood ties |
-| Deck | Honesty | Being truthful and sincere in words and actions |
-| Deck | Compassion | Empathizing with the suffering of others and caring for their well-being |
-| Sidebar | authenticity | Living as one's true self, independent of social pressures |
-| Sidebar | humor | Appreciating life's absurdities, being able to laugh at oneself and the world |
-| Sidebar | safety | Living without threat or fear, feeling secure in one's life |
-| Sidebar | leadership | Guiding and inspiring others towards a common goal |
-| Sidebar | peace | State of calm and harmony, free from conflict and violence |
-| Sidebar | knowledge | Pursuing and sharing information and ideas, contributing to collective understanding |
-| Sidebar | friendship | Forming and maintaining supportive and affectionate relationships |
-| Sidebar | generosity | Sharing willingly with others, not expecting something in return |
-| Sidebar | courage | Acting on one's beliefs in the face of danger and threats, overcoming fears |
-| Sidebar | gratitude | Appreciating one's fortunes, being thankful for the positive aspects of one's life |
-| Sidebar | accountability | Taking responsibility for one's actions and decisions |
-| Sidebar | curiosity | Passion for learning, exploring, and understanding |
-| Sidebar | purity | Avoiding complicity in wrongdoing, striving to remain uncorrupted and undegraded |
-| Sidebar | humility | Having a modest view of one's own importance |
-| Sidebar | equality | Upholding the same rights, opportunities and respect for everyone |
-| Sidebar | tolerance | Coexisting across differences in opinions, beliefs, or practices |
-| Sidebar | Creativity | Generating original ideas and approaching matters in novel ways |
-| Sidebar | independence | Ability to be self-sufficient and not reliant on others |
+The printed face, from the print script, is: the name in title case
+("Community"), the definition beneath it, and the card's picture in the
+lower half (`<Name>.png`, from the Drive folder "Value Cards/images 2.1").
+The number and the Schwartz icon sit in the bottom corner. A crimson frame
+(`#A41034`) marks a Deck card and a navy one (`#172D4A`) a Sidebar card.
+The back is the Center's seal, which is already the platform's card back.
 
-Archive cards (retired, and not dealt): happiness, perseverance, purpose,
-growth, innovation, optimism, collaboration, self-awareness, trust.
+`art` names the picture file. `image` stays blank, so the face is
+generated from text plus the picture and the text stays real text at any
+zoom. The pictures and the Schwartz icons ("Value Cards/icons") are not in
+the repo yet.
+
+The definitions are copied from the sheet as they stand. Two differ from
+the Notion page by a serial comma ("connection, and care";
+"opportunities, and respect"), and they match the printed PDF.
 
 ### What changed from the prompt as first written
 
@@ -859,7 +848,8 @@ four of its requirements contradict them. Each is replaced below:
 - **Hands.** The first version said hands were private. In the activity
   they are open within the trio.
 - **Card fields.** It asked for a fuller gloss and a tension example on
-  every card. The physical cards carry a name and a definition only.
+  every card. The printed cards carry a name, a definition, a picture, a
+  number and a Schwartz icon.
 - **Ranking.** It asked for a ranking strip with the order recorded at the
   start and the end. The activity's sorting step is choosing a top three
   at the end.
@@ -875,11 +865,15 @@ STOP and list the questions rather than guessing. Mark anything you have
 to invent with a TODO comment.
 
 CONTENT
-  Replace content/exercises/value-cards-trading/cards.csv with the 36
-  cards in the plan, one row each, with the columns key, name, definition,
-  image (blank). Drop the old short_definition, fuller_gloss and
-  tension_example columns, and update content/README.md to match. The
-  debrief questions go in the game's prompts CSV. Update the exercise's
+  The deck is content/decks/value-cards/cards.csv, already filled in
+  from the printed cards (see "The deck as printed" in the plan). Name it
+  from the game's components; do not copy it into the exercise's folder.
+  Draw each face as printed: name, definition, the picture named in
+  `art`, the number with its Schwartz icon, and a frame coloured by
+  `group`, using colours from tokens.css and adding tokens if needed. If
+  the definition format cannot name a picture column alongside text, add
+  that in generic terms. The debrief questions go in the game's prompts
+  CSV. Update the exercise's
   row in content/site/exercises.csv to match the activity: three people
   per table, any number of tables, about 30 minutes plus a debrief.
 
@@ -1020,30 +1014,52 @@ read on 2026-10-30:
   1, 10 (Mayor/King), 2, 4 (Merchant) and 14 (Noble); Phase 2 cards 1, 10,
   4, 13 (Merchant) and 7 (Noble).
 
+### Resolved by the author on 2026-10-30
+
+- The Phase 2 Hudrosia council flags are corrected in the sheet: card 13
+  (a Merchant) is on the council and card 2 (a Shepherd) is not.
+  `roles.csv` was re-exported to match.
+- A card that is both a council member and a river dweller shows both
+  lines. The sheet now gives Phase 2 Hudrosia cards 1 and 4 both.
+- The repeated title line on the Phase 1 Hudrosia King card 1 sheet is
+  gone.
+- Where the slide deck and the printouts differ, the printouts are
+  current.
+
 ### Open before this prompt runs
 
-1. **Phase 2 Hudrosia council flags.** The spreadsheet marks card 2 (a
-   Shepherd) as a council member and card 13 (a Merchant) as not one. The
-   document says the council is the kings, merchants and noble, and card
-   13 has a merchant's sheet. `roles.csv` copies the spreadsheet as it
-   stands; correct it there.
-2. **Two lines that will not fit.** In Phase 2 Hudrosia, cards 1 and 4
-   are both council members and river dwellers. The spreadsheet's card
-   text has one slot for the extra line, and that slot holds the river
-   line, so these cards never say "You are a council member." Should the
-   card carry both lines?
-3. **Phase 1 Hudrosia printout.** The Noble's sheet is headed "card no.
-   4" (it should be 14). The King card 1 sheet repeats its title line. The
-   invitation reads "The Wise Council of shall convene".
-4. **Phase 2 Potamosia printout.** The doc has 26 unresolved suggested
-   edits. Accept or reject them before the text is copied.
-5. **Spelling across the Phase 2 printouts.** Two misspellings recur:
-   "Hedrosia" and "Potamsians". "i shepherds" and "shuffles" (for
-   "scuffles") appear too, and Hudrosia's sheets say "the informed masses"
-   where "uninformed" may be meant. Copy as written, or correct?
-6. **The slide deck's Phase 2 options differ from the printouts.** The
-   slides say "a surprise naval attack ... to conquer their undefended
-   fertile lands" and "envoys by foot". Which wording is current?
+Checked against the Drive files at 18:30 UTC on 2026-10-30.
+
+1. **Phase 1 Hudrosia printout: card numbers.** The sheets are now headed
+   Merchant "card no. 2", Merchant "card no. 14" and Noble "card no. 4".
+   The roles sheet makes card 4 a Merchant and card 14 the Noble, so the
+   second Merchant should be 4 and the Noble 14. The invitation still
+   reads "The Wise Council of shall convene".
+2. **Phase 2 Potamosia printout: suggested edits.** Drive still reports 26
+   unresolved suggestions on this doc (last edited 18:08 UTC). If they
+   have been accepted, this may be Drive's record lagging; check the doc
+   in editing mode.
+3. **Spelling in the Phase 2 printouts: copy as written, or correct?**
+   Each sentence repeats on every elite sheet of that city:
+   - Potamosia, all five sheets: "Hedrosia's oligarchy".
+   - Hudrosia, all five sheets: "entreaties with the Potamsians", "scuffles
+     but i shepherds", "the unpredictable whim of the informed masses"
+     ("uninformed"?), and "increasingly outrageous and plans".
+   - Hudrosia, King 1, King 10, Merchant 4, Merchant 13 and Noble 7: "the
+     Potamsians are constructing many ships".
+   - Hudrosia, King 1: "Potamsia's penchant".
+   - Hudrosia, King 1 and Merchant 13: "Potomosian farmers" and "the
+     characteristically arrogant manner of Potamosians *Demokrats*".
+   - Hudrosia invitation: "provoking shuffles and violence" ("scuffles"?)
+     and a double space in "two oldest families  who".
+   - Both cities, all ten sheets: "and if respond in kind to our efforts"
+     (missing "they"), and "Against the background" ("this background"?).
+   - Potamosia, Noble 7: "but this it will guarantee". Potamosia,
+     Merchant 4: "troubling.The shipwrights" (missing space).
+   - Phase 1, smaller ones: Hudrosia King 1 "answer what questions from
+     the people raise"; Potamosia Mayor 1 "river,close"; Potamosia
+     Merchant 4 "about half the city.  would rest easier"; Potamosia
+     invitation "for the duration of a half an hour Sand Timer".
 
 ### What changed from the prompt as first written
 
@@ -1188,6 +1204,12 @@ A CLASS
   The class page, seen by a participant: a list of the tables with open
   seats. They type a name and choose one. The facilitator can also move a
   participant from one table to another.
+  Sort at random: one press deals everyone who has joined the class into
+  tables at random, as evenly as each table's seat range allows. It is a
+  logged shuffle, not global randomness. It is shown before it is
+  applied, and the facilitator can sort again or adjust by hand before
+  confirming. People who arrive later are placed in the table with the
+  most room.
   A class page never shows a card face or a token value. Test that.
   The facilitator is recognised by their existing identity cookie. There
   is no login.

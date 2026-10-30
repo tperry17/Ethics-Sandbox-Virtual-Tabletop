@@ -3,7 +3,7 @@
 Its catalog and detail-page copy lives in ``content/site/exercise*.csv``,
 keyed by this slug (see ``content/README.md``). Once the game-definition
 system exists, its actual deck comes from
-``content/exercises/value-cards-trading/cards.csv``.
+``content/decks/value-cards/cards.csv``.
 """
 
 from sandbox.games.content import load_exercise
