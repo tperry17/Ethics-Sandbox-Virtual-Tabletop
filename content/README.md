@@ -57,7 +57,9 @@ council marks add to a card. `elite_sheets.csv` holds the information
 sheet each elite card comes with, and `invitations.csv` each city's
 invitation for each phase. Both come from the author's four "Printouts"
 Google Docs, with typos corrected (listed in `docs/BUILD-PLAN.md`, Prompt
-11).
+11). Their text keeps the printouts' bold and italic as `**bold**` and
+`*italic*`. A line starting `# ` is a heading, list items start `- ` or
+`1. `, and a literal asterisk is written `\*`.
 
 `decks/value-cards/cards.csv` is the Value Cards deck as printed, copied
 from the "deck" sheet of the author's "values cards - the spreadsheet".

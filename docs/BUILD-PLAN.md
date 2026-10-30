@@ -1053,9 +1053,16 @@ correct these, the count being how many times each was found:
 - "a half an hour Sand Timer" to "a half-hour Sand Timer" (1);
 - doubled spaces, wherever they appeared.
 
-Bold and italic are not kept; the text is plain, with paragraphs separated
-by a blank line and list items starting with "- " (or "1. " in an
-invitation).
+The text keeps the printouts' emphasis (the author's decision,
+2026-10-30). It is written in a small subset of Markdown:
+- `**bold**` and `*italic*`;
+- `# ` for a heading line;
+- a blank line between paragraphs;
+- list items starting with "- " (or "1. " in an invitation);
+- `\*` for a literal asterisk.
+
+Prompt 11 renders that subset on the card and sheet faces, as real text,
+and nothing more.
 
 ### What changed from the prompt as first written
 
@@ -1084,7 +1091,8 @@ CONTENT, in content/exercises/democracy-simulation/
   A card's back is its job's knowledge and interest, plus the line from
   each feature it has.
     elite_sheets.csv: key, phase, city, card_number, job, text. One row per
-    elite card (20).
+    elite card (20). Text in both files uses the small Markdown subset
+    described under "Typos corrected in the copy".
     invitations.csv: key, phase, city, text. One row per city per phase
     (4).
   To add, from the rules document:
