@@ -15,12 +15,12 @@ table below in the same pull request.
 
 Prompts 1–9 are done. Prompt 10 (Value Cards Trading) is ready to run:
 its rules and deck are now in this plan. Prompt 11 (Democracy Simulation)
-has its rules recorded, but still needs the role cards and the sheets that
-go with them (see "Waiting on the author"). Prompts 12–14 were rewritten on
+has all its material. It waits on a short list of corrections to that
+material (see "Waiting on the author"). Prompts 12–14 were rewritten on
 2026-10-30 for the two exercises as they actually are. Prompt 12 now keeps
 the facilitator's controls to what these two exercises need.
 
-The order from here is 10, then 12, then 11 once its cards arrive, then 13
+The order from here is 10, then 12, then 11 once its corrections are in, then 13
 and 14. Prompt 14 does not depend on the games and can run alongside the
 others.
 
@@ -39,7 +39,7 @@ shows "Claimed" in this table on `main`.
 | 8 | The table client — interaction | Done | | `d8c383d` (PR #1) |
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
 | 10 | Value Cards Trading | Ready to run | `claude/step-10-value-cards-trading` | |
-| 11 | Democracy Simulation | Waiting on the role cards and sheets; rules recorded | `claude/step-11-democracy-simulation` | |
+| 11 | Democracy Simulation | Waiting on the author's corrections; material supplied | `claude/step-11-democracy-simulation` | |
 | 12 | Running a session (rewritten, lean) | Not started | `claude/step-12-facilitator-controls` | |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
@@ -151,13 +151,11 @@ Where these conflict with a prompt below, these win.
 
 ## Waiting on the author
 
-- **Prompt 10:** nothing blocks it. Two small checks are listed under
-  Prompt 10: which of the Kit's card groups make up the Core deck, and
-  how the names are capitalised.
-- **Prompt 11:** the role cards (cards 1–20 for each phase, with river and
-  rumour marks), the elite information sheets, the Town Hall Invitations,
-  the moderator card, and Phase 1's exact rumour text. These are listed
-  under Prompt 11, "Still needed before this prompt can run".
+- **Prompt 10:** nothing blocks it. One small check is open: how the
+  card names are capitalised.
+- **Prompt 11:** the role cards are now in the repo. The elite sheets and
+  invitations are in the author's Drive folder. A few corrections to that
+  material are listed under Prompt 11, "Open before this prompt runs".
 
 ---
 
@@ -749,8 +747,9 @@ them in a browser (or headless Chromium) to check them.
 - Deck: "Value Cards Kit",
   <https://harvard-ethics.notion.site/Value-Cards-Kit-372fa270aa9380e184d2fbe263ce96d2>.
   The Kit says the deck has 36 cards. Its gallery has three groups: "Deck"
-  (18), "Sidebar" (18) and "Archive" (9). This plan takes Deck plus Sidebar
-  as the 36 and leaves Archive out.
+  (18), "Sidebar" (18) and "Archive" (9). The author confirmed on
+  2026-10-30 that the 36 are Deck plus Sidebar, and that Archive is left
+  out.
 - The Kit also links a digital version on Screentop
   (<https://screentop.gg/@tperry/value-cards/play/skwb>). It is useful for
   comparing layouts. Do not copy it.
@@ -917,7 +916,7 @@ clear_ink)
   deal: 12 cards to each seat, face up.
   call_time: ends trading and opens the top-three zones. If a pair has
   not traded, it names them in its confirm sentence. It warns and never
-  blocks.
+  blocks (the author's decision, 2026-10-30).
 
 EVENTS
   Log every offer, acceptance, refusal and withdrawal, and every move into
@@ -934,12 +933,27 @@ Update this plan's status table. Commit.
 
 ## 11. Democracy Simulation
 
-**Status: Rules recorded; still waiting on the role cards and the sheets
-that go with them.** The source is the author's Google Doc, "Leadership and
-knowledge in democracies and oligarchies" (Tomer J. Perry),
-<https://docs.google.com/document/d/164G4MKukBiFjJiJ6piofohCZFcGWRRjugKV60s2bDSE/edit>,
-read in full (both tabs) on 2026-10-30. Its "Running the exercise remotely"
-and "Observation Sheet" headings are empty so far.
+**Status: Material supplied; waiting on the corrections listed under
+"Open before this prompt runs".** All of the material is in the author's
+Drive folder,
+<https://drive.google.com/drive/folders/1zRzxok62G8tFtLYkgUMj_4d0JtB6nqOa>,
+read on 2026-10-30:
+
+- **"Leadership and knowledge in democracies and oligarchies"** (Tomer J.
+  Perry): the rules, read in full (both tabs). Its "Running the exercise
+  remotely" and "Observation Sheet" headings are empty so far.
+- **"role cards"** (a Google Sheet): all 80 cards, 20 per city per phase,
+  plus the job, feature and moderator text. These are now exported to
+  `content/exercises/democracy-simulation/` as `roles.csv`, `jobs.csv` and
+  `features.csv`. The values are unchanged; only the whitespace was tidied.
+- **The four "Printouts" Google Docs,** one per city per phase: each
+  city's invitation and its five elite information sheets. They are not
+  copied into the repo yet, because the Phase 2 Potamosia doc still has
+  unresolved suggested edits. Prompt 11 copies them into
+  `invitations.csv` and `elite_sheets.csv`.
+- **"Democracy Simulation: Slides",** the introduction deck.
+- **The `role-icons` folder** (an icon per job, plus moderator and river
+  resident) and the two city seals, for card faces.
 
 ### The rules, as the document gives them
 
@@ -988,23 +1002,48 @@ and "Observation Sheet" headings are empty so far.
   document suggests the instructor observes during play and debriefs from
   those observations.
 
-### Still needed before this prompt can run
+### Decided by the author on 2026-10-30
 
-1. **The role cards themselves,** for each phase: cards 1–20, each with
-   its job, river dweller (yes or no) and rumour (yes or no). The document
-   gives the role mix at each size and the interest and knowledge text for
-   each job, so cards 10–20 can be read off the table (Phase 1: 10 Mayor,
-   11 Shepherd, 12 Farmer, 13 Fisher, 14 Noble, 15 Farmer, 16 Thespian,
-   17 Shepherd, 18 Mason, 19 Fisher, 20 Shepherd). Cards 1–9 cannot be
-   read off it beyond 1 (Mayor/King), 2 and 4 (Merchants). Nor can it say
-   which cards are river dwellers or carry the rumour.
-2. **The elite information sheets:** five per phase, in a Potamosia and a
-   Hudrosia variant. The document says "see the attached files".
-3. **The Town Hall Invitations,** one per city per phase.
-4. **The moderator card** for Potamosia's co-Chairs.
-5. **The exact rumour and river text for Phase 1.** The document
-   paraphrases the rumour ("the rich are stealing money from the town's
-   treasury"). Phase 2's text is given word for word.
+- **Jobs are public.** Everyone can see who is a farmer and who is a
+  shepherd. Everything on the back of a card, and the elite sheets, is
+  private, and stays private at the debrief too.
+- **Potamosia votes by a show of hands,** so each person's vote is public.
+
+### Checked against the document
+
+- The card order in `roles.csv` matches the document's role mix at every
+  size from 9 to 20, in both phases.
+- The river and rumour counts match the document's shares: in Phase 1, 7
+  river dwellers and 5 rumours at 20; in Phase 2, 8 river dwellers (40%)
+  and 6 rumours (30%) at 20.
+- Elite sheets exist for exactly the elite card numbers: Phase 1 cards
+  1, 10 (Mayor/King), 2, 4 (Merchant) and 14 (Noble); Phase 2 cards 1, 10,
+  4, 13 (Merchant) and 7 (Noble).
+
+### Open before this prompt runs
+
+1. **Phase 2 Hudrosia council flags.** The spreadsheet marks card 2 (a
+   Shepherd) as a council member and card 13 (a Merchant) as not one. The
+   document says the council is the kings, merchants and noble, and card
+   13 has a merchant's sheet. `roles.csv` copies the spreadsheet as it
+   stands; correct it there.
+2. **Two lines that will not fit.** In Phase 2 Hudrosia, cards 1 and 4
+   are both council members and river dwellers. The spreadsheet's card
+   text has one slot for the extra line, and that slot holds the river
+   line, so these cards never say "You are a council member." Should the
+   card carry both lines?
+3. **Phase 1 Hudrosia printout.** The Noble's sheet is headed "card no.
+   4" (it should be 14). The King card 1 sheet repeats its title line. The
+   invitation reads "The Wise Council of shall convene".
+4. **Phase 2 Potamosia printout.** The doc has 26 unresolved suggested
+   edits. Accept or reject them before the text is copied.
+5. **Spelling across the Phase 2 printouts.** Two misspellings recur:
+   "Hedrosia" and "Potamsians". "i shepherds" and "shuffles" (for
+   "scuffles") appear too, and Hudrosia's sheets say "the informed masses"
+   where "uninformed" may be meant. Copy as written, or correct?
+6. **The slide deck's Phase 2 options differ from the printouts.** The
+   slides say "a surprise naval attack ... to conquer their undefended
+   fertile lands" and "envoys by foot". Which wording is current?
 
 ### What changed from the prompt as first written
 
@@ -1023,14 +1062,26 @@ anything there is ambiguous or contradictory, STOP and ask rather than
 guessing.
 
 CONTENT, in content/exercises/democracy-simulation/
-  jobs.csv: phase, job, elite, interest, knowledge.
-  roles.csv: phase, card_number, job, river, rumour, image. This replaces
-  the two placeholder rows.
-  elite_sheets.csv: phase, city, card_number, text.
-  invitations.csv: phase, city, text.
-  outcomes.csv: our_choice, their_choice, text (Phase 2).
-  The moderator card text, and the debrief questions with the learning
-  outcome each belongs to, go in the game's prompts CSV.
+  Already there, exported from the author's "role cards" sheet:
+    roles.csv: key, phase, city, card_number, job, river, rumour, council,
+    image. 80 rows, one card each.
+    jobs.csv: key, phase, job, elite, knowledge, interest, image. This
+    includes the Moderator card's text.
+    features.csv: key, phase, feature (River, Rumors, Council), knowledge,
+    interest.
+  A card's back is its job's knowledge and interest, plus the line from
+  each feature it has.
+  To add, from the four "Printouts" docs in the author's Drive folder
+  (linked in this plan):
+    elite_sheets.csv: phase, city, card_number, text, with each sheet's
+    text exactly as written.
+    invitations.csv: phase, city, text.
+  To add, from the rules document:
+    outcomes.csv: our_choice, their_choice, text (Phase 2).
+  Role icons and the city seals are in the Drive folder's role-icons
+  folder. They go in images/ once the author has exported them.
+  The debrief questions go in the game's prompts CSV, each with the
+  learning outcome it belongs to.
   Update the exercise's row in content/site/exercises.csv: 9–20 people per
   city, several cities at once, and the real running time.
 
@@ -1050,7 +1101,8 @@ SEATS AND CARDS
   flag (`revealable: false`) that removes the reveal from the menu and
   that the model refuses.
   Each seat has a public name tent showing the job and a character name
-  the player types.
+  the player types. Jobs are public; the back of every card and every
+  elite sheet is private, for the whole session and at the debrief.
 
 POTAMOSIA
   choose_moderators: picks two seats at random (as a logged Shuffle, not
@@ -1060,7 +1112,8 @@ POTAMOSIA
   it.
   A vote is called by a moderator or the facilitator (rules.py checks who
   holds the token). Every present seat votes once on the options, and
-  votes are shown together when the count closes. An option passes with
+  votes are shown together when the count closes. Votes are public, like
+  a show of hands. An option passes with
   more than half the votes cast. A tie is reported as a tie and nothing
   passes.
 
@@ -1242,10 +1295,9 @@ THE DEBRIEF PAGE: /t/{code}/debrief
     In Hudrosia's council, the tally only, unless the facilitator
     chooses to show more.
     Interest against vote: for each person, the option their card
-    favoured and the way they voted. The facilitator sees all of it, and
-    each participant sees their own, until the facilitator presses
-    "reveal roles". The document's debrief turns on who held which
-    information, so the roles are revealed at the debrief, not before.
+    favoured and the way they voted. The facilitator sees all of it;
+    each participant sees only their own. Jobs are public throughout,
+    but the back of a card is never shown to anyone else.
     Information that existed in the room: every knowledge item and
     rumour on the cards dealt. The facilitator ticks the ones that
     surfaced (the software cannot hear the call), or picks them from

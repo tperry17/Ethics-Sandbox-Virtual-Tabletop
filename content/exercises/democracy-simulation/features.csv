@@ -1,0 +1,7 @@
+key,phase,feature,knowledge,interest
+p1-river,1,River,,"You live by the river, a dam would make your house safer."
+p1-rumors,1,Rumors,You heard that the rich are stealing money from the town treasury.,
+p1-council,1,Council,You are a council member.,
+p2-river,2,River,"Our ships were built for fishing, they need weeks of work to be made combat-ready.",
+p2-rumors,2,Rumors,"The rival city has successfully planted spies among us, relaying to them our every word!",
+p2-council,2,Council,You are a council member.,
