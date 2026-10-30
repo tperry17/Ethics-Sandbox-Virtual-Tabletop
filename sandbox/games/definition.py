@@ -147,6 +147,7 @@ class ZoneSpec(_Strict):
     visibility: Visibility
     layout: Layout
     capacity: int | None = Field(default=None, ge=1)
+    owner_moves_only: bool = False
     per_seat: bool = False
     step: tuple[float, float] = (0.0, 0.0)
 
@@ -160,6 +161,11 @@ class ZoneSpec(_Strict):
             )
         if self.per_seat and self.visibility not in (*owned, Visibility.PUBLIC):
             raise ValueError(f"per-seat zone {self.id!r} cannot be hidden")
+        if self.owner_moves_only and not self.per_seat:
+            raise ValueError(
+                f"zone {self.id!r} is owner_moves_only but not per_seat, "
+                "so it has no owner"
+            )
         if self.rect[2] <= 0 or self.rect[3] <= 0:
             raise ValueError(f"zone {self.id!r} needs a positive width and height")
         return self

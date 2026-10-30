@@ -105,6 +105,7 @@ def _add_zone(
         layout=spec.layout,
         owner_seat=seat_id,
         capacity=spec.capacity,
+        owner_moves_only=spec.owner_moves_only,
     )
 
 

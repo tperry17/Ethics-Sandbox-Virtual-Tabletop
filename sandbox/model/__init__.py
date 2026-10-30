@@ -7,7 +7,16 @@ and, where noted, the table's own seeded RNG.
 """
 
 from sandbox.model.actions import MenuEntry, piece_actions
-from sandbox.model.entities import Piece, Polygon, Rect, Seat, Stroke, Table, Zone
+from sandbox.model.entities import (
+    Offer,
+    Piece,
+    Polygon,
+    Rect,
+    Seat,
+    Stroke,
+    Table,
+    Zone,
+)
 from sandbox.model.layout import place_in_zone
 from sandbox.model.ops import (
     AddSeat,
@@ -50,6 +59,7 @@ from sandbox.model.ops import (
 )
 from sandbox.model.results import Ok, OpOutcome, Patch, Reject
 from sandbox.model.rng import TableRng
+from sandbox.model.trading import AcceptSwap, DeclineSwap, OfferSwap, WithdrawSwap
 from sandbox.model.types import Layout, PieceKind, Visibility, ZoneKind
 from sandbox.model.visibility import (
     ViewPiece,
@@ -64,6 +74,11 @@ from sandbox.model.visibility import (
 )
 
 __all__ = [
+    "AcceptSwap",
+    "DeclineSwap",
+    "Offer",
+    "OfferSwap",
+    "WithdrawSwap",
     "AddSeat",
     "AddZone",
     "AssignSeat",

@@ -46,11 +46,13 @@ from sandbox.db.models import Participant, Room
 from sandbox.games import GAMES, Game
 from sandbox.games.engine import announcement, build_macro
 from sandbox.model import (
+    AcceptSwap,
     AddSeat,
     AddZone,
     AssignSeat,
     ClearInk,
     Deal,
+    DeclineSwap,
     Despawn,
     Draw,
     EndShow,
@@ -64,6 +66,7 @@ from sandbox.model import (
     Lock,
     Move,
     MoveToZone,
+    OfferSwap,
     Ok,
     Operation,
     OpOutcome,
@@ -88,6 +91,7 @@ from sandbox.model import (
     Ungroup,
     Unlock,
     ViewTable,
+    WithdrawSwap,
     Zone,
     piece_actions,
     project,
@@ -243,6 +247,17 @@ class ZoneView(BaseModel):
     visibility: str
     layout: str
     owner_seat: str | None
+    owner_moves_only: bool = False
+
+
+class OfferView(BaseModel):
+    """An open swap offer. Mirrors ``ViewOffer``; the whole table sees it."""
+
+    id: str
+    from_seat: str
+    to_seat: str
+    give: list[str]
+    want: list[str]
 
 
 class ComponentView(BaseModel):
@@ -312,6 +327,8 @@ class TableView(BaseModel):
     seats: list[SeatView]
     strokes: list[StrokeView]
     version: int
+    offers: list[OfferView] = Field(default_factory=list)
+    swapped: list[tuple[str, str]] = Field(default_factory=list)
 
 
 class YouView(BaseModel):
@@ -460,6 +477,10 @@ _OPERATION_TYPES: tuple[type, ...] = (
     ShowTo,
     EndShow,
     Peek,
+    OfferSwap,
+    AcceptSwap,
+    DeclineSwap,
+    WithdrawSwap,
 )
 
 
@@ -970,6 +991,7 @@ class RoomRuntime:
                 layout=zone.layout,
                 owner_seat=zone.owner_seat,
                 capacity=zone.capacity,
+                owner_moves_only=zone.owner_moves_only,
             )
             for zone in zones
             if zone.id not in self.table.zones
@@ -1368,6 +1390,7 @@ class RoomRuntime:
                     visibility=str(zone.visibility),
                     layout=str(zone.layout),
                     owner_seat=zone.owner_seat,
+                    owner_moves_only=zone.owner_moves_only,
                 )
                 for zone in view.zones
             ],
@@ -1383,6 +1406,17 @@ class RoomRuntime:
                 for stroke in view.strokes
             ],
             version=view.version,
+            offers=[
+                OfferView(
+                    id=offer.id,
+                    from_seat=offer.from_seat,
+                    to_seat=offer.to_seat,
+                    give=list(offer.give),
+                    want=list(offer.want),
+                )
+                for offer in view.offers
+            ],
+            swapped=list(view.swapped),
         )
 
     def _components_for(self, view: ViewTable) -> list[ComponentView]:

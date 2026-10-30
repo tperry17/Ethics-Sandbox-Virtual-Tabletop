@@ -12,6 +12,7 @@ from typing import Any
 
 from sandbox.model import (
     Layout,
+    Offer,
     Piece,
     PieceKind,
     Polygon,
@@ -41,6 +42,16 @@ def to_snapshot(table: Table) -> Snapshot:
             stroke_id: _dump_stroke(stroke)
             for stroke_id, stroke in table.strokes.items()
         },
+        "offers": {
+            offer_id: {
+                "from_seat": offer.from_seat,
+                "to_seat": offer.to_seat,
+                "give": list(offer.give),
+                "want": list(offer.want),
+            }
+            for offer_id, offer in table.offers.items()
+        },
+        "swapped": sorted(sorted(pair) for pair in table.swapped),
         "rng": _dump_rng(table.rng),
         "version": table.version,
         "applied_op_ids": sorted(table.applied_op_ids),
@@ -66,6 +77,18 @@ def from_snapshot(data: Snapshot) -> Table:
             stroke_id: _load_stroke(stroke_id, fields)
             for stroke_id, fields in data["strokes"].items()
         },
+        # Snapshots written before swaps existed have neither key.
+        offers={
+            offer_id: Offer(
+                id=offer_id,
+                from_seat=fields["from_seat"],
+                to_seat=fields["to_seat"],
+                give=tuple(fields["give"]),
+                want=tuple(fields["want"]),
+            )
+            for offer_id, fields in data.get("offers", {}).items()
+        },
+        swapped={frozenset(pair) for pair in data.get("swapped", [])},
         rng=_load_rng(data["rng"]),
         version=data["version"],
         applied_op_ids=set(data["applied_op_ids"]),
@@ -148,6 +171,7 @@ def _dump_zone(zone: Zone) -> Snapshot:
         "layout": zone.layout.value,
         "owner_seat": zone.owner_seat,
         "capacity": zone.capacity,
+        "owner_moves_only": zone.owner_moves_only,
     }
 
 
@@ -161,6 +185,7 @@ def _load_zone(zone_id: str, fields: Snapshot) -> Zone:
         layout=Layout(fields["layout"]),
         owner_seat=fields["owner_seat"],
         capacity=fields["capacity"],
+        owner_moves_only=fields.get("owner_moves_only", False),
     )
 
 

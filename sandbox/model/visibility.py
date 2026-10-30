@@ -58,6 +58,18 @@ class ViewZone:
     visibility: Visibility
     layout: Layout
     owner_seat: str | None
+    owner_moves_only: bool = False
+
+
+@dataclass(frozen=True)
+class ViewOffer:
+    """An open offer. Who offers what to whom is public to the whole table."""
+
+    id: str
+    from_seat: str
+    to_seat: str
+    give: tuple[str, ...]
+    want: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -87,6 +99,8 @@ class ViewTable:
     seats: tuple[ViewSeat, ...]
     strokes: tuple[ViewStroke, ...]
     version: int
+    offers: tuple[ViewOffer, ...] = ()
+    swapped: tuple[tuple[str, str], ...] = ()
 
 
 def entitled_to_face(
@@ -172,6 +186,7 @@ def project(table: Table, viewer_seat: str | None) -> ViewTable:
             visibility=zone.visibility,
             layout=zone.layout,
             owner_seat=zone.owner_seat,
+            owner_moves_only=zone.owner_moves_only,
         )
         for zone in table.zones.values()
     )
@@ -201,6 +216,17 @@ def project(table: Table, viewer_seat: str | None) -> ViewTable:
         seats=seats,
         strokes=strokes,
         version=table.version,
+        offers=tuple(
+            ViewOffer(
+                id=offer.id,
+                from_seat=offer.from_seat,
+                to_seat=offer.to_seat,
+                give=offer.give,
+                want=offer.want,
+            )
+            for offer in table.offers.values()
+        ),
+        swapped=tuple(sorted(tuple(sorted(pair)) for pair in table.swapped)),  # type: ignore[misc]
     )
 
 

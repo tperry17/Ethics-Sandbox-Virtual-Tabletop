@@ -93,6 +93,12 @@ class Zone:
     layout: Layout
     owner_seat: str | None = None
     capacity: int | None = None
+    owner_moves_only: bool = False
+    """Whether only the owner (or the facilitator) may move pieces in or out.
+
+    A zone can be public - everyone reads its faces - and still be one only
+    its owner arranges: an open hand. Others reach it through an offer.
+    """
 
 
 @dataclass
@@ -120,6 +126,22 @@ class Stroke:
 
 
 @dataclass
+class Offer:
+    """One open proposal to swap pieces between two seats.
+
+    ``give`` are the proposer's pieces, ``want`` the recipient's, the same
+    number each way. It stays on the table, visible to everyone, until the
+    recipient answers it or the proposer withdraws it.
+    """
+
+    id: str
+    from_seat: str
+    to_seat: str
+    give: tuple[str, ...]
+    want: tuple[str, ...]
+
+
+@dataclass
 class Table:
     """The whole state of one room's tabletop at one instant.
 
@@ -133,6 +155,9 @@ class Table:
     zones: dict[str, Zone] = field(default_factory=dict)
     seats: dict[str, Seat] = field(default_factory=dict)
     strokes: dict[str, Stroke] = field(default_factory=dict)
+    offers: dict[str, Offer] = field(default_factory=dict)
+    swapped: set[frozenset[str]] = field(default_factory=set)
+    """Each pair of seats that has completed a swap with each other."""
     rng: TableRng = field(default_factory=lambda: TableRng(seed=0))
     version: int = 0
     applied_op_ids: set[str] = field(default_factory=set)

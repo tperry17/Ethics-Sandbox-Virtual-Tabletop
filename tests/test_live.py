@@ -56,7 +56,7 @@ def _pieces_in(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def test_every_operation_has_a_wire_name() -> None:
     assert live.OPERATIONS["move_to_zone"] is MoveToZone
     assert live.OPERATIONS["move"] is Move
-    assert len(live.OPERATIONS) == 30
+    assert len(live.OPERATIONS) == 34
 
 
 def test_decode_intent_reads_a_payload_into_an_operation() -> None:

@@ -109,11 +109,26 @@ def _reason_not_movable(table: Table, piece: Piece, actor_seat: str) -> str | No
     owned = (Visibility.PRIVATE_TO_OWNER, Visibility.FACILITATOR_ONLY)
     if (
         zone is not None
-        and zone.visibility in owned
+        and (zone.visibility in owned or zone.owner_moves_only)
         and zone.owner_seat is not None
         and zone.owner_seat != actor_seat
     ):
         return "That piece is in someone else's hand."
+    return None
+
+
+def _reason_cannot_place_in(table: Table, zone: Zone, actor_seat: str) -> str | None:
+    """Whether ``actor_seat`` may put a piece into ``zone``.
+
+    Only an owner-moves-only zone refuses: its owner arranges it, and
+    everyone else must make an offer instead.
+    """
+    if (
+        zone.owner_moves_only
+        and zone.owner_seat not in (None, actor_seat)
+        and not table.is_facilitator(actor_seat)
+    ):
+        return f"Only its owner may put cards into {zone.label}. Make an offer."
     return None
 
 
@@ -122,7 +137,8 @@ def _reason_cannot_take_from(table: Table, zone: Zone, actor_seat: str) -> str |
     if table.is_facilitator(actor_seat):
         return None
     owned = (Visibility.PRIVATE_TO_OWNER, Visibility.FACILITATOR_ONLY)
-    if zone.visibility in owned and zone.owner_seat not in (None, actor_seat):
+    restricted = zone.visibility in owned or zone.owner_moves_only
+    if restricted and zone.owner_seat not in (None, actor_seat):
         return f"Only its owner or the facilitator may take from {zone.label}."
     if any(
         piece.held_by not in (None, actor_seat)
@@ -287,6 +303,8 @@ class MoveToZone:
         zone = _get_zone(table, self.zone_id)
         if zone is None:
             return f"There is no zone {self.zone_id!r} on the table."
+        if (reason := _reason_cannot_place_in(table, zone, actor_seat)) is not None:
+            return reason
         already_there = piece.zone_id == zone.id
         if (
             zone.capacity is not None
@@ -340,6 +358,8 @@ class StackOnto:
         zone = table.zones.get(onto.zone_id)
         if zone is None:
             return f"There is no zone {onto.zone_id!r} on the table."
+        if (reason := _reason_cannot_place_in(table, zone, actor_seat)) is not None:
+            return reason
         if (
             zone.capacity is not None
             and piece.zone_id != zone.id
@@ -1008,6 +1028,12 @@ class ResetTable:
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         patches = []
+        for offer_id in list(table.offers):
+            table.offers.pop(offer_id)
+            patches.append(
+                Patch(kind="offer", op="remove", entity_id=offer_id, fields={})
+            )
+        table.swapped.clear()
         for piece_id in list(table.pieces):
             table.pieces.pop(piece_id)
             patches.append(
@@ -1186,6 +1212,7 @@ def _zone_patch(zone: Zone) -> Patch:
             "visibility": str(zone.visibility),
             "layout": str(zone.layout),
             "owner_seat": zone.owner_seat,
+            "owner_moves_only": zone.owner_moves_only,
         },
     )
 
@@ -1268,6 +1295,7 @@ class AddZone:
     layout: Layout
     owner_seat: str | None = None
     capacity: int | None = None
+    owner_moves_only: bool = False
     op_id: str = field(default_factory=new_op_id)
 
     def validate(self, table: Table, actor_seat: str) -> str | None:
@@ -1288,6 +1316,7 @@ class AddZone:
             layout=self.layout,
             owner_seat=self.owner_seat,
             capacity=self.capacity,
+            owner_moves_only=self.owner_moves_only,
         )
         table.zones[zone.id] = zone
         return [_zone_patch(zone)]
