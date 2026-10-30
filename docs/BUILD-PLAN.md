@@ -37,7 +37,7 @@ shows "Claimed" in this table on `main`.
 | 7 | The table client — rendering | Done | | `9c86f37` |
 | 8 | The table client — interaction | Done | | `d8c383d` (PR #1) |
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
-| 10 | Value Cards Trading | Claimed | `claude/step-10-value-cards-trading` | |
+| 10 | Value Cards Trading | Claimed; in progress: server side and deck page done, table client work to do | `claude/step-10-value-cards-trading` | PR #16 |
 | 11 | Democracy Simulation | Ready to run | `claude/step-11-democracy-simulation` | |
 | 12 | Running a session (rewritten, lean) | Not started | `claude/step-12-facilitator-controls` | |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
@@ -738,7 +738,11 @@ Reveal). Keep it in the repo as the worked example, fully tested. Commit.
 
 ## 10. Value Cards Trading
 
-**Status: Ready to run.** The rules and the deck below were copied on
+**Status: In progress (PR #16).** Done: the swap and owner-moves-only model, the
+game definition, `call_time`, the debrief prompts, the catalog row and the
+printable deck page. Still to do: the table client's offer controls, the card
+face's frame and icon, and the trading event record. The rules and the deck
+below were copied on
 2026-10-30 from the Center's Civil Discourse Wiki on Notion. The pages
 render only with JavaScript: a plain fetch returns an empty page, so open
 them in a browser (or headless Chromium) to check them.

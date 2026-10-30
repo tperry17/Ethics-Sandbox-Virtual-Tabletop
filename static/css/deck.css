@@ -1,0 +1,75 @@
+/* The printable deck: cards at poker size, three across, cut apart. */
+
+.deck-sheet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.5in, 1fr));
+  gap: var(--space-4);
+  list-style: none;
+  margin: var(--space-6) 0;
+  padding: 0;
+}
+
+.deck-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  aspect-ratio: 5 / 7;
+  padding: var(--space-3);
+  border: var(--line-strong) solid var(--card-frame-deck);
+  border-radius: var(--radius-md);
+  background: var(--surface-page);
+  color: var(--text-primary);
+  break-inside: avoid;
+}
+
+.deck-card--sidebar {
+  border-color: var(--card-frame-sidebar);
+}
+
+.deck-card__title {
+  margin: 0;
+  font-family: var(--font-reading);
+  font-size: var(--text-lg);
+  line-height: var(--leading-tight);
+}
+
+.deck-card__body {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+}
+
+.deck-card__art {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain; /* fitted, never cropped or stretched */
+}
+
+.deck-card__folio {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.deck-card__icon {
+  height: 1.5rem;
+  width: auto;
+}
+
+@media print {
+  .site__back {
+    display: none;
+  }
+
+  .deck-sheet {
+    grid-template-columns: repeat(3, 2.5in);
+    gap: 0;
+  }
+
+  .deck-card {
+    border-radius: 0;
+  }
+}

@@ -109,3 +109,17 @@ def test_an_exercise_without_a_definition_keeps_its_drawn_preview(
 
     assert "table-picture" not in page
     assert "zone-grid" in page
+
+
+def test_the_value_cards_deck_page_shows_every_printed_card(
+    client: TestClient,
+) -> None:
+    page = client.get("/exercises/value-cards-trading/deck").text
+
+    assert page.count('class="deck-card ') == 36
+    assert "deck-card--sidebar" in page
+    assert "/content/decks/value-cards/images/Community.png" in page
+
+
+def test_an_exercise_without_a_deck_has_no_deck_page(client: TestClient) -> None:
+    assert client.get("/exercises/democracy-simulation/deck").status_code == 404

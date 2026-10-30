@@ -118,6 +118,19 @@ async def exercise_detail(request: Request, slug: str) -> HTMLResponse:
     )
 
 
+@app.get("/exercises/{slug}/deck", response_class=HTMLResponse)
+async def exercise_deck(request: Request, slug: str) -> HTMLResponse:
+    """Every card of an exercise's decks, laid out to print and cut out."""
+    game = GAMES.get(slug)
+    if game is None or not any(game.decks.values()):
+        raise HTTPException(status_code=404, detail="That exercise has no deck.")
+    return templates.TemplateResponse(
+        request=request,
+        name="deck.html",
+        context={"game": game, "decks": game.decks.values()},
+    )
+
+
 @app.get("/games/{slug}/preview", response_class=HTMLResponse)
 async def game_preview(request: Request, slug: str) -> HTMLResponse:
     """The table of any game definition after setup, as a still picture."""
