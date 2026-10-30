@@ -240,7 +240,7 @@ def test_two_doors_is_not_part_of_the_product() -> None:
 def test_validate_games_notes_catalog_exercises_without_a_definition() -> None:
     report = validate_games()
 
-    assert any("value-cards-trading" in note for note in report.notes)
+    assert any("democracy-simulation" in note for note in report.notes)
 
 
 def test_validate_games_reports_a_broken_definition(tmp_path: Path) -> None:

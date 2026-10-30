@@ -59,7 +59,14 @@ from sandbox.model.ops import (
 )
 from sandbox.model.results import Ok, OpOutcome, Patch, Reject
 from sandbox.model.rng import TableRng
-from sandbox.model.trading import AcceptSwap, DeclineSwap, OfferSwap, WithdrawSwap
+from sandbox.model.trading import (
+    AcceptSwap,
+    CloseOffers,
+    DeclineSwap,
+    OfferSwap,
+    Record,
+    WithdrawSwap,
+)
 from sandbox.model.types import Layout, PieceKind, Visibility, ZoneKind
 from sandbox.model.visibility import (
     ViewPiece,
@@ -74,6 +81,8 @@ from sandbox.model.visibility import (
 )
 
 __all__ = [
+    "CloseOffers",
+    "Record",
     "AcceptSwap",
     "DeclineSwap",
     "Offer",

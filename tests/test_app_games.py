@@ -105,7 +105,7 @@ def test_a_two_doors_room_starts_set_up(client: TestClient) -> None:
 def test_an_exercise_without_a_definition_keeps_its_drawn_preview(
     client: TestClient,
 ) -> None:
-    page = client.get("/exercises/value-cards-trading").text
+    page = client.get("/exercises/democracy-simulation").text
 
     assert "table-picture" not in page
     assert "zone-grid" in page

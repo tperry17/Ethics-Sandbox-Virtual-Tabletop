@@ -74,9 +74,9 @@ class OfferSwap:
     def validate(self, table: Table, actor_seat: str) -> str | None:
         me = table.seats.get(actor_seat)
         them = table.seats.get(self.to_seat)
-        if me is None or me.is_facilitator:
+        if me is None:
             return "Only a seated player can make an offer."
-        if them is None or them.is_facilitator:
+        if them is None:
             return f"There is no player {self.to_seat!r} to trade with."
         if self.to_seat == actor_seat:
             return "You cannot trade with yourself."
@@ -206,3 +206,41 @@ class WithdrawSwap:
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         table.offers.pop(self.offer_id)
         return [_offer_removed(self.offer_id)]
+
+
+@dataclass(frozen=True)
+class CloseOffers:
+    """Withdraw every open offer at once, for a macro that ends trading.
+
+    Anyone may run it, which suits a group with no facilitator; it is for
+    macros, not a wire intent.
+    """
+
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        patches = [_offer_removed(offer_id) for offer_id in table.offers]
+        table.offers.clear()
+        return patches
+
+
+@dataclass(frozen=True)
+class Record:
+    """Put a note in the permanent log and change nothing on the table.
+
+    A macro uses it to keep what the table looked like at one moment - who
+    held what when time was called - in a form the log can be read for later.
+    """
+
+    label: str
+    data: dict[str, object] = field(default_factory=dict)
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        return []
