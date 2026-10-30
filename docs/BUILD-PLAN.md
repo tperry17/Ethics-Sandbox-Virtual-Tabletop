@@ -37,7 +37,7 @@ shows "Claimed" in this table on `main`.
 | 7 | The table client — rendering | Done | | `9c86f37` |
 | 8 | The table client — interaction | Done | | `d8c383d` (PR #1) |
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
-| 10 | Value Cards Trading | Ready to run | `claude/step-10-value-cards-trading` | |
+| 10 | Value Cards Trading | Claimed | `claude/step-10-value-cards-trading` | |
 | 11 | Democracy Simulation | Ready to run | `claude/step-11-democracy-simulation` | |
 | 12 | Running a session (rewritten, lean) | Not started | `claude/step-12-facilitator-controls` | |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
