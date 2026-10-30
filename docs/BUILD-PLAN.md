@@ -153,13 +153,10 @@ Where these conflict with a prompt below, these win.
 
 ## Waiting on the author
 
-- **Prompt 10:** nothing blocks the rules or the text. The card pictures
-  ("Value Cards/images 2.1") and the Schwartz icons ("Value Cards/icons")
-  need exporting from Drive into the repo before the faces can match the
-  printed cards.
-- **Prompt 11:** nothing blocks the text. The role icons and city seals
-  need exporting from Drive into
-  `content/exercises/democracy-simulation/images/`.
+- **Prompt 10:** nothing; its rules, deck, pictures and icons are all in
+  the repo.
+- **Prompt 11:** nothing; its text, role icons and city seals are all in
+  the repo.
 
 ---
 
@@ -832,8 +829,12 @@ The back is the Center's seal, which is already the platform's card back.
 
 `art` names the picture file. `image` stays blank, so the face is
 generated from text plus the picture and the text stays real text at any
-zoom. The pictures and the Schwartz icons ("Value Cards/icons") are not in
-the repo yet.
+zoom. The pictures are in `content/decks/value-cards/images/` and the
+Schwartz icons in its `icons/` folder, all exported from Drive and checked
+against Drive's file sizes. Most pictures are 2000x2000. Two are not:
+Leadership is 1999x1545 and Dignity is 1470x1470. Fit each picture inside
+its box without cropping or stretching. The same goes for the Democracy
+Simulation's river-resident icon, which is 2172x724.
 
 The definitions are copied from the sheet as they stand. Two differ from
 the Notion page by a serial comma ("connection, and care";
@@ -1097,8 +1098,9 @@ CONTENT, in content/exercises/democracy-simulation/
     (4).
   To add, from the rules document:
     outcomes.csv: our_choice, their_choice, text (Phase 2).
-  Role icons and the city seals are in the Drive folder's role-icons
-  folder. They go in images/ once the author has exported them.
+  images/ holds the job, moderator and river-resident icons and the two
+  city seals (potamosia-seal.png, hudrosia-seal.png), exported from the
+  author's Drive.
   The debrief questions go in the game's prompts CSV, each with the
   learning outcome it belongs to.
   Update the exercise's row in content/site/exercises.csv: 9–20 people per
