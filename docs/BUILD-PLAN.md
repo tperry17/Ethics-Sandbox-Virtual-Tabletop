@@ -13,10 +13,15 @@ table below in the same pull request.
 
 ## Where we are
 
-Prompts 1–9 are done. Prompts 10 and 11 need written rules from
-the author before they can run (see "Waiting on the author"). Prompts 12–16
-are unclaimed, but Prompt 12 says it is built after the games, so it is
-best left until 10 and 11 can run.
+Prompts 1–9 are done. Prompt 10 (Value Cards Trading) is ready to run:
+its rules and deck are now in this plan. Prompt 11 (Democracy Simulation)
+is ready to run: its cards, sheets and invitations are in `content/`. Prompts 12–14 were rewritten on
+2026-10-30 for the two exercises as they actually are. Prompt 12 now keeps
+the facilitator's controls to what these two exercises need.
+
+The order from here is 10, then 12, then 11, then 13
+and 14. Prompt 14 does not depend on the games and can run alongside the
+others.
 
 Before starting a step, claim it (see "Claiming a step"). A claimed step
 shows "Claimed" in this table on `main`.
@@ -32,13 +37,13 @@ shows "Claimed" in this table on `main`.
 | 7 | The table client — rendering | Done | | `9c86f37` |
 | 8 | The table client — interaction | Done | | `d8c383d` (PR #1) |
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
-| 10 | Value Cards Trading | Waiting on the author's rules | `claude/step-10-value-cards-trading` | |
-| 11 | Democracy Simulation | Waiting on the author's rules | `claude/step-11-democracy-simulation` | |
-| 12 | Facilitator controls and the shared view | Not started | `claude/step-12-facilitator-controls` | |
+| 10 | Value Cards Trading | Ready to run | `claude/step-10-value-cards-trading` | |
+| 11 | Democracy Simulation | Ready to run | `claude/step-11-democracy-simulation` | |
+| 12 | Running a session (rewritten, lean) | Not started | `claude/step-12-facilitator-controls` | |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
-| 16 | Launch pass | Not started; deployment target has changed (below) | `claude/step-16-launch-pass` | |
+| 16 | Launch pass | Not started; hosting is the Mac on the local network (below) | `claude/step-16-launch-pass` | |
 
 ### Claiming a step
 
@@ -119,9 +124,23 @@ Where these conflict with a prompt below, these win.
   the editable text in CSV instead.
 - **Images as card faces.** A card or role may be an uploaded image, named
   in the `image` column of its CSV. Prompts 9–11 already say so.
-- **Deployment.** Section 0 and Prompt 16 say Fly.io or Render. The current
-  way to run a session is `scripts/deploy.sh` on a Mac on the local
-  network. Prompt 16's hosting choice is open (see below).
+- **Deployment.** Section 0 and Prompt 16 say Fly.io or Render. The
+  author decided on 2026-10-30 to host from a MacBook on the local network
+  for now, with `scripts/deploy.sh`. Prompt 16 deploys nowhere else, and
+  Prompt 14 covers what serving from a Mac requires.
+- **Exercise rules.** The rules for both exercises now come from the
+  Center's own documents (linked under Prompts 10 and 11). They differ
+  from what the first drafts of those prompts assumed. Value Cards is for
+  exactly three people, with open hands. The Democracy Simulation is 9–20
+  people per city, with a simple majority or a secret council vote. Where
+  the site copy in `content/site/exercises.csv` says otherwise, Prompts 10
+  and 11 correct it.
+- **A room is sized by its exercise.** CLAUDE.md's "groups of 4–30"
+  describes the tabletop in general, not any one exercise (the author,
+  2026-10-30). Each game sets its own seat range. Value Cards Trading
+  seats 3, and later Value Cards exercises may seat more. A Democracy
+  city seats 9–20. A class that is larger than one table runs several
+  rooms, which Prompt 12 adds.
 - **Call.** Section 0 says Zoom; CLAUDE.md says a separate video or phone
   call. Nothing depends on which.
 - **No principles of engagement.** The six principles that were on the
@@ -134,13 +153,10 @@ Where these conflict with a prompt below, these win.
 
 ## Waiting on the author
 
-- **Prompt 10:** the rules of the trading exercise (the `<<<PASTE …>>>`
-  block), and a complete `content/exercises/value-cards-trading/cards.csv`.
-  It has two rows today.
-- **Prompt 11:** the rest of the Democracy Simulation rules, and a complete
-  `content/exercises/democracy-simulation/roles.csv`. It has two rows today.
-- **Prompt 16:** whether to deploy to a host (Fly.io, Render or other) or
-  keep serving from a Mac on the local network.
+- **Prompt 10:** nothing; its rules, deck, pictures and icons are all in
+  the repo.
+- **Prompt 11:** nothing; its text, role icons and city seals are all in
+  the repo.
 
 ---
 
@@ -722,237 +738,756 @@ Reveal). Keep it in the repo as the worked example, fully tested. Commit.
 
 ## 10. Value Cards Trading
 
-**Status: Waiting on the author's rules.**
+**Status: Ready to run.** The rules and the deck below were copied on
+2026-10-30 from the Center's Civil Discourse Wiki on Notion. The pages
+render only with JavaScript: a plain fetch returns an empty page, so open
+them in a browser (or headless Chromium) to check them.
 
-The first real exercise. It is a game definition, not new code — if it needs new code, that is a signal the engine is missing something.
+- Rules: "Core Value Cards Activity: Trading & Sorting",
+  <https://harvard-ethics.notion.site/Core-Value-Cards-Activity-Trading-Sorting-3b9fa270aa9380a0a889f27be7fdae5d>
+- Deck: the printed cards (the author's decision, 2026-10-30). They are
+  printed with nanDECK from the "deck" sheet of the author's Google Sheet
+  "values cards - the spreadsheet"
+  (<https://docs.google.com/spreadsheets/d/1bsJuX048BY9O0T0C2chUs7qZin4K5ibCWq4ek1lDvT4/edit>).
+  The print script, `valuecards.txt` in the Drive folder "Value Cards",
+  prints the rows marked Deck (18) and Sidebar (18) and leaves out
+  Archive. The resulting file is `valuescards.pdf` in the same folder.
+  The 36 cards are now in `content/decks/value-cards/cards.csv`. They live
+  outside any one exercise because later exercises will use the same
+  deck. The Kit page on Notion
+  (<https://harvard-ethics.notion.site/Value-Cards-Kit-372fa270aa9380e184d2fbe263ce96d2>)
+  lists the same 36. Its "+ 1" marks are a Notion link to a second Schwartz
+  category, not something printed on the card, and the deck does not
+  carry them.
+- The Kit also links a digital version on Screentop
+  (<https://screentop.gg/@tperry/value-cards/play/skwb>). It is useful for
+  comparing layouts. Do not copy it.
+
+### The rules, as the activity page gives them
+
+- **Group:** exactly three players. A class runs as many trios as it
+  needs, side by side.
+- **Time:** about 30 minutes, followed by a debrief.
+- **Deal:** the deck is split equally among the three players, so 12 cards
+  each.
+- **Hands are open.** Players keep their cards face up "so that all
+  players can see each other's cards throughout the game".
+- **Goal:** build the hand that best reflects the values you care about
+  most, by trading.
+- **A trade** is an exchange of the same number of cards in each direction.
+  There are no one-sided gifts. Players may trade as often as they like,
+  but each player must trade at least once with each of the other two
+  before the exercise ends.
+- **Sorting:** once trading has finished, each player picks the top three
+  values in their final hand.
+- **Sharing:** players may share their decisions and their final values
+  with the trio, or with people outside it, if they choose. Doing so is
+  optional.
+- **Sensitivity** (the activity page's own rating): "Low to Moderate —
+  trading and final hands are visible within the trio throughout, and
+  sharing beyond the group at the end is optional".
+
+The debrief questions on the activity page:
+
+1. How strongly do you feel about the values you prioritized?
+2. What experiences or influences have shaped the values you hold most
+   strongly?
+3. Did this reflection reinforce or challenge any of your existing beliefs?
+4. Were there moments when you second-guessed your decisions? Why?
+5. How did the group dynamics influence which values were chosen? How
+   might the result have been different if there were different members?
+   What was your role in this group dynamic?
+
+Additional questions:
+
+6. Do you think your values would change if you did this activity in a
+   different phase of your life?
+7. Are there areas in your life where your actions don't fully align with
+   your values? How might you bridge that gap?
+8. In what ways do your values guide your relationships, career choices,
+   or goals?
+9. How might this reflection shape the way you navigate ethical dilemmas
+   in the future?
+10. If someone were to observe your actions, what values do you think they
+    would say you prioritize?
+11. What is one value you want to be more intentional about upholding?
+12. Did the group make any decisions that reflected shared values?
+
+### The deck as printed
+
+`content/decks/value-cards/cards.csv` has one row per printed card: key,
+name, definition, group (Deck or Sidebar), number (the number printed in
+the card's corner), schwartz (the Schwartz category whose icon is printed
+beside the number), art and image.
+
+The printed face, from the print script, is: the name in title case
+("Community"), the definition beneath it, and the card's picture in the
+lower half (`<Name>.png`, from the Drive folder "Value Cards/images 2.1").
+The number and the Schwartz icon sit in the bottom corner. A crimson frame
+(`#A41034`) marks a Deck card and a navy one (`#172D4A`) a Sidebar card.
+The back is the Center's seal, which is already the platform's card back.
+
+`art` names the picture file. `image` stays blank, so the face is
+generated from text plus the picture and the text stays real text at any
+zoom. The pictures are in `content/decks/value-cards/images/` and the
+Schwartz icons in its `icons/` folder, all exported from Drive and checked
+against Drive's file sizes. Most pictures are 2000x2000. Two are not:
+Leadership is 1999x1545 and Dignity is 1470x1470. Fit each picture inside
+its box without cropping or stretching. The same goes for the Democracy
+Simulation's river-resident icon, which is 2172x724.
+
+The definitions are copied from the sheet as they stand. Two differ from
+the Notion page by a serial comma ("connection, and care";
+"opportunities, and respect"), and they match the printed PDF.
+
+### What changed from the prompt as first written
+
+The first version of this prompt was written before the rules existed, and
+four of its requirements contradict them. Each is replaced below:
+
+- **Hands.** The first version said hands were private. In the activity
+  they are open within the trio.
+- **Card fields.** It asked for a fuller gloss and a tension example on
+  every card. The printed cards carry a name, a definition, a picture, a
+  number and a Schwartz icon.
+- **Ranking.** It asked for a ranking strip with the order recorded at the
+  start and the end. The activity's sorting step is choosing a top three
+  at the end.
+- **Group size.** It assumed 4–12 people. The activity is for three.
 
 ```text
-Read CLAUDE.md and sandbox/games/. Build the Value Cards Trading exercise
-as a game definition.
+Read CLAUDE.md, sandbox/games/, and the Two Doors fixture
+(tests/games/two_doors/ with its CSVs). Then build the Value Cards Trading
+exercise as a game definition. The rules, the deck and the debrief
+questions are in docs/BUILD-PLAN.md under Prompt 10. Implement exactly
+those rules. If anything there is ambiguous, contradictory or incomplete,
+STOP and list the questions rather than guessing. Mark anything you have
+to invent with a TODO comment.
 
-The card content lives in
-content/exercises/value-cards-trading/cards.csv (one row per card: name,
-short_definition, fuller_gloss, tension_example, image - `image` names a
-file in the sibling images/ folder and is blank for a generated card) -
-fill it in completely before running this prompt; read it rather than
-asking for the deck to be pasted in. A card with an `image` uses that
-image as its face; the text fields still drive the deck list, validation,
-and the printable page. The rules of the trading exercise are below. Implement exactly
-these. If anything is ambiguous, contradictory or incomplete, STOP and list
-the questions rather than guessing. Anything you have to invent, mark with
-a TODO comment.
+CONTENT
+  The deck is content/decks/value-cards/cards.csv, already filled in
+  from the printed cards (see "The deck as printed" in the plan). Name it
+  from the game's components; do not copy it into the exercise's folder.
+  Draw each face as printed: name, definition, the picture named in
+  `art`, the number with its Schwartz icon, and a frame coloured by
+  `group`, using colours from tokens.css and adding tokens if needed. If
+  the definition format cannot name a picture column alongside text, add
+  that in generic terms. The debrief questions go in the game's prompts
+  CSV. Update the exercise's
+  row in content/site/exercises.csv to match the activity: three people
+  per table, any number of tables, about 30 minutes plus a debrief.
 
-<<<PASTE THE RULES OF THE TRADING EXERCISE HERE - HOW MANY CARDS EACH
-PERSON STARTS WITH, WHETHER CARDS ARE DUPLICATED ACROSS HANDS, WHAT A LEGAL
-TRADE IS, HOW ONE IS AGREED, WHETHER THERE ARE ROUNDS AND WHAT ENDS ONE>>>
+THE TABLE
+  meta.players is min 3, max 3. The facilitator is optional: a trio can
+  run it alone, and the teacher looking after several trios is Prompt
+  12's business.
+  Each seat has a hand. The hand is visible to everyone at the table, but
+  only its owner may move cards within it or out of it. If the model has
+  no way to say "public, but only the owner moves it", add one, in
+  generic terms, to sandbox/model/. A rule like that is not specific to
+  this exercise.
+  Each seat also has a top-three zone with capacity 3, private to its
+  owner. Sharing it is the owner's choice, made with the existing reveal
+  ("show to the table"). Nothing ever reveals it automatically.
+  Card faces must be readable at 60% zoom with 12 cards in a hand.
 
-REGARDLESS OF THE RULES, this exercise must:
-  - carry each value card's name, a one-sentence definition a 14-year-old
-    understands, a fuller gloss, and an example of the value in tension
-    with another; card faces must be readable at 60% zoom
-  - keep hands genuinely private, enforced by project(), never by CSS
-  - make "show this card to Ana" and "show this card to everyone"
-    first-class, obvious, and distinct from playing a card
-  - give the facilitator macros for: set up, deal the starting hands,
-    call time on trading, collect everything back, and reset
-  - provide a personal ranking strip - a private zone where a participant
-    orders their own cards - and record the order at the start and at the
-    end, because the difference is what the debrief is built from
-  - append a legible event for every trade, reveal, and reorder
+TRADING
+  A trade is an offer: one player picks N of their own cards and N of
+  another player's, with N at least 1, and the other player accepts or
+  declines. The offerer may withdraw it until it is answered. Acceptance
+  swaps the cards as one transaction. Unequal counts, gifts (N for 0) and
+  taking a card out of someone else's hand are all refused by Python, each
+  with a plain sentence. While an offer is open, everyone at the table
+  can see it.
+  The exchange is a generic model operation: an atomic swap between two
+  owners' zones, agreed to by both. It must not be written as anything
+  specific to value cards.
+  The table shows, for each pair, whether that pair has traded yet. It is
+  a checklist, not a score.
 
-If any of that cannot be expressed in the YAML plus the escape hatch, do
-not special-case it in the web layer. Extend the definition format, and say
-in your summary what you extended and why.
+MACROS (every game also has setup, deal, reset, shuffle, collect and
+clear_ink)
+  deal: 12 cards to each seat, face up.
+  call_time: ends trading and opens the top-three zones. If a pair has
+  not traded, it names them in its confirm sentence. It warns and never
+  blocks (the author's decision, 2026-10-30).
 
-Write the deck as data files, add it to `validate-games`, and build a
-readable /exercises/value-cards/deck page a facilitator can print. Commit.
+EVENTS
+  Log every offer, acceptance, refusal and withdrawal, and every move into
+  or out of a top-three zone. Record each seat's hand as dealt and as it
+  stands at call_time. Prompt 13's debrief is built from these.
+
+Tests: equal-count enforcement, the refusal of gifts and taking, the
+atomic swap, the pair checklist, and dealing 12 each. validate-games must
+pass. Build a printable deck page at /exercises/value-cards-trading/deck.
+Update this plan's status table. Commit.
 ```
-
-**What `cards.csv` needs to cover:** every card's name, a one-sentence definition, a fuller gloss, and an example of it in tension with another value - one row each. **What your pasted rules need to cover:** how many cards exist and how many each person starts with; whether cards are duplicated across hands; what a legal trade is and whether anything is required alongside it; how a trade is agreed; whether there are rounds and what ends one; and what the facilitator decides versus what the table decides.
 
 ---
 
 ## 11. Democracy Simulation
 
-**Status: Waiting on the author's rules.**
+**Status: Ready to run.** All of the material is in the author's Drive
+folder,
+<https://drive.google.com/drive/folders/1zRzxok62G8tFtLYkgUMj_4d0JtB6nqOa>,
+read on 2026-10-30:
 
-Same shape. Written second because it inherits everything the first one proved.
+- **"Leadership and knowledge in democracies and oligarchies"** (Tomer J.
+  Perry): the rules, read in full (both tabs). Its "Running the exercise
+  remotely" and "Observation Sheet" headings are empty so far.
+- **"role cards"** (a Google Sheet): all 80 cards, 20 per city per phase,
+  plus the job, feature and moderator text. These are now exported to
+  `content/exercises/democracy-simulation/` as `roles.csv`, `jobs.csv` and
+  `features.csv`. The values are unchanged; only the whitespace was tidied.
+- **The four "Printouts" Google Docs,** one per city per phase: each
+  city's invitation and its five elite information sheets. Phase 2
+  Potamosia is the clean copy the author made on 2026-10-30
+  (<https://docs.google.com/document/d/1nNzufIhuVVw9oXG1NVnZRjUwBYiYLFYA-JroTQII5jo/edit>),
+  not the older doc with suggested edits. All four are exported to
+  `invitations.csv` and `elite_sheets.csv`, with the typos listed below
+  corrected at the author's request.
+- **"Democracy Simulation: Slides",** the introduction deck.
+- **The `role-icons` folder** (an icon per job, plus moderator and river
+  resident) and the two city seals, for card faces.
+
+### The rules, as the document gives them
+
+- **Groups:** each city is 9–20 participants, and a class runs several
+  cities at once. One room is one city.
+- **Two cities, two variants.** Potamosia is a democracy. Hudrosia is an
+  oligarchy. Their citizens are identical: the same roles, interests and
+  knowledge. The one difference in the cards is that Potamosia's two
+  mayors are Hudrosia's two kings. A class runs either democracy-only
+  cities or half and half.
+- **Two phases.** Each is a separate session, and either can be run
+  alone. Phase 1, "Construction Project": the city has 30 gold, enough
+  for one of three projects (the dam, real cost 18; the bridge, 20; the
+  walls, 21). The richer citizens' private wealth could pay for all
+  three, but that is not public. Phase 2, "Going to war?": the choice is
+  attack, defences or diplomacy. The outcome depends on what the other
+  city chooses, through a three-by-three outcomes table that forms a
+  cycle like rock-paper-scissors.
+- **Role cards.** Every card is numbered 1–20. A city of N people uses
+  cards 1 to N, which keeps support for each option balanced at every
+  size. Each card has a job (Mayor/King, Merchant, Noble, Mason, Farmer,
+  Shepherd, Thespian or Fisher), an interest and some knowledge. Some
+  cards also mark the holder as a river dweller, and some carry a rumour.
+  A card's secret side is never shown to anyone: holders may tell others
+  what it says, or not tell them. Its public side carries a character
+  name, which the player chooses and introduces in character ("I am
+  Felix, the Farmer").
+- **Elites.** The Mayors/Kings, Merchants and Noble are 25–40% of the city.
+  They also receive an information sheet. The sheets are largely
+  accurate, but they disagree with each other on estimates.
+- **Potamosia (democracy):** decisions are by simple majority of all
+  present citizens. By custom the mayors speak first. They are elected
+  yearly and can be deposed by majority vote. Two citizens are picked at
+  random as co-Chairs (moderators). The co-Chairs grant and revoke the
+  right to speak, draft resolutions and call votes. They must see at
+  least one proposal affirmed, or be exiled.
+- **Hudrosia (oligarchy):** a council of the elite decides, run by the
+  two hereditary kings, in a fishbowl with the rest of the city looking
+  on. In principle it decides by consensus; in practice by a majority in
+  a secret council vote. At least one proposal must pass in the first 20
+  minutes. In the last 10 minutes the kings hold a public assembly where
+  townspeople can question and heckle.
+- **Timing:** an introduction of 5–10 minutes, then 30 minutes of meeting
+  with a visible timer, then the debrief.
+- **Debrief:** questions grouped under three learning outcomes. The
+  document suggests the instructor observes during play and debriefs from
+  those observations.
+
+### Decided by the author on 2026-10-30
+
+- **Jobs are public.** Everyone can see who is a farmer and who is a
+  shepherd. Everything on the back of a card, and the elite sheets, is
+  private, and stays private at the debrief too.
+- **Potamosia votes by a show of hands,** so each person's vote is public.
+
+### Checked against the document
+
+- The card order in `roles.csv` matches the document's role mix at every
+  size from 9 to 20, in both phases.
+- The river and rumour counts match the document's shares: in Phase 1, 7
+  river dwellers and 5 rumours at 20; in Phase 2, 8 river dwellers (40%)
+  and 6 rumours (30%) at 20.
+- Elite sheets exist for exactly the elite card numbers: Phase 1 cards
+  1, 10 (Mayor/King), 2, 4 (Merchant) and 14 (Noble); Phase 2 cards 1, 10,
+  4, 13 (Merchant) and 7 (Noble).
+
+### Resolved by the author on 2026-10-30
+
+- The Phase 2 Hudrosia council flags are corrected in the sheet: card 13
+  (a Merchant) is on the council and card 2 (a Shepherd) is not.
+  `roles.csv` was re-exported to match.
+- A card that is both a council member and a river dweller shows both
+  lines. The sheet now gives Phase 2 Hudrosia cards 1 and 4 both.
+- The repeated title line on the Phase 1 Hudrosia King card 1 sheet is
+  gone.
+- Where the slide deck and the printouts differ, the printouts are
+  current.
+
+### Typos corrected in the copy (the author's decision, 2026-10-30)
+
+The Drive docs are unchanged. `invitations.csv` and `elite_sheets.csv`
+correct these, the count being how many times each was found:
+
+- "Hedrosia" to "Hudrosia" (5);
+- "Potamsians" to "Potamosians" (10);
+- "Potamsia's" to "Potamosia's" (1);
+- "Potomosian" to "Potamosian" (2);
+- "scuffles but i shepherds" to "scuffles but shepherds" (5);
+- "the informed masses" to "the uninformed masses" (5);
+- "increasingly outrageous and plans" to "increasingly outrageous plans"
+  (5);
+- "manner of Potamosians Demokrats" to "manner of Potamosian Demokrats"
+  (2);
+- "provoking shuffles" to "provoking scuffles" (1);
+- "and if respond in kind" to "and if they respond in kind" (10);
+- "Against the background" to "Against this background" (4);
+- "but this it will guarantee" to "but this will guarantee" (1);
+- "troubling.The" to "troubling. The" (1);
+- "answer what questions from the people raise" to "answer what
+  questions the people raise" (1);
+- "river,close" to "river, close" (1);
+- "about half the city. would" to "about half the city, would" (1);
+- "a half an hour Sand Timer" to "a half-hour Sand Timer" (1);
+- doubled spaces, wherever they appeared.
+
+The text keeps the printouts' emphasis (the author's decision,
+2026-10-30). It is written in a small subset of Markdown:
+- `**bold**` and `*italic*`;
+- `# ` for a heading line;
+- a blank line between paragraphs;
+- list items starting with "- " (or "1. " in an invitation);
+- `\*` for a literal asterisk.
+
+Prompt 11 renders that subset on the card and sheet faces, as real text,
+and nothing more.
+
+### What changed from the prompt as first written
+
+The first version asked for approval and ranked-choice voting, and for a
+private pre-discussion poll. The document has neither. It uses a simple
+majority in Potamosia and a secret council majority in Hudrosia. The
+"position before discussion" already exists: it is the interest printed on
+each person's role card.
 
 ```text
-Read CLAUDE.md, sandbox/games/, and the Value Cards definition for house
-style. Build the Democracy Simulation as a game definition.
-
-The roles live in content/exercises/democracy-simulation/roles.csv (one
-row per role: name, description, starting_information, image - `image`
-names a file in the sibling images/ folder and is blank for a generated
-role card) - fill it in completely before running this prompt; read it
-rather than asking for the roles to be pasted in. The rest of the rules are below. Implement exactly
-these. If anything is ambiguous or contradictory, STOP and ask rather than
+Read CLAUDE.md, sandbox/games/, and the Value Cards Trading definition for
+house style. Then build the Democracy Simulation as a game definition. The
+rules are in docs/BUILD-PLAN.md under Prompt 11, and the full source is
+the author's document linked there. Implement exactly those rules. If
+anything there is ambiguous or contradictory, STOP and ask rather than
 guessing.
 
-<<<PASTE THE REST OF THE DEMOCRACY SIMULATION RULES HERE - HOW MANY
-PARTICIPANTS, WHAT IS BEING DECIDED, HOW PROPOSALS ARE MADE AND AMENDED,
-VOTING, AND WHAT ENDS A ROUND>>>
+CONTENT, in content/exercises/democracy-simulation/
+  Already there, exported from the author's "role cards" sheet:
+    roles.csv: key, phase, city, card_number, job, river, rumour, council,
+    image. 80 rows, one card each.
+    jobs.csv: key, phase, job, elite, knowledge, interest, image. This
+    includes the Moderator card's text.
+    features.csv: key, phase, feature (River, Rumors, Council), knowledge,
+    interest.
+  A card's back is its job's knowledge and interest, plus the line from
+  each feature it has.
+    elite_sheets.csv: key, phase, city, card_number, job, text. One row per
+    elite card (20). Text in both files uses the small Markdown subset
+    described under "Typos corrected in the copy".
+    invitations.csv: key, phase, city, text. One row per city per phase
+    (4).
+  To add, from the rules document:
+    outcomes.csv: our_choice, their_choice, text (Phase 2).
+  images/ holds the job, moderator and river-resident icons and the two
+  city seals (potamosia-seal.png, hudrosia-seal.png), exported from the
+  author's Drive.
+  The debrief questions go in the game's prompts CSV, each with the
+  learning outcome it belongs to.
+  Update the exercise's row in content/site/exercises.csv: 9–20 people per
+  city, several cities at once, and the real running time.
 
-REGARDLESS OF THE RULES, this exercise must:
-  - support roles or positions assigned to seats, with a fair deterministic
-    shuffle the facilitator can re-roll before the session starts, and a
-    role card each person can read privately
-  - carry proposals as physical objects on the table - a note piece anyone
-    can read, with an author and an amendment history reconstructible from
-    the event log
-  - implement voting as a component with more than one method available -
-    simple majority, approval, and ranked choice at minimum - because which
-    method is used is itself one of the things the exercise is about. Show
-    the count's workings in the result, not just the winner. Ties are
-    reported as ties.
-  - record each seat's vote and, separately and privately, the position
-    they held before the discussion. The gap between those two is the most
-    valuable thing this exercise produces.
-  - make a speaking queue available as a table object, so nobody has to
-    interrupt to be heard on the call
-  - never declare a side correct. The result reports what the table decided
-    and by what method, and stops there.
+OPTIONS
+  The room is created with two choices: city (Potamosia or Hudrosia) and
+  phase (1 or 2). Add `options` to the definition format in generic
+  terms: named choices offered on /start, and readable by steps and by
+  rules.py through GameContext. Mayor/King is a label that depends on the
+  city. Nothing in sandbox/web/ may know about either city.
 
-Unit-test each voting method against known tallies including ties and
-spoiled ballots. Commit.
+SEATS AND CARDS
+  meta.players is min 9, max 20.
+  deal (rules.py): with N seats taken, shuffle cards 1..N and deal one to
+  each seat, private to its owner. Elite cards also deal their sheet,
+  also private. Re-dealing is allowed until the meeting starts.
+  The role cards and sheets cannot be shown to anyone. Add a generic deck
+  flag (`revealable: false`) that removes the reveal from the menu and
+  that the model refuses.
+  Each seat has a public name tent showing the job and a character name
+  the player types. Jobs are public; the back of every card and every
+  elite sheet is private, for the whole session and at the debrief.
+
+POTAMOSIA
+  choose_moderators: picks two seats at random (as a logged Shuffle, not
+  global randomness) and gives each a public Moderator token and the
+  moderator card. A speaking queue sits on the table: anyone can join it;
+  the moderators and the facilitator can call the next speaker or clear
+  it.
+  A vote is called by a moderator or the facilitator (rules.py checks who
+  holds the token). Every present seat votes once on the options, and
+  votes are shown together when the count closes. Votes are public, like
+  a show of hands. An option passes with
+  more than half the votes cast. A tie is reported as a tie and nothing
+  passes.
+
+HUDROSIA
+  At setup the elite seats' name tents sit in a council zone in the
+  middle of the table. Votes are called by a king or the facilitator.
+  Only council members vote, and the vote is secret: the table sees the
+  tally; who voted for what is recorded but shown only to the facilitator.
+  The meeting is in two parts: council (20 minutes), then public assembly
+  (10 minutes). Both are advisory labels on the timer, not locks.
+
+PROPOSALS
+  A proposal is a note piece in a Proposals zone. Anyone may write one,
+  and its author and edit history come from the event log. Putting a
+  proposal to the vote moves it to "On the floor"; the result moves it to
+  "Passed" or "Not passed".
+
+PHASE 2
+  Record the decision each city passes. Pairing two rooms and showing the
+  outcome from outcomes.csv belongs to Prompt 12's class page, not to
+  this prompt.
+
+EVENTS
+  Record, for each seat: card number, job, the interest on its card, and
+  each vote it cast. Prompt 13 compares interest with vote.
+
+Unit-test the count: majority, a tie, nobody voting, and a secret council
+vote that must not leak to the table's projection. validate-games plays
+both cities and both phases at 9 and at 20 seats. Update this plan's
+status table. Commit.
 ```
-
-**What `roles.csv` needs to cover:** every role's name, a description, and what information or perspective it starts with - one row each. **What your pasted rules need to cover:** how many participants there are; what is being decided; how proposals are made and amended; who may speak when; how voting works and who is eligible; what ends a round; and what the facilitator controls.
 
 ---
 
-## 12. Facilitator controls and the shared view
+## 12. Running a session
 
-**Status: Not started.**
+**Status: Not started.** Rewritten on 2026-10-30. The author asked for
+only the facilitator controls needed to run these two exercises, on a
+platform that works and can be extended later. The longer list from the
+first version is kept under "Deferred" below.
 
-Built after the games, because only now do you know what actually needs a control.
+What the two exercises actually need:
+
+- **Several rooms at once.** Value Cards is played in threes, so a class
+  of 24 means 8 rooms. The Democracy Simulation has 9–20 people per city
+  and several cities. In both, the teacher is not a player in any room.
+- **Phase 2 of the Democracy Simulation pairs two cities.** Its outcome
+  depends on both cities' decisions.
+- **A timer.** Both run on about 30 minutes.
+- **Debrief questions** both exercises supply, which the teacher may want
+  on everyone's screen.
+
+Today, starting a room seats the person who started it as its facilitator
+(`sandbox/web/rooms.py`, `create_room`). That suits a single group with a
+facilitator at the table, which still has to work. It does not suit a
+teacher running eight trios.
 
 ```text
-Read CLAUDE.md. Build the facilitator console and the spectator view.
+Read CLAUDE.md. Build what a facilitator needs to run a class through the
+Ethics Sandbox, and no more.
 
-CONSOLE - a panel on the facilitator's own screen, collapsible
-  Macro buttons for the current game, grouped, with destructive ones
-  confirmed. The three they will actually use - set up, deal, reset -
-  are large and always visible.
-  Seats: assign, rename, swap, make observer, remove, resend link, and
-  see who is connected.
-  A pause control that freezes all input and shows a "we're talking" card
-  on every screen, for when the conversation leaves the table. This will
-  be used constantly. Make it one press.
-  Facilitation prompts from the game definition, one press to push one to
-  every screen.
-  A timer that is advisory: it shows, it chimes, it never forces anything.
-  Table controls: clear all ink, unlock everything, recall all cards,
-  snapshot the table, restore a snapshot.
+A CLASS
+  /start offers "one table" (as now) or "a class". A class is an exercise,
+  its options, and a number of tables, all created in one transaction.
+  It has its own code and a page at /c/{code}.
+  The class page, seen by the facilitator: one row per table, showing the
+  table's join link and code, who is seated, who is connected, and
+  whether its macros have run (set up, dealt, time called). There is one
+  button to open any table as its facilitator. The facilitator is not
+  seated at any table: they join it as an observer with facilitator
+  powers.
+  The class page, seen by a participant: a list of the tables with open
+  seats. They type a name and choose one. The facilitator can also move a
+  participant from one table to another.
+  Sort at random: one press deals everyone who has joined the class into
+  tables at random, as evenly as each table's seat range allows. It is a
+  logged shuffle, not global randomness. It is shown before it is
+  applied, and the facilitator can sort again or adjust by hand before
+  confirming. People who arrive later are placed in the table with the
+  most room.
+  A class page never shows a card face or a token value. Test that.
+  The facilitator is recognised by their existing identity cookie. There
+  is no login.
 
-SPECTATOR VIEW at /t/{code}/view
-  A read-only view of the public table for someone screen-sharing to a
-  room, or joining late, or observing. Larger type, no controls, no hand
-  tray. It must contain no private information: write a test that asserts
-  the spectator projection contains no component_id for any piece in a
-  private or hidden zone.
+IN EACH TABLE
+  The macro toolbar already exists. Add a roster showing who is connected
+  and who is away. The facilitator gets "make observer" and "remove",
+  using the existing room services.
+  A timer: the facilitator starts it for one table, or for every table
+  from the class page. Every screen shows the time remaining. It chimes
+  once when it runs out. It is advisory and never refuses anything.
+  A label for each part of the meeting (Hudrosia's council, then its
+  assembly) comes from the game definition.
+  Push a prompt: the facilitator picks one of the game's prompts and
+  shows it as a dismissable card on every screen, at one table or at all
+  of them.
 
-HANDOVER
-  If the facilitator disconnects for 60 seconds, any participant may claim
-  the role, and the claim is logged as an event and announced.
+PAIRED TABLES (Democracy Simulation, Phase 2)
+  On the class page the facilitator pairs two tables. Once both have
+  passed a decision, the class page shows the facilitator the matching
+  row of outcomes.csv. The facilitator decides when to announce it. This
+  is game data read through the definition; the web layer only knows
+  that a game may declare pairing.
 
-Commit.
+Tests: a class of N tables is created whole or not at all; the class
+page leaks nothing; a participant cannot act as facilitator on it; the
+timer running out changes nothing on the table. Update this plan's status
+table. Commit.
 ```
+
+**Deferred** from the first version, to be added when a session shows
+they are needed:
+
+- the pause control that freezes the table;
+- snapshots and restore;
+- "unlock everything" and "recall all cards" as separate controls (the
+  game's collect and reset macros cover most of this);
+- swapping and renaming seats;
+- the spectator view at `/t/{code}/view`, with its privacy test;
+- facilitator handover after 60 seconds away.
 
 ---
 
 ## 13. Reflection, debrief and the playtest record
 
-**Status: Not started.**
+**Status: Not started.** Rewritten on 2026-10-30 for the two exercises as
+they actually are.
 
-The civic payload, and the reason to keep an event log. Without this the site is a toy; with it, it is an instrument.
+The point of this step is to give the debrief, which both source documents
+say is where the learning happens, something accurate to work from. The
+facilitator should be able to say "you gave away *justice* in your second
+trade" or "the council voted three to two for the walls", not rely on
+memory. The step has four parts:
+
+1. Notes and reflections during play.
+2. A debrief page for each table, and one for the class.
+3. The record: exports and replay.
+4. Consent, and what happens to the data.
+
+**What the step can count on.** It is built only from events that Prompts
+10–12 already log. It adds no new tracking of what people do at the
+table.
+
+**Where the debrief stops.** It never ranks or scores people, and it never
+says which choice was right. Speech is not recorded. The platform cannot
+know what was said on the call, so anything about the conversation comes
+from the facilitator's notes, not from the software.
 
 ```text
-Read CLAUDE.md. Build the reflection layer and the session record.
+Read CLAUDE.md, the two exercise definitions, and docs/BUILD-PLAN.md
+under Prompts 10-13. Build the reflection layer and the session record.
 
 DURING PLAY
-Short private prompts a facilitator can push, appearing as a card that can
-be answered or dismissed and never blocking the table: "What are you
-protecting right now?", "What would change your mind?" Answers are private
-by default; a participant may mark one to share.
+  Observation notes (facilitator only): a notes box on the class page and
+  on each table. Each note is timestamped, attached to that table's event
+  log, and may be tagged with one of the game's learning outcomes (listed
+  in the game's content). The Democracy Simulation document recommends
+  exactly this: observe, note behaviour, then debrief from the notes.
+  Reflection prompts: when the facilitator pushes a prompt (Prompt 12), a
+  participant may answer it in a private text box. Answers are private by
+  default. The participant may mark an answer "share with the table". The
+  box never blocks the table and can be dismissed.
 
-AFTER PLAY - /t/{code}/debrief, built from real events, not opinion
-  1. What moved - each person's ranking or position at the start against
-     the end, side by side, no score attached.
-  2. Where the table disagreed - the widest spreads, offered as openers.
-  3. The turns - moments the log shows a mind changed: a trade accepted
-     after a refusal, a vote different from the pre-discussion position.
-     Quote what the person wrote or showed at the time.
-  4. Steelman - each person states in one sentence the strongest version
-     of a position they argued against; shown beside what that person
-     actually argued, once everyone has submitted.
-  5. Open floor - shared reflections posted together, attributed, in the
-     order written.
-Charts are small, honest and unglamorous: one shared scale, direct labels,
-theme tokens, no gradients. Never rank people.
+THE DEBRIEF PAGE: /t/{code}/debrief
+  The facilitator sees it at any time. Participants see it once the
+  facilitator opens it, with one button. Everything on it comes from the
+  event log.
 
-THE RECORD
-  Export a session as JSON (full event log, schema-versioned, with a data
-  dictionary) and as CSV, from the facilitator console.
-  An anonymised export replacing names with stable pseudonyms.
-  Session replay: a /t/{code}/replay page that plays the event log back on
-  a read-only table with a scrubber. This falls out almost free from the
-  seeded RNG and the append-only log, and it is the single most useful
-  thing you will have for improving the exercises.
-  Timing derived from events: how long each part actually took, where
-  people sat idle.
+  Value Cards Trading
+    Each person, side by side: the hand they were dealt, the hand they
+    ended with (kept, given, received), and their top three if they
+    chose to show it. A top three that was not shown is visible only to
+    its owner, on their own debrief.
+    The trades in order: who gave what for what, and when. Also the
+    offers that were declined and the cards they asked for.
+    Across the trio: cards that changed hands most, cards that never
+    moved, and cards nobody put in a top three.
+    The activity's debrief questions, listed for discussion.
 
-CONSENT
-  A plain-language notice on joining: what is recorded, that this is a
-  playtest, how it will be used, how to ask for deletion. A CONSENT.md in
-  the repo. Do not skip this - you are recording people's arguments.
+  Democracy Simulation
+    A timeline: when the moderators were chosen; each proposal as
+    written, who wrote it, its edits, when it was put to the vote, and
+    the result; and, in Hudrosia, the change from council to assembly.
+    Each vote: the tally per option. In Potamosia, how each person voted.
+    In Hudrosia's council, the tally only, unless the facilitator
+    chooses to show more.
+    Interest against vote: for each person, the option their card
+    favoured and the way they voted. The facilitator sees all of it;
+    each participant sees only their own. Jobs are public throughout,
+    but the back of a card is never shown to anyone else.
+    Information that existed in the room: every knowledge item and
+    rumour on the cards dealt. The facilitator ticks the ones that
+    surfaced (the software cannot hear the call), or picks them from
+    their notes.
+    Phase 2: the decisions of the two paired cities and the outcome.
+    The document's debrief questions, grouped by learning outcome.
 
-Commit.
+THE CLASS DEBRIEF: /c/{code}/debrief
+  Value Cards: which values were kept and which were given away most
+  often, across all trios. No trio is compared with another.
+  Democracy Simulation: each city's decision side by side, with the
+  democracies and the oligarchies in separate columns. The document
+  calls this a controlled experiment, so put the comparison first.
+
+CHARTS
+  Small and plain: one shared scale, direct labels, colours from the
+  design tokens only, no gradients. Never rank people.
+
+THE RECORD (facilitator only)
+  Export a table or a whole class as JSON: the full event log,
+  schema-versioned, with a data dictionary (docs/DATA-DICTIONARY.md)
+  explaining every event type and field. Also as CSV, one file per event
+  type.
+  An anonymised export: names replaced with stable pseudonyms
+  (Participant A, B and so on, stable within one export), and free text
+  (notes, proposals, reflections) left out unless the facilitator ticks
+  "include written text".
+  Replay at /t/{code}/replay: the table rebuilt from the event log, with
+  a scrubber, read-only. By default it shows the public view; the
+  facilitator may replay showing every face.
+  Timing from events: how long each part took (dealing to calling time,
+  each vote), and stretches where a table was idle.
+
+CONSENT AND RETENTION
+  The join screen carries a short, plain notice: what is recorded (moves,
+  votes, written text, display names, never audio or video), that this is
+  a playtest, how the record is used, and how to ask for it to be
+  deleted. Add CONSENT.md, written in the same words.
+  The facilitator can delete a table's or a class's record outright.
+  This also closes the Prompt 5 gap: rooms go dormant after 12 idle
+  hours and are deleted after 30 days. Say so in the notice, and in the
+  facilitator's view of the room.
+
+Tests: each debrief section against a recorded session of each exercise;
+the anonymised export contains no display name; an unshown top three and
+the Hudrosia council's individual votes never reach a participant's
+debrief before they should. Update this plan's status table. Commit.
 ```
 
 ---
 
 ## 14. Access, tablets and resilience
 
-**Status: Not started.**
+**Status: Not started.** Rewritten on 2026-10-30 to account for what
+Prompt 8 already did and for hosting from a Mac on the local network.
 
-The pass that decides whether a real session survives contact with a real room. Do not defer it to "polish".
+**Already in place, so this step checks it rather than builds it.**
+
+- **Keyboard (Prompt 8):** Tab to every piece, arrow keys to move, Enter
+  to flip, R to rotate, M or Shift-F10 for the menu, P to point, Escape
+  to clear.
+- **Announcements:** a live region (`client/src/announcer.ts`).
+- **Touch:** a 500 ms long press opens the menu (`client/src/interaction.ts`),
+  and pinch zoom works (`client/src/viewport-input.ts`).
+- **Reduced motion:** `prefers-reduced-motion` is checked in
+  `client/src/table.ts` and the stylesheets.
+
+**Found while revising this plan:**
+
+- **Holds.** When a participant's socket closes, their held pieces are
+  released at once (`sandbox/web/live.py`, `_on_leave`). The plan asked
+  for a 10-second grace period.
+- **Copying the room link.** The "copy room link" button builds the link
+  from the address in the browser's own bar
+  (`sandbox/web/templates/table.html`).
+  - On the Mac running the server, that address is `localhost`, so the
+    link it copies is useless to anyone else.
+  - On another device the address is `http://<LAN IP>`, which is not a
+    secure context. There `navigator.clipboard` does not exist, the call
+    throws, and the button silently does nothing.
 
 ```text
-Read CLAUDE.md. Harden the Ethics Sandbox. Behaviour changes only where
-they are bugs.
+Read CLAUDE.md. Harden the Ethics Sandbox for a real session: laptops and
+tablets in a classroom, served from a Mac on the local network. Change
+behaviour only where it is a bug or this prompt says so. For every item,
+write a test (Playwright where it involves a browser) or, where it
+cannot be automated, a line in docs/MANUAL-CHECKS.md saying how to check
+it by hand.
 
 ACCESSIBILITY
-  Every table action reachable by keyboard: tab between pieces in a stable
-  order, arrow keys to move, Enter to flip, a keyboard-openable context
-  menu, and a keyboard route into and out of the hand tray.
-  A live region announcing reveals, deals, macro results, and who joined
-  or left. Not every piece movement - that would be unusable.
-  Correct roles and labels on custom controls. AA contrast in both themes.
-  Seat tints distinguishable under deuteranopia and protanopia, and never
-  the only carrier of information - pair every tint with a name or shape.
-  All motion behind prefers-reduced-motion, including piece interpolation.
+  Check the keyboard model from Prompt 8 end to end, in both exercises:
+  the trade offer, the vote, the speaking queue, and getting into and out
+  of the hand tray and the top-three zone. Fix any gaps.
+  Every custom control has a correct role and label. Check this with
+  axe-core run from Playwright (@axe-core/playwright, approved by the
+  author on 2026-10-30), and add its one-line justification to CLAUDE.md.
+  Measure AA contrast for every text-on-surface pair in tokens.css, in
+  both themes. List any failures and fix them in tokens.css only.
+  Seat tints must be distinguishable under deuteranopia and protanopia,
+  and must never carry information alone: a name or a shape always goes
+  with them.
+  prefers-reduced-motion must cover piece interpolation, the rollback
+  glide, toasts and the timer.
+  The announcer says: deals, trades accepted, votes opened and closed,
+  reveals, macros, joins and leaves. It does not announce ordinary moves.
+  The page works with text zoomed to 200%.
 
-DEVICES
-  Laptop and tablet are the primary targets; make both genuinely good.
-  Touch: drag, pinch zoom, two-finger pan, long-press menu, and a hand tray
-  that works with a thumb. No hover-only affordances anywhere.
-  Phone gets a reduced but honest view: your hand, the public table
-  read-only, and the ability to show and play cards. Say plainly on the
-  join screen that a larger screen is better.
+TABLETS AND PHONES
+  Targets: iPad in Safari (portrait and landscape) and a laptop at
+  1280x800. Run the Playwright suite in WebKit as well as Chromium, in CI
+  (approved by the author on 2026-10-30).
+  Touch: one-finger drag, pinch zoom, two-finger pan, long-press menu,
+  tap to select. Make the trade offer and the vote work by touch alone.
+  Touch targets are at least 44 px. Nothing works only on hover.
+  The hand tray and its 12 cards fit within thumb reach in both
+  orientations. Rotating the iPad keeps your place on the table.
+  The on-screen keyboard does not cover the note or name being typed.
+  Phones (narrower than 600 px): your hand and private cards, the public
+  table read-only, and the actions to show or play a card, offer or
+  answer a trade, and vote. The join screen says plainly that a tablet
+  or laptop is better.
+
+SERVING FROM A MAC ON THE LOCAL NETWORK
+  Links shared from the Mac must use its network address. scripts/deploy.sh
+  sets SANDBOX_PUBLIC_URL from the LAN IP. The app builds every shareable
+  link from that setting, and shows the link as text that can be selected
+  and copied by hand.
+  Copying must work without a secure context. Where navigator.clipboard
+  is missing, select the link text and say "Press Ctrl-C or Cmd-C".
+  Audit the client for any other API that needs a secure context.
+  Add a /health page a participant can open to check they can reach the
+  Mac at all.
+  A server restart mid-session (Ctrl-C, then deploy.sh again) restores
+  every table from its snapshot, and the clients reconnect on their own.
+  docs/FACILITATING-ON-A-MAC.md:
+    - keep the lid open and the charger in (caffeinate -i stops idle
+      sleep, not sleep when the lid is closed);
+    - campus and guest Wi-Fi often stop devices from reaching one
+      another, so test the network beforehand, or use a hotspot or a
+      router of your own;
+    - what to do if the Mac's address changes;
+    - check /health from one tablet before the class arrives.
 
 RESILIENCE
-  Locked phone or backgrounded tab resumes correctly.
-  30 seconds of airplane mode recovers without a reload.
-  Refresh mid-session restores exactly, including hand and zoom.
-  Two people dragging the same piece resolves without either seeing a
-  glitch.
-  A dropped participant's held pieces release after 10 seconds.
-  Error boundaries on every route with a message saying what happened and
-  what to do next.
+  Each of these is a Playwright test:
+  - A tab that was backgrounded, or an iPad that was locked, picks up
+    again on its own, replaying from the last seq it saw.
+  - 30 seconds offline recovers without a reload. Intents sent in that
+    time are either applied or rolled back with a message, never left
+    hanging.
+  - A refresh mid-session restores the hand, the seat and the view.
+    Zoom and pan are kept in localStorage, wrapped in try/catch.
+  - Two people dragging the same piece resolve without either seeing a
+    glitch.
+  - A dropped participant's held pieces are released 10 seconds after
+    their socket closes, not at once, so that a blip does not drop a
+    card in mid-drag. If the participant reconnects within the 10
+    seconds, they keep their hold.
+  - Error pages: an unknown room code, a closed room, a full room, a
+    server error, and a refused socket. Each says what happened and what
+    to do next.
 
-Commit.
+Update this plan's status table. Commit.
 ```
 
 ---
@@ -987,7 +1522,11 @@ Wire it all into CI. Commit.
 
 ## 16. Launch pass
 
-**Status: Not started.**
+**Status: Not started.** Hosting is decided: a MacBook on the local
+network, served with `scripts/deploy.sh`. Read the prompt's first item as
+"make `scripts/deploy.sh` the documented way to serve a session, with every
+environment variable in .env.example and the README". Deploying to Fly.io
+or Render is set aside until the author asks for it.
 
 ```text
 Read CLAUDE.md. Prepare the Ethics Sandbox for its first real session.

@@ -41,11 +41,31 @@ prompts, and what its buttons say - lives under `exercises/<exercise>/`,
 and the exercise's game definition (`sandbox/games/<exercise>/game.yaml`)
 names the files it reads.
 
-`exercises/value-cards-trading/cards.csv` and
-`exercises/democracy-simulation/roles.csv` are not read yet. Their
+`decks/value-cards/cards.csv` and the Democracy Simulation's CSV files
+are not read yet. Their
 exercises get game definitions in later steps of the build plan
 (`docs/BUILD-PLAN.md`, prompts 10 and 11), which will read exactly these
 files. Fill them in as spreadsheets ahead of that work.
+
+The Democracy Simulation's three files come from the author's "role
+cards" Google Sheet. `roles.csv` has one row per card (80 in all: cards
+1-20 for each city and phase), with yes/no columns for whether the holder
+lives by the river, has heard the rumour, or sits on the council.
+`jobs.csv` holds the knowledge and interest text for each job in each
+phase. `features.csv` holds the extra line that the river, rumour and
+council marks add to a card. `elite_sheets.csv` holds the information
+sheet each elite card comes with, and `invitations.csv` each city's
+invitation for each phase. Both come from the author's four "Printouts"
+Google Docs, with typos corrected (listed in `docs/BUILD-PLAN.md`, Prompt
+11). Their text keeps the printouts' bold and italic as `**bold**` and
+`*italic*`. A line starting `# ` is a heading, list items start `- ` or
+`1. `, and a literal asterisk is written `\*`.
+
+`decks/value-cards/cards.csv` is the Value Cards deck as printed, copied
+from the "deck" sheet of the author's "values cards - the spreadsheet".
+It sits under `decks/` rather than under one exercise because several
+exercises will use it. `art` names the card's picture and `schwartz` the
+category whose icon is printed in its corner.
 
 A game's buttons CSV (for example `exercises/<exercise>/buttons.csv`) has
 one row per button: `id` (which button; it matches the game definition),

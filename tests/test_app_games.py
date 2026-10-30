@@ -65,6 +65,9 @@ def test_a_card_image_is_served(client: TestClient) -> None:
     [
         "/content/exercises/two-doors/cards.csv",
         "/content/exercises/value-cards-trading/cards.csv",
+        "/content/decks/value-cards/cards.csv",
+        "/content/exercises/democracy-simulation/roles.csv",
+        "/content/exercises/democracy-simulation/elite_sheets.csv",
         "/content/../pyproject.toml",
         "/content/%2e%2e/pyproject.toml",
         "/content/exercises/two-doors/images/README.md",
