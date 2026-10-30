@@ -15,12 +15,11 @@ table below in the same pull request.
 
 Prompts 1–9 are done. Prompt 10 (Value Cards Trading) is ready to run:
 its rules and deck are now in this plan. Prompt 11 (Democracy Simulation)
-has all its material. It waits on a short list of corrections to that
-material (see "Waiting on the author"). Prompts 12–14 were rewritten on
+is ready to run: its cards, sheets and invitations are in `content/`. Prompts 12–14 were rewritten on
 2026-10-30 for the two exercises as they actually are. Prompt 12 now keeps
 the facilitator's controls to what these two exercises need.
 
-The order from here is 10, then 12, then 11 once its corrections are in, then 13
+The order from here is 10, then 12, then 11, then 13
 and 14. Prompt 14 does not depend on the games and can run alongside the
 others.
 
@@ -39,7 +38,7 @@ shows "Claimed" in this table on `main`.
 | 8 | The table client — interaction | Done | | `d8c383d` (PR #1) |
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
 | 10 | Value Cards Trading | Ready to run | `claude/step-10-value-cards-trading` | |
-| 11 | Democracy Simulation | Waiting on the author's corrections; material supplied | `claude/step-11-democracy-simulation` | |
+| 11 | Democracy Simulation | Ready to run | `claude/step-11-democracy-simulation` | |
 | 12 | Running a session (rewritten, lean) | Not started | `claude/step-12-facilitator-controls` | |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
@@ -158,9 +157,9 @@ Where these conflict with a prompt below, these win.
   ("Value Cards/images 2.1") and the Schwartz icons ("Value Cards/icons")
   need exporting from Drive into the repo before the faces can match the
   printed cards.
-- **Prompt 11:** the role cards are in the repo. Three things are left in
-  the printouts; they are listed under Prompt 11, "Open before this prompt
-  runs".
+- **Prompt 11:** nothing blocks the text. The role icons and city seals
+  need exporting from Drive into
+  `content/exercises/democracy-simulation/images/`.
 
 ---
 
@@ -927,9 +926,8 @@ Update this plan's status table. Commit.
 
 ## 11. Democracy Simulation
 
-**Status: Material supplied; waiting on the corrections listed under
-"Open before this prompt runs".** All of the material is in the author's
-Drive folder,
+**Status: Ready to run.** All of the material is in the author's Drive
+folder,
 <https://drive.google.com/drive/folders/1zRzxok62G8tFtLYkgUMj_4d0JtB6nqOa>,
 read on 2026-10-30:
 
@@ -941,10 +939,12 @@ read on 2026-10-30:
   `content/exercises/democracy-simulation/` as `roles.csv`, `jobs.csv` and
   `features.csv`. The values are unchanged; only the whitespace was tidied.
 - **The four "Printouts" Google Docs,** one per city per phase: each
-  city's invitation and its five elite information sheets. They are not
-  copied into the repo yet, because the Phase 2 Potamosia doc still has
-  unresolved suggested edits. Prompt 11 copies them into
-  `invitations.csv` and `elite_sheets.csv`.
+  city's invitation and its five elite information sheets. Phase 2
+  Potamosia is the clean copy the author made on 2026-10-30
+  (<https://docs.google.com/document/d/1nNzufIhuVVw9oXG1NVnZRjUwBYiYLFYA-JroTQII5jo/edit>),
+  not the older doc with suggested edits. All four are exported to
+  `invitations.csv` and `elite_sheets.csv`, with the typos listed below
+  corrected at the author's request.
 - **"Democracy Simulation: Slides",** the introduction deck.
 - **The `role-icons` folder** (an icon per job, plus moderator and river
   resident) and the two city seals, for card faces.
@@ -1026,40 +1026,36 @@ read on 2026-10-30:
 - Where the slide deck and the printouts differ, the printouts are
   current.
 
-### Open before this prompt runs
+### Typos corrected in the copy (the author's decision, 2026-10-30)
 
-Checked against the Drive files at 18:30 UTC on 2026-10-30.
+The Drive docs are unchanged. `invitations.csv` and `elite_sheets.csv`
+correct these, the count being how many times each was found:
 
-1. **Phase 1 Hudrosia printout: card numbers.** The sheets are now headed
-   Merchant "card no. 2", Merchant "card no. 14" and Noble "card no. 4".
-   The roles sheet makes card 4 a Merchant and card 14 the Noble, so the
-   second Merchant should be 4 and the Noble 14. The invitation still
-   reads "The Wise Council of shall convene".
-2. **Phase 2 Potamosia printout: suggested edits.** Drive still reports 26
-   unresolved suggestions on this doc (last edited 18:08 UTC). If they
-   have been accepted, this may be Drive's record lagging; check the doc
-   in editing mode.
-3. **Spelling in the Phase 2 printouts: copy as written, or correct?**
-   Each sentence repeats on every elite sheet of that city:
-   - Potamosia, all five sheets: "Hedrosia's oligarchy".
-   - Hudrosia, all five sheets: "entreaties with the Potamsians", "scuffles
-     but i shepherds", "the unpredictable whim of the informed masses"
-     ("uninformed"?), and "increasingly outrageous and plans".
-   - Hudrosia, King 1, King 10, Merchant 4, Merchant 13 and Noble 7: "the
-     Potamsians are constructing many ships".
-   - Hudrosia, King 1: "Potamsia's penchant".
-   - Hudrosia, King 1 and Merchant 13: "Potomosian farmers" and "the
-     characteristically arrogant manner of Potamosians *Demokrats*".
-   - Hudrosia invitation: "provoking shuffles and violence" ("scuffles"?)
-     and a double space in "two oldest families  who".
-   - Both cities, all ten sheets: "and if respond in kind to our efforts"
-     (missing "they"), and "Against the background" ("this background"?).
-   - Potamosia, Noble 7: "but this it will guarantee". Potamosia,
-     Merchant 4: "troubling.The shipwrights" (missing space).
-   - Phase 1, smaller ones: Hudrosia King 1 "answer what questions from
-     the people raise"; Potamosia Mayor 1 "river,close"; Potamosia
-     Merchant 4 "about half the city.  would rest easier"; Potamosia
-     invitation "for the duration of a half an hour Sand Timer".
+- "Hedrosia" to "Hudrosia" (5);
+- "Potamsians" to "Potamosians" (10);
+- "Potamsia's" to "Potamosia's" (1);
+- "Potomosian" to "Potamosian" (2);
+- "scuffles but i shepherds" to "scuffles but shepherds" (5);
+- "the informed masses" to "the uninformed masses" (5);
+- "increasingly outrageous and plans" to "increasingly outrageous plans"
+  (5);
+- "manner of Potamosians Demokrats" to "manner of Potamosian Demokrats"
+  (2);
+- "provoking shuffles" to "provoking scuffles" (1);
+- "and if respond in kind" to "and if they respond in kind" (10);
+- "Against the background" to "Against this background" (4);
+- "but this it will guarantee" to "but this will guarantee" (1);
+- "troubling.The" to "troubling. The" (1);
+- "answer what questions from the people raise" to "answer what
+  questions the people raise" (1);
+- "river,close" to "river, close" (1);
+- "about half the city. would" to "about half the city, would" (1);
+- "a half an hour Sand Timer" to "a half-hour Sand Timer" (1);
+- doubled spaces, wherever they appeared.
+
+Bold and italic are not kept; the text is plain, with paragraphs separated
+by a blank line and list items starting with "- " (or "1. " in an
+invitation).
 
 ### What changed from the prompt as first written
 
@@ -1087,11 +1083,10 @@ CONTENT, in content/exercises/democracy-simulation/
     interest.
   A card's back is its job's knowledge and interest, plus the line from
   each feature it has.
-  To add, from the four "Printouts" docs in the author's Drive folder
-  (linked in this plan):
-    elite_sheets.csv: phase, city, card_number, text, with each sheet's
-    text exactly as written.
-    invitations.csv: phase, city, text.
+    elite_sheets.csv: key, phase, city, card_number, job, text. One row per
+    elite card (20).
+    invitations.csv: key, phase, city, text. One row per city per phase
+    (4).
   To add, from the rules document:
     outcomes.csv: our_choice, their_choice, text (Phase 2).
   Role icons and the city seals are in the Drive folder's role-icons
@@ -1414,7 +1409,8 @@ ACCESSIBILITY
   the trade offer, the vote, the speaking queue, and getting into and out
   of the hand tray and the top-three zone. Fix any gaps.
   Every custom control has a correct role and label. Check this with
-  axe-core run from Playwright, and justify the dependency in CLAUDE.md.
+  axe-core run from Playwright (@axe-core/playwright, approved by the
+  author on 2026-10-30), and add its one-line justification to CLAUDE.md.
   Measure AA contrast for every text-on-surface pair in tokens.css, in
   both themes. List any failures and fix them in tokens.css only.
   Seat tints must be distinguishable under deuteranopia and protanopia,
@@ -1428,7 +1424,8 @@ ACCESSIBILITY
 
 TABLETS AND PHONES
   Targets: iPad in Safari (portrait and landscape) and a laptop at
-  1280x800. Run the Playwright suite in WebKit as well as Chromium, in CI.
+  1280x800. Run the Playwright suite in WebKit as well as Chromium, in CI
+  (approved by the author on 2026-10-30).
   Touch: one-finger drag, pinch zoom, two-finger pan, long-press menu,
   tap to select. Make the trade offer and the vote work by touch alone.
   Touch targets are at least 44 px. Nothing works only on hover.
