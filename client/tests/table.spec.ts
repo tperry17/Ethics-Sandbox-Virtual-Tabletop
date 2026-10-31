@@ -96,15 +96,21 @@ test.describe("the table client renders a recorded session", () => {
   test("stacks pieces by zone and z, not by the order nodes were made", async ({ page }) => {
     await page.goto(PREVIEW);
 
-    const order = await page.evaluate(() => {
-      const read = (id: string): number =>
-        Number.parseInt(
-          getComputedStyle(document.querySelector(`[data-piece-id="${id}"]`)!).zIndex,
-          10,
-        );
-      return { table: read("token-1"), claim: read("claim-1"), deck: read("deck-1") };
-    });
+    // The recorded session arrives after the page loads and is drawn on the
+    // next frame, so wait until all three pieces exist and carry a z-index.
+    const read = (): Promise<{ table: number; claim: number; deck: number }> =>
+      page.evaluate(() => {
+        const z = (id: string): number => {
+          const node = document.querySelector(`[data-piece-id="${id}"]`);
+          return node === null ? Number.NaN : Number.parseInt(getComputedStyle(node).zIndex, 10);
+        };
+        return { table: z("token-1"), claim: z("claim-1"), deck: z("deck-1") };
+      });
+    await expect
+      .poll(async () => Object.values(await read()).every(Number.isFinite))
+      .toBe(true);
 
+    const order = await read();
     expect(order.deck).toBeLessThan(order.claim);
     expect(order.table).toBeLessThan(order.claim);
   });
