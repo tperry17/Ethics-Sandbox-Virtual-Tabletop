@@ -1,5 +1,5 @@
 # The Democracy Simulation. The rules are in docs/BUILD-PLAN.md, Prompt 11.
-# One activity is one city. Its two options say which city and which phase.
+# One activity is one city. Its two options say which city and which scenario.
 meta:
   slug: democracy-simulation
   title: Democracy Simulation
@@ -15,7 +15,7 @@ options:
       - {id: potamosia, label: "Potamosia (a democracy)"}
       - {id: hudrosia, label: "Hudrosia (an oligarchy)"}
   - id: phase
-    label: Phase
+    label: Scenario
     choices:
       - {id: "1", label: "1: Construction project"}
       - {id: "2", label: "2: Going to war?"}
