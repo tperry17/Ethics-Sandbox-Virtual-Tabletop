@@ -159,8 +159,8 @@ typography, and it has not come to that.
 An activity's table is data. A game (an activity) is a directory under `sandbox/games/`
 holding a `game.yaml`, an `__init__.py`, and optionally a `rules.py` for
 what the YAML cannot say. No exercise has one yet. The worked example is
-Two Doors, a test fixture in `tests/games/two_doors/` whose CSV files are in
-`tests/games/content/exercises/two-doors/`: read it alongside this section.
+Pairs, a test fixture in `tests/games/pairs/` whose CSV files are in
+`tests/games/content/exercises/pairs/`: read it alongside this section.
 It is not part of the product; the app loads it only when
 `SANDBOX_EXTRA_GAMES` names `tests/games`, as pytest and the Playwright
 server do.
@@ -216,19 +216,21 @@ from sandbox.games.hatch import GameContext, MacroRefused, hook, macro
 from sandbox.model import Flip, MoveToZone, Operation, Table
 
 
-@macro("reveal")  # game.yaml: {id: reveal, ..., python: reveal}
-def reveal(table: Table, context: GameContext) -> list[Operation]:
-    if table.pieces_in_zone("doors"):
-        raise MacroRefused("The doors already hold cards. Collect them first.")
+@macro("call_pairs")  # game.yaml: {id: call_pairs, ..., python: call_pairs}
+def call_pairs(table: Table, context: GameContext) -> list[Operation]:
+    caught = context.zone("caught")
     operations: list[Operation] = []
     for seat in context.seats:  # seat order
         hand = table.pieces_in_zone(context.zone("hand", seat))
-        if not hand:
-            raise MacroRefused(f"{table.seats[seat].label} has no card. Deal first.")
-        operations += [
-            MoveToZone(piece_id=hand[-1].id, zone_id="doors"),
-            Flip(piece_id=hand[-1].id, face_up=True),
-        ]
+        ranks = [piece.component_id.split("-of-")[0] for piece in hand]
+        for piece, rank in zip(hand, ranks):
+            if ranks.count(rank) >= 2:
+                operations += [
+                    MoveToZone(piece_id=piece.id, zone_id=caught),
+                    Flip(piece_id=piece.id, face_up=True),
+                ]
+    if not operations:
+        raise MacroRefused("Nobody holds a pair.")
     return operations
 ```
 

@@ -16,8 +16,8 @@ FIXTURE_GAMES = Path(__file__).resolve().parent / "games"
 FIXTURE_CONTENT = FIXTURE_GAMES / "content"
 
 
-def two_doors() -> Game:
-    return GAMES["two-doors"]
+def pairs() -> Game:
+    return GAMES["pairs"]
 
 
 def hooked() -> Game:

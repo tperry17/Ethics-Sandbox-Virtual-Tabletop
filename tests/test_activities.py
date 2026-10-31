@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from _games_support import two_doors
+from _games_support import pairs
 
 from sandbox.games.engine import (
     build_activity_start,
@@ -14,6 +14,7 @@ from sandbox.model import (
     EndActivity,
     JoinActivity,
     LeaveActivity,
+    MoveToZone,
     Ok,
     OpenActivity,
     Rect,
@@ -38,7 +39,7 @@ def _room(people: int = 4) -> Table:
 
 
 def _open(table: Table, seat: str = "seat-1") -> str:
-    game = two_doors().definition.meta
+    game = pairs().definition.meta
     op = OpenActivity(
         kind=game.slug,
         title=game.title,
@@ -53,7 +54,7 @@ def _begun(table: Table, seats: tuple[str, ...] = ("seat-1", "seat-3")) -> str:
     activity_id = _open(table, seats[0])
     for seat in seats[1:]:
         assert isinstance(run_op(table, seat, JoinActivity(activity_id)), Ok)
-    built = build_activity_start(two_doors(), table, seats[0], activity_id)
+    built = build_activity_start(pairs(), table, seats[0], activity_id)
     assert not isinstance(built, Reject), built
     assert isinstance(run_op(table, seats[0], built), Ok)
     return activity_id
@@ -85,7 +86,7 @@ def test_beginning_makes_zones_for_the_players_only() -> None:
     activity_id = _begun(table)
     assert table.activities[activity_id].status == "running"
     zones = set(table.zones)
-    assert f"{activity_id}:doors" in zones
+    assert f"{activity_id}:caught" in zones
     assert f"{activity_id}:hand-seat-1" in zones
     assert f"{activity_id}:hand-seat-3" in zones
     assert f"{activity_id}:hand-seat-2" not in zones
@@ -96,7 +97,7 @@ def test_beginning_makes_zones_for_the_players_only() -> None:
 def test_an_activity_is_placed_clear_of_the_sandbox() -> None:
     table = _room()
     activity_id = _begun(table)
-    own = table.zones[f"{activity_id}:doors"].geometry
+    own = table.zones[f"{activity_id}:caught"].geometry
     assert isinstance(own, Rect)
     others = [z.geometry for zid, z in table.zones.items() if ":" not in zid]
     assert all(own.x > g.x + g.width for g in others if isinstance(g, Rect)), (
@@ -110,11 +111,11 @@ def test_an_activity_button_acts_only_on_its_own_zones() -> None:
     sandbox_pieces = {
         p.id: p.zone_id for p in table.pieces.values() if ":" not in p.zone_id
     }
-    deal = build_macro(two_doors(), table, "seat-1", "deal", activity_id)
+    deal = build_macro(pairs(), table, "seat-1", "deal", activity_id)
     assert isinstance(deal, type(deal)) and not isinstance(deal, Reject), deal
     assert isinstance(run_op(table, "seat-1", deal), Ok)
-    assert len(table.pieces_in_zone(f"{activity_id}:hand-seat-1")) == 1
-    assert len(table.pieces_in_zone(f"{activity_id}:hand-seat-3")) == 1
+    assert len(table.pieces_in_zone(f"{activity_id}:hand-seat-1")) == 3
+    assert len(table.pieces_in_zone(f"{activity_id}:hand-seat-3")) == 3
     assert not table.pieces_in_zone(f"{activity_id}:hand-seat-2")
     after = {p.id: p.zone_id for p in table.pieces.values() if ":" not in p.zone_id}
     assert after == sandbox_pieces
@@ -123,28 +124,37 @@ def test_an_activity_button_acts_only_on_its_own_zones() -> None:
 def test_a_python_button_finds_the_activitys_zones_through_the_context() -> None:
     table = _room()
     activity_id = _begun(table)
-    for macro in ("deal", "reveal"):
-        built = build_macro(two_doors(), table, "seat-1", macro, activity_id)
-        assert not isinstance(built, Reject), built
-        assert isinstance(run_op(table, "seat-1", built), Ok)
-    assert len(table.pieces_in_zone(f"{activity_id}:doors")) == 2
+    run_op(table, "seat-1", TakeFacilitator())  # so the test may place the cards
+    for suit in ("hearts", "spades"):
+        ace = next(
+            p
+            for p in table.pieces.values()
+            if p.component_id == f"cards:ace-of-{suit}"
+            and p.zone_id.startswith(f"{activity_id}:")
+        )
+        move = MoveToZone(piece_id=ace.id, zone_id=f"{activity_id}:hand-seat-1")
+        assert isinstance(run_op(table, "seat-1", move), Ok)
+    built = build_macro(pairs(), table, "seat-1", "call_pairs", activity_id)
+    assert not isinstance(built, Reject), built
+    assert isinstance(run_op(table, "seat-1", built), Ok)
+    assert len(table.pieces_in_zone(f"{activity_id}:caught")) == 2
 
 
 def test_a_facilitator_button_is_open_to_the_players_while_nobody_facilitates() -> None:
     table = _room()
     activity_id = _begun(table)
     assert not isinstance(
-        build_macro(two_doors(), table, "seat-3", "deal", activity_id), Reject
+        build_macro(pairs(), table, "seat-3", "deal", activity_id), Reject
     )
     run_op(table, "seat-2", TakeFacilitator())
-    refused = build_macro(two_doors(), table, "seat-3", "deal", activity_id)
+    refused = build_macro(pairs(), table, "seat-3", "deal", activity_id)
     assert isinstance(refused, Reject) and "facilitator" in refused.reason
 
 
 def test_someone_outside_the_activity_cannot_press_its_buttons() -> None:
     table = _room()
     activity_id = _begun(table)
-    refused = build_macro(two_doors(), table, "seat-2", "deal", activity_id)
+    refused = build_macro(pairs(), table, "seat-2", "deal", activity_id)
     assert isinstance(refused, Reject)
 
 
@@ -153,7 +163,7 @@ def test_two_activities_do_not_touch_each_others_zones() -> None:
     first = _begun(table, ("seat-1", "seat-2"))
     second = _begun(table, ("seat-3", "seat-4"))
     assert first != second
-    built = build_macro(two_doors(), table, "seat-1", "deal", first)
+    built = build_macro(pairs(), table, "seat-1", "deal", first)
     assert not isinstance(built, Reject)
     run_op(table, "seat-1", built)
     assert not table.pieces_in_zone(f"{second}:hand-seat-3")
