@@ -8,6 +8,7 @@
  * every frame, and a node that rebuilds itself is a node that drops frames.
  */
 
+import { renderRichText } from "./richtext.js";
 import type { ComponentView, PieceKind, SeatView } from "./protocol.js";
 import type { LocalPiece } from "./model.js";
 
@@ -211,6 +212,7 @@ export class PieceNode {
             component?.group ?? "",
             component?.badge ?? "",
             piece.value ?? "",
+            piece.text ?? "",
             label,
           ].join("\u0000");
     if (signature === this.faceSignature) return;
@@ -226,6 +228,9 @@ export class PieceNode {
       component?.title ?? label ?? `A ${piece.kind}`,
     );
     if (component !== undefined) appendFace(this.body, component);
+    if (piece.text !== undefined && piece.text !== null) {
+      this.body.append(span("piece__text", piece.text));
+    }
     if (component?.group) this.element.dataset.group = component.group.toLowerCase();
     else delete this.element.dataset.group;
     // A component the client has not been sent gets a blank face rather
@@ -280,7 +285,9 @@ export function appendFace(container: HTMLElement, component: ComponentView): vo
     container.append(span("piece__title", component.title));
   }
   if (component.body !== null) {
-    container.append(span("piece__copy", component.body));
+    const copy = span("piece__copy", "");
+    renderRichText(copy, component.body);
+    container.append(copy);
   }
   if (component.folio !== null || (component.badge ?? null) !== null) {
     const foot = document.createElement("span");

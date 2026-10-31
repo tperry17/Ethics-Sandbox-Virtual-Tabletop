@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from sandbox.model.entities import (
+    MAX_TEXT,
     SYSTEM_SEAT,
     Geometry,
     Piece,
@@ -25,6 +26,7 @@ from sandbox.model.entities import (
     Table,
     Zone,
     rolled_value,
+    written_text,
 )
 from sandbox.model.layout import place_in_zone
 from sandbox.model.results import Ok, OpOutcome, Patch, Reject
@@ -179,6 +181,7 @@ def _piece_patch(piece: Piece) -> Patch:
             "revealed_to": sorted(piece.revealed_to),
             "revealed_by": piece.revealed_by,
             "value": rolled_value(piece),
+            "text": written_text(piece),
         },
     )
 
@@ -657,6 +660,39 @@ class SetProp:
         return [_piece_patch(piece)]
 
 
+@dataclass(frozen=True)
+class SetText:
+    """Write on a note, token or marker: a name, a proposal, a label.
+
+    The text is seen by whoever may see the piece's face. It is plain text;
+    clients draw it with ``textContent``. An empty string wipes it.
+    """
+
+    piece_id: str
+    text: str
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        piece = _get_piece(table, self.piece_id)
+        if (reason := _reason_piece_missing(piece, self.piece_id)) is not None:
+            return reason
+        assert piece is not None
+        if piece.kind not in (PieceKind.NOTE, PieceKind.TOKEN, PieceKind.MARKER):
+            return "You can only write on a note, a token or a marker."
+        if len(self.text) > MAX_TEXT:
+            return f"That is too long: at most {MAX_TEXT} characters."
+        return _reason_not_movable(table, piece, actor_seat)
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        piece = table.pieces[self.piece_id]
+        text = self.text.strip()
+        props = {k: v for k, v in piece.props.items() if k != "text"}
+        if text:
+            props["text"] = text
+        piece.props = props
+        return [_piece_patch(piece)]
+
+
 # -- locking, grouping ---------------------------------------------------------
 
 
@@ -1079,6 +1115,8 @@ class ShowTo:
             table, piece, zone, actor_seat, count_reveals=False
         ):
             return "You can only show a piece whose face you can see."
+        if piece.props.get("revealable") is False:
+            return "This card is never shown to anyone."
         if piece.revealed_by is not None and piece.revealed_by != actor_seat:
             return "Someone else is already showing that piece."
         for seat_id in self.seat_ids:

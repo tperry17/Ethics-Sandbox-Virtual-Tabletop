@@ -928,3 +928,23 @@ def test_a_die_in_a_hidden_zone_shows_no_value_to_anyone() -> None:
     assert isinstance(patch, Ok)
     projected = project_patches(table, patch.patches, SEAT_A)
     assert projected[0].fields["value"] is None
+
+
+def test_set_text_writes_on_a_note_and_is_projected_with_the_face() -> None:
+    from sandbox.model.ops import SetText
+
+    table = build_sample_table(deck_size=1)
+    piece = table.pieces["card-0"]
+    assert SetText("card-0", "hello").validate(table, SEAT_A) is not None  # a card
+    piece.kind = PieceKind.NOTE
+    assert isinstance(run_op(table, SEAT_A, SetText("card-0", "  Build the dam  ")), Ok)
+    assert piece.props["text"] == "Build the dam"
+    zone = table.zones[piece.zone_id]
+    for viewer in (SEAT_A, None):
+        shown = [p for p in project(table, viewer).pieces if p.id == "card-0"][0]
+        entitled = shown.component_id is not None
+        assert (shown.text == "Build the dam") is entitled
+    assert SetText("card-0", "x" * 281).validate(table, SEAT_A) is not None
+    assert isinstance(run_op(table, SEAT_A, SetText("card-0", "")), Ok)
+    assert "text" not in piece.props
+    assert zone is not None

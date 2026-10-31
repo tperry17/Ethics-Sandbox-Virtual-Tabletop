@@ -19,8 +19,8 @@ from __future__ import annotations
 
 import copy
 import re
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 
 from sandbox.games.definition import (
     ClearInkStep,
@@ -104,6 +104,7 @@ class Scope:
     activity_id: str
     seats: tuple[str, ...]
     origin: tuple[float, float]
+    options: Mapping[str, str] = field(default_factory=dict)
 
     @property
     def prefix(self) -> str:
@@ -121,6 +122,7 @@ def scope_of(table: Table, activity_id: str) -> Scope:
         activity_id=activity_id,
         seats=activity.seats,
         origin=(ACTIVITY_SPACING * serial, 0.0),
+        options=dict(activity.options),
     )
 
 
@@ -164,9 +166,19 @@ class _Builder:
         table: Table,
         actor_seat: str,
         scope: Scope | None = None,
+        options: Mapping[str, str] | None = None,
     ) -> None:
         self.game = game
         self.scope = scope
+        # What was chosen when the activity was opened; a room game's table,
+        # which has no activity, takes each option's first choice.
+        self.options: Mapping[str, str] = (
+            scope.options
+            if scope is not None
+            else options
+            if options is not None
+            else ({} if game is None else game.definition.default_options())
+        )
         self.trial = copy.deepcopy(table)
         # Who each step is tried as. An activity's buttons act for the room.
         self.actor_seat = SYSTEM_SEAT if scope is not None else actor_seat
@@ -206,6 +218,8 @@ class _Builder:
             per_seat_zones=self._game().per_seat_zones,
             macro_id=macro_id,
             seat_id=seat_id,
+            options=self.options,
+            cards=self._game().cards(),
         )
 
     def _seats(self) -> tuple[str, ...]:
@@ -246,9 +260,13 @@ class _Builder:
 
     # -- seats and zones ----------------------------------------------------
 
+    def _wanted(self, spec: ZoneSpec) -> bool:
+        """Whether the options chosen include the zone (see ``ZoneSpec.when``)."""
+        return all(self.options.get(k) == v for k, v in spec.when.items())
+
     def shared_zones(self) -> None:
         for spec in self._game().definition.zones:
-            if not spec.per_seat:
+            if not spec.per_seat and self._wanted(spec):
                 self.run(
                     _add_zone(
                         spec,
@@ -265,7 +283,7 @@ class _Builder:
         for index, seat_id in enumerate(self.scope.seats):
             label = self.trial.seats[seat_id].label
             for spec in self._game().definition.zones:
-                if spec.per_seat:
+                if spec.per_seat and self._wanted(spec):
                     self.run(
                         _add_zone(
                             spec,
@@ -292,7 +310,7 @@ class _Builder:
         )
         if self.game is not None:
             for spec in self.game.definition.zones:
-                if spec.per_seat:
+                if spec.per_seat and self._wanted(spec):
                     self.run(
                         _add_zone(
                             spec,
@@ -348,8 +366,22 @@ class _Builder:
         deck = next(
             d for d in self._game().definition.components.decks if d.id == step.deck
         )
+        wanted = {
+            column: value.format_map(self.options)
+            for column, value in step.where.items()
+        }
+        cards = [
+            card
+            for card in self._game().decks[step.deck]
+            if all(
+                card.fields.get(c, "").casefold() == v.casefold()
+                for c, v in wanted.items()
+            )
+        ]
+        if not cards:
+            raise _Refused(f"No cards in {step.deck!r} match {wanted}.")
         for zone in self.zones(step.zone):
-            for card in self._game().decks[step.deck]:
+            for card in cards:
                 # A fresh random id for each card: an id derived from the
                 # card would name it to everyone, face down or not.
                 self.run(
@@ -357,9 +389,11 @@ class _Builder:
                         component_id=card.component_id,
                         kind=deck.kind,
                         zone_id=zone,
-                        piece_ids=(new_op_id(),),
+                        piece_ids=(piece_id := new_op_id(),),
                     )
                 )
+                if not deck.revealable:
+                    self.run(SetProp(piece_id=piece_id, key="revealable", value=False))
             # The cards went in in file order, and everyone saw their ids
             # arrive in that order. A shuffle is what makes those ids stop
             # meaning anything; a hidden zone always gets one.
@@ -459,6 +493,7 @@ def build_table(
     *,
     participant_id: str | None,
     as_facilitator: bool = False,
+    options: Mapping[str, str] | None = None,
 ) -> tuple[str, Transaction]:
     """Everything a new room's table needs, with its creator seated.
 
@@ -470,7 +505,7 @@ def build_table(
     the creator's seat and its own zones; then the definition's setup.
     Returns the creator's seat id and the transaction to apply as them.
     """
-    builder = _Builder(game, table, actor_seat="seat-1")
+    builder = _Builder(game, table, actor_seat="seat-1", options=options)
     try:
         if game is not None:
             builder.shared_zones()

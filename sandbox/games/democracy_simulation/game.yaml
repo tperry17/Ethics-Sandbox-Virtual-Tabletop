@@ -1,0 +1,129 @@
+# The Democracy Simulation. The rules are in docs/BUILD-PLAN.md, Prompt 11.
+# One activity is one city. Its two options say which city and which phase.
+meta:
+  slug: democracy-simulation
+  title: Democracy Simulation
+  players: {min: 9, max: 20}
+  duration_minutes: 45
+  facilitator: optional
+  listed: true
+
+options:
+  - id: city
+    label: City
+    choices:
+      - {id: potamosia, label: "Potamosia (a democracy)"}
+      - {id: hudrosia, label: "Hudrosia (an oligarchy)"}
+  - id: phase
+    label: Phase
+    choices:
+      - {id: "1", label: "1: Construction project"}
+      - {id: "2", label: "2: Going to war?"}
+
+components:
+  decks:
+    # Every card is a row of a *_cards.csv file, composed from the sheets by
+    # sandbox/games/democracy_simulation/compose.py. Nobody may show these to
+    # anyone: a card's back is private for the whole session.
+    - {id: roles, source: exercises/democracy-simulation/role_cards.csv, key: key, title: title, body: body, folio: folio, image: image, revealable: false, width: 150, height: 210}
+    - {id: moderators, source: exercises/democracy-simulation/moderator_cards.csv, key: key, title: title, body: body, image: image, revealable: false, width: 150, height: 210}
+    - {id: sheets, source: exercises/democracy-simulation/sheet_cards.csv, key: key, title: title, body: body, folio: folio, image: null, revealable: false, width: 260, height: 340}
+    - {id: invitations, source: exercises/democracy-simulation/invitation_cards.csv, key: key, title: title, body: body, image: null, width: 300, height: 380}
+  pieces:
+    # A name tent shows a job, and jobs are public.
+    - {id: tent-mayor, kind: note, title: Mayor, width: 160, height: 90}
+    - {id: tent-king, kind: note, title: King, width: 160, height: 90}
+    - {id: tent-merchant, kind: note, title: Merchant, width: 160, height: 90}
+    - {id: tent-noble, kind: note, title: Noble, width: 160, height: 90}
+    - {id: tent-mason, kind: note, title: Mason, width: 160, height: 90}
+    - {id: tent-farmer, kind: note, title: Farmer, width: 160, height: 90}
+    - {id: tent-shepherd, kind: note, title: Shepherd, width: 160, height: 90}
+    - {id: tent-thespian, kind: note, title: Thespian, width: 160, height: 90}
+    - {id: tent-fisher, kind: note, title: Fisher, width: 160, height: 90}
+    - {id: moderator-token, kind: token, title: Moderator (co-Chair)}
+    - {id: proposal, kind: note, title: Proposal, width: 200, height: 130}
+    - {id: speaker, kind: note, title: Speaking next, width: 160, height: 80}
+    - {id: "yes", kind: token, title: "For", tint_index: 1}
+    - {id: "no", kind: token, title: "Against", tint_index: 4}
+    - {id: vote-open, kind: marker, title: Vote open}
+    - {id: result-passed, kind: marker, title: Passed}
+    - {id: result-not-passed, kind: marker, title: Not passed}
+    - {id: result-tie, kind: marker, title: "A tie, so nothing passes"}
+    - {id: lot, kind: marker, title: Lot}
+    - {id: meeting-started, kind: marker, title: The meeting has started}
+
+seats:
+  labels: []
+
+zones:
+  - {id: table, kind: table, label: The city, rect: [0, 0, 2400, 5300], visibility: public, layout: free}
+  - {id: box, kind: deck, label: Box, rect: [40, 40, 240, 320], visibility: hidden, layout: stack}
+  - {id: spare, kind: deck, label: Cards not in play, rect: [300, 40, 240, 320], visibility: hidden, layout: stack}
+  - {id: lots, kind: deck, label: Lots, rect: [560, 40, 240, 320], visibility: hidden, layout: stack}
+  - {id: notice, kind: table, label: Invitation, rect: [1500, 1560, 420, 520], visibility: public, layout: free}
+  - {id: proposals, kind: tray, label: Proposals, rect: [1500, 40, 420, 300], visibility: public, layout: grid}
+  - {id: floor, kind: tray, label: On the floor, rect: [1500, 360, 420, 300], visibility: public, layout: grid}
+  - {id: passed, kind: tray, label: Passed, rect: [1500, 680, 420, 200], visibility: public, layout: grid}
+  - {id: not-passed, kind: tray, label: Not passed, rect: [1500, 900, 420, 200], visibility: public, layout: grid}
+  - {id: tally-yes, kind: tray, label: "For", rect: [1960, 360, 200, 300], visibility: public, layout: grid}
+  - {id: tally-no, kind: tray, label: "Against", rect: [2180, 360, 200, 300], visibility: public, layout: grid}
+  - {id: queue, kind: tray, label: Speaking queue, rect: [1500, 2120, 880, 200], visibility: public, layout: spread}
+  - {id: council, kind: table, label: The council, rect: [1500, 1120, 880, 400], visibility: public, layout: grid, when: {city: hudrosia}}
+  - {id: hand, kind: hand, label: Role card, rect: [40, 400, 720, 230], visibility: private_to_owner, layout: spread, per_seat: true, step: [0, 250]}
+  - {id: tent, kind: slot, label: Name tent, rect: [800, 400, 200, 230], visibility: public, layout: grid, per_seat: true, step: [0, 250]}
+  - {id: ballot-box, kind: tray, label: Ballots, rect: [1040, 400, 200, 230], visibility: facilitator_only, layout: grid, per_seat: true, step: [0, 250]}
+  - {id: ballot, kind: slot, label: Vote, rect: [1260, 400, 180, 230], visibility: facilitator_only, layout: grid, capacity: 1, per_seat: true, step: [0, 250]}
+
+setup:
+  - {op: spawn_deck, deck: roles, zone: box, where: {city: "{city}", phase: "{phase}"}}
+  - {op: spawn_deck, deck: moderators, zone: spare, where: {phase: "{phase}"}}
+  - {op: spawn_deck, deck: sheets, zone: spare, where: {city: "{city}", phase: "{phase}"}}
+  - {op: spawn_deck, deck: invitations, zone: notice, where: {city: "{city}", phase: "{phase}"}}
+
+macros:
+  - id: setup
+    steps:
+      - {op: reset_table}
+      - {op: setup}
+  - id: deal
+    python: deal
+  - id: choose_moderators
+    python: choose_moderators
+  - id: start_meeting
+    python: start_meeting
+  - id: put_to_vote
+    who: anyone
+    python: put_to_vote
+  - id: close_vote
+    who: anyone
+    python: close_vote
+  - id: join_queue
+    who: anyone
+    python: join_queue
+  - id: next_speaker
+    who: anyone
+    python: next_speaker
+  - id: clear_queue
+    who: anyone
+    python: clear_queue
+  - id: new_proposal
+    who: anyone
+    python: new_proposal
+  - id: reset
+    steps:
+      - {op: reset_table}
+  - id: shuffle
+    steps:
+      - {op: shuffle, zone: box}
+  - id: collect
+    steps:
+      - {op: collect, to: box, kinds: [card], face_up: false}
+  - id: clear_ink
+    steps:
+      - {op: clear_ink}
+
+buttons:
+  source: exercises/democracy-simulation/buttons.csv
+
+prompts:
+  source: exercises/democracy-simulation/prompts.csv

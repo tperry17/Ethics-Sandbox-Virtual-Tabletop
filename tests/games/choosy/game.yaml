@@ -1,0 +1,40 @@
+# A test-only game: options, a filtered deck, and a deck nobody may reveal.
+meta:
+  slug: choosy
+  title: Choosy
+  players: {min: 1, max: 4}
+  duration_minutes: 5
+  facilitator: optional
+  listed: false
+
+options:
+  - id: side
+    label: Side
+    choices:
+      - {id: north, label: North}
+      - {id: south, label: South}
+
+components:
+  decks:
+    - {id: secrets, source: exercises/choosy/secrets.csv, key: key, title: title, image: null, revealable: false}
+    - {id: plain, source: exercises/choosy/plain.csv, key: key, title: title, image: null}
+
+zones:
+  - {id: table, kind: table, label: Table, rect: [0, 0, 800, 600], visibility: public, layout: free}
+  - {id: pile, kind: deck, label: Pile, rect: [0, 620, 200, 100], visibility: hidden, layout: stack}
+  - {id: hand, kind: hand, label: Hand, rect: [0, 740, 400, 100], visibility: private_to_owner, layout: spread, per_seat: true, step: [0, 120]}
+
+setup:
+  - {op: spawn_deck, deck: secrets, zone: pile, where: {side: "{side}"}}
+  - {op: spawn_deck, deck: plain, zone: table}
+
+macros:
+  - {id: setup, steps: [{op: reset_table}, {op: setup}]}
+  - {id: deal, steps: [{op: deal, from: pile, to: hand, count: 1}]}
+  - {id: reset, steps: [{op: reset_table}]}
+  - {id: shuffle, steps: [{op: shuffle, zone: pile}]}
+  - {id: collect, steps: [{op: collect, to: pile}]}
+  - {id: clear_ink, who: anyone, steps: [{op: clear_ink}]}
+
+buttons:
+  source: exercises/choosy/buttons.csv

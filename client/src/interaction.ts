@@ -648,8 +648,22 @@ export class InteractionController {
     const pieceId = node?.dataset.pieceId;
     if (pieceId === undefined) return;
     event.preventDefault();
+    const piece = this.model.pieces.get(pieceId);
+    if (piece?.kind === "note") {
+      this.write(pieceId);
+      return;
+    }
     this.flip(this.targetsFor(pieceId));
   };
+
+  /** Ask what to write on a note. The server judges whether it may be written. */
+  private write(pieceId: string): void {
+    const current = this.model.pieces.get(pieceId)?.text ?? "";
+    const text = window.prompt("Write on this note:", current);
+    if (text === null) return;
+    this.table.intents.send("set_text", { piece_id: pieceId, text }, this.settles(pieceId));
+    this.table.announcer.announce("Note written on.");
+  }
 
   private onContextMenu = (event: MouseEvent): void => {
     const node = (event.target as Element | null)?.closest<HTMLElement>("[data-piece-id]");

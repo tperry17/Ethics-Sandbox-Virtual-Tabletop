@@ -87,6 +87,15 @@ def rolled_value(piece: Piece) -> str | None:
     return None if value is None else str(value)
 
 
+MAX_TEXT = 280
+
+
+def written_text(piece: Piece) -> str | None:
+    """What has been written on a note or token, or None when nothing has."""
+    text = piece.props.get("text")
+    return text if isinstance(text, str) and text else None
+
+
 @dataclass
 class Zone:
     """A named area of the table with its own visibility and layout rule."""
@@ -165,6 +174,8 @@ class Activity:
     seats: tuple[str, ...]
     status: str = "signup"
     zones: tuple[str, ...] = ()
+    options: dict[str, str] = field(default_factory=dict)
+    """The choices made when it was opened (which city, which phase)."""
 
 
 @dataclass

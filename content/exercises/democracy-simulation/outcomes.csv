@@ -1,0 +1,10 @@
+our_choice,their_choice,text
+Attack,Attack,An all-out war in the field. High casualties but low damages to both cities. No decisive victor and no loser either.
+Attack,Defenses,"Catastrophic for the attacker - high casualties and complete loss. Minimal casualties to the defender and minimal damages, but pays the economic costs of investing in defenses."
+Attack,Diplomacy,Catastrophic for the defender who is taken by surprise without proper defenses. High casualties and high damages to the defender.
+Defenses,Attack,"Catastrophic for the attacker - high casualties and complete loss. Minimal casualties to the defender and minimal damages, but pays the economic costs of investing in defenses."
+Defenses,Defenses,A waste of resources on both sides but low casualties and no damages.
+Defenses,Diplomacy,"Low casualties and low damages to both sides, but much better economic conditions to the side that chose diplomacy while the defenders invested in armaments that were never used."
+Diplomacy,Attack,Catastrophic for the defender who is taken by surprise without proper defenses. High casualties and high damages to the defender.
+Diplomacy,Defenses,"Low casualties and low damages to both sides, but much better economic conditions to the side that chose diplomacy while the defenders invested in armaments that were never used."
+Diplomacy,Diplomacy,"Low casualties and low damages for both sides, economic benefits greatly expanded, envoys meeting in the field on the way to each other’s city embrace, the good will increasing the odds of reconciliation."

@@ -122,12 +122,23 @@ async def exercise_detail(request: Request, slug: str) -> HTMLResponse:
 async def exercise_deck(request: Request, slug: str) -> HTMLResponse:
     """Every card of an exercise's decks, laid out to print and cut out."""
     game = GAMES.get(slug)
-    if game is None or not any(game.decks.values()):
+    # A deck marked revealable: false is private for the whole session, so
+    # the public page never prints it.
+    shown = (
+        []
+        if game is None
+        else [
+            game.decks[deck.id]
+            for deck in game.definition.components.decks
+            if deck.revealable and game.decks[deck.id]
+        ]
+    )
+    if game is None or not shown:
         raise HTTPException(status_code=404, detail="That exercise has no deck.")
     return templates.TemplateResponse(
         request=request,
         name="deck.html",
-        context={"game": game, "decks": game.decks.values()},
+        context={"game": game, "decks": shown},
     )
 
 

@@ -74,6 +74,8 @@ export interface PieceView {
   revealed_by: string | null;
   /** A rolled die's face, sent only to a viewer who may see the die's face. */
   value?: string | null;
+  /** What has been written on a note, sent only to a viewer who may see its face. */
+  text?: string | null;
 }
 
 export interface ZoneView {
@@ -141,6 +143,8 @@ export interface ActivityView {
   max_players: number;
   seats: string[];
   status: "signup" | "running";
+  /** What was chosen when it was opened, such as which city. */
+  options?: Record<string, string>;
 }
 
 /** An open swap offer. The whole table sees who offers what to whom. */
@@ -159,6 +163,14 @@ export interface ActivityChoiceView {
   min_players: number;
   max_players: number;
   duration_minutes: number;
+  /** Choices the person makes when starting it; the first is the default. */
+  options?: ActivityOptionView[];
+}
+
+export interface ActivityOptionView {
+  id: string;
+  label: string;
+  choices: { id: string; label: string }[];
 }
 
 export interface YouView {

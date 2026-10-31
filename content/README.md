@@ -41,11 +41,15 @@ prompts, and what its buttons say - lives under `exercises/<exercise>/`,
 and the exercise's game definition (`sandbox/games/<exercise>/game.yaml`)
 names the files it reads.
 
-`decks/value-cards/cards.csv` and the Democracy Simulation's CSV files
-are not read yet. Their
-exercises get game definitions in later steps of the build plan
-(`docs/BUILD-PLAN.md`, prompts 10 and 11), which will read exactly these
-files. Fill them in as spreadsheets ahead of that work.
+Both exercises' definitions read these files. The Democracy Simulation
+does not read its sheets directly: `role_cards.csv`, `moderator_cards.csv`,
+`sheet_cards.csv` and `invitation_cards.csv` are composed from `roles.csv`,
+`jobs.csv`, `features.csv`, `elite_sheets.csv` and `invitations.csv`, because
+a card's back is made of several of them. **After editing any of those five,
+run `uv run python sandbox/games/democracy_simulation/compose.py`** and commit
+the four files it writes; a test fails until you do. `outcomes.csv` (the nine
+outcomes of Phase 2's war table) is kept for the class page, and
+`prompts.csv` holds the debrief questions, each under its learning outcome.
 
 The Democracy Simulation's three files come from the author's "role
 cards" Google Sheet. `roles.csv` has one row per card (80 in all: cards
