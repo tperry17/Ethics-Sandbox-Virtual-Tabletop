@@ -79,32 +79,26 @@ def test_nothing_but_images_is_served_from_content(
     assert client.get(path).status_code == 404
 
 
-def test_the_start_page_offers_an_unlisted_game_only_when_asked(
+def test_the_start_page_opens_a_room_and_offers_no_game(client: TestClient) -> None:
+    page = client.get("/start").text
+
+    assert "Pairs" not in page
+    assert 'name="game_slug"' not in page
+    assert client.get("/start?game=pairs").text == page
+
+
+def test_a_game_slug_sent_to_start_is_ignored_the_room_is_still_open(
     client: TestClient,
 ) -> None:
-    assert "Pairs" not in client.get("/start").text
-
-    asked = client.get("/start?game=pairs").text
-
-    assert "Pairs" in asked
-    assert 'value="pairs" required checked' in asked
-
-
-def test_a_pairs_room_starts_set_up(client: TestClient) -> None:
     response = client.post(
-        "/start",
-        data={
-            "game_slug": "pairs",
-            "display_name": "Ines",
-            "as_facilitator": "true",
-        },
+        "/start", data={"game_slug": "pairs", "display_name": "Ines"}
     )
     assert response.status_code == 303
 
     table_page = client.get(response.headers["location"])
 
     assert table_page.status_code == 200
-    assert "<title>Pairs ·" in table_page.text
+    assert "<title>Open table ·" in table_page.text
 
 
 def test_an_exercise_without_a_definition_keeps_its_drawn_preview(

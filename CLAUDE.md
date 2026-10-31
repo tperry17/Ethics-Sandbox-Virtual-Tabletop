@@ -249,8 +249,9 @@ def call_pairs(table: Table, context: GameContext) -> list[Operation]:
 it uses, and plays every macro at both ends of the player range; pytest
 runs the same check. `/games/{slug}/preview` draws a game's table after
 setup from the spectator projection, and an exercise page shows it once
-the exercise has a definition. `/start?game={slug}` starts an unlisted
-game. Definitions and content hot-reload under `uv run dev`.
+the exercise has a definition. Any game, listed or not, can be started as an
+activity in a room; `/start` always opens the sandbox. Definitions and
+content hot-reload under `uv run dev`.
 
 ### Who may move what
 

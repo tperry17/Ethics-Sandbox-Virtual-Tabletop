@@ -42,7 +42,7 @@ def test_start_form_renders(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert "Open a room" in response.text
-    assert 'name="game_slug" value="sandbox"' in response.text
+    assert 'name="game_slug"' not in response.text
 
 
 def test_starting_with_no_game_opens_the_sandbox_with_no_facilitator(
@@ -61,7 +61,6 @@ def test_starting_a_room_redirects_to_the_table_and_sets_a_cookie(
     response = client.post(
         "/start",
         data={
-            "game_slug": "value-cards-trading",
             "display_name": "Ada",
             "as_facilitator": "true",
         },
@@ -74,9 +73,7 @@ def test_starting_a_room_redirects_to_the_table_and_sets_a_cookie(
 
 
 def test_starting_a_room_without_a_name_shows_an_error(client: TestClient) -> None:
-    response = client.post(
-        "/start", data={"game_slug": "value-cards-trading", "display_name": "  "}
-    )
+    response = client.post("/start", data={"display_name": "  "})
 
     assert response.status_code == 400
     assert "Enter a name" in response.text
@@ -86,7 +83,6 @@ def test_the_facilitator_can_open_their_own_table(client: TestClient) -> None:
     start = client.post(
         "/start",
         data={
-            "game_slug": "value-cards-trading",
             "display_name": "Ada",
             "as_facilitator": "true",
         },
@@ -104,7 +100,6 @@ def test_visiting_a_table_before_joining_redirects_to_join(client: TestClient) -
     start = client.post(
         "/start",
         data={
-            "game_slug": "value-cards-trading",
             "display_name": "Ada",
             "as_facilitator": "true",
         },
@@ -132,7 +127,6 @@ def test_joining_a_room_seats_the_participant_and_redirects(
     start = client.post(
         "/start",
         data={
-            "game_slug": "value-cards-trading",
             "display_name": "Ada",
             "as_facilitator": "true",
         },

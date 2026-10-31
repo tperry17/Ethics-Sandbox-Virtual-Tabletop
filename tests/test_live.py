@@ -655,7 +655,6 @@ def test_a_browser_that_has_not_joined_is_refused_the_socket(
     started = socket_client.post(
         "/start",
         data={
-            "game_slug": "value-cards-trading",
             "display_name": "Ada",
             "as_facilitator": "true",
         },
@@ -675,7 +674,6 @@ def test_the_facilitator_socket_answers_hello_with_a_snapshot(
     started = socket_client.post(
         "/start",
         data={
-            "game_slug": "value-cards-trading",
             "display_name": "Ada",
             "as_facilitator": "true",
         },

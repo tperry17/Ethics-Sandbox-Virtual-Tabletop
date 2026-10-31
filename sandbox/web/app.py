@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from sandbox.content_loading import CONTENT_ROOT
 from sandbox.db import init_db, session_scope
-from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, OPEN_ROOM_SLUG, Game
+from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, OPEN_ROOM_SLUG
 from sandbox.games.loader import IMAGE_SUFFIXES
 from sandbox.web.content import SITE_COPY
 from sandbox.web.identity import (
@@ -35,7 +35,6 @@ from sandbox.web.rooms import (
     FacilitatorTakenError,
     RoomClosedError,
     RoomNotFoundError,
-    UnknownExerciseError,
     create_room,
     get_participant,
     get_room_by_code,
@@ -151,44 +150,25 @@ async def content_image(path: str) -> FileResponse:
     return FileResponse(file)
 
 
-def _start_choices(requested: str) -> list[Game]:
-    """Unlisted games offered on the start page: the one asked for by name."""
-    game = GAMES.get(requested)
-    if game is None or game.definition.meta.listed:
-        return []
-    return [game]
-
-
 @app.get("/start", response_class=HTMLResponse)
-async def start_form(request: Request, game: str = "") -> HTMLResponse:
-    """Render the form for choosing an exercise and starting a room.
-
-    ``?game=<slug>`` also offers a game the public catalog does not list,
-    such as the reference game, already chosen.
-    """
+async def start_form(request: Request) -> HTMLResponse:
+    """Render the form for opening a room."""
     return templates.TemplateResponse(
-        request=request,
-        name="start.html",
-        context={
-            "open_room": OPEN_ROOM_SLUG,
-            "games": _start_choices(game),
-            "chosen": game,
-            "error": None,
-        },
+        request=request, name="start.html", context={"error": None}
     )
 
 
 @app.post("/start", response_class=HTMLResponse)
 def start_room(
     request: Request,
-    game_slug: str = Form(OPEN_ROOM_SLUG),
     display_name: str = Form(...),
     as_facilitator: bool = Form(False),
     session: Session = Depends(get_session),
 ) -> Response:
-    """Create a room for ``game_slug`` and seat its creator.
+    """Open a room and seat its creator.
 
-    The creator is a player unless they ticked "Join as facilitator".
+    Every room is the open sandbox; activities are started inside it. The
+    creator is a player unless they ticked "Join as facilitator".
     """
     cookie_id = _identify(request)
 
@@ -197,39 +177,18 @@ def start_room(
             request=request,
             name="start.html",
             status_code=400,
-            context={
-                "open_room": OPEN_ROOM_SLUG,
-                "games": _start_choices(game_slug),
-                "chosen": game_slug,
-                "error": "Enter a name to join with.",
-            },
+            context={"error": "Enter a name to join with."},
         )
         set_participant_cookie(response, request, cookie_id)
         return response
 
-    try:
-        room, _facilitator = create_room(
-            session,
-            game_slug=game_slug,
-            facilitator_cookie_id=cookie_id,
-            facilitator_name=display_name,
-            as_facilitator=as_facilitator,
-        )
-    except UnknownExerciseError:
-        response = templates.TemplateResponse(
-            request=request,
-            name="start.html",
-            status_code=400,
-            context={
-                "open_room": OPEN_ROOM_SLUG,
-                "games": [],
-                "chosen": "",
-                "error": "There is no such game.",
-            },
-        )
-        set_participant_cookie(response, request, cookie_id)
-        return response
-
+    room, _creator = create_room(
+        session,
+        game_slug=OPEN_ROOM_SLUG,
+        facilitator_cookie_id=cookie_id,
+        facilitator_name=display_name,
+        as_facilitator=as_facilitator,
+    )
     response = RedirectResponse(url=f"/t/{room.code}", status_code=303)
     set_participant_cookie(response, request, cookie_id)
     return response
