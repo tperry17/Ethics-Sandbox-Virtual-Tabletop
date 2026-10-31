@@ -19,8 +19,10 @@ is ready to run: its cards, sheets and invitations are in `content/`. Prompts 12
 2026-10-30 for the two exercises as they actually are. Prompt 12 now keeps
 the facilitator's controls to what these two exercises need.
 
-The order from here is 10, then 12, then 11, then 13
-and 14. Prompt 14 does not depend on the games and can run alongside the
+**The order from here is 17, then 10, then 12, then 11, then 13
+and 14.** Prompt 17 (open rooms and activities) was added on 2026-10-31
+and comes first: Prompts 10, 11 and 12 start activities inside the rooms it
+builds. Prompt 10 has a paused draft, pull request #16; see its section. Prompt 14 does not depend on the games and can run alongside the
 others.
 
 Before starting a step, claim it (see "Claiming a step"). A claimed step
@@ -43,6 +45,7 @@ shows "Claimed" in this table on `main`.
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
+| 17 | Open rooms and activities (added 2026-10-31; first in the order) | Not started | `claude/step-17-open-rooms-and-activities` | |
 | 16 | Launch pass | Not started; hosting is the Mac on the local network (below) | `claude/step-16-launch-pass` | |
 
 ### Claiming a step
@@ -135,12 +138,14 @@ Where these conflict with a prompt below, these win.
   people per city, with a simple majority or a secret council vote. Where
   the site copy in `content/site/exercises.csv` says otherwise, Prompts 10
   and 11 correct it.
-- **A room is sized by its exercise.** CLAUDE.md's "groups of 4–30"
-  describes the tabletop in general, not any one exercise (the author,
-  2026-10-30). Each game sets its own seat range. Value Cards Trading
-  seats 3, and later Value Cards exercises may seat more. A Democracy
-  city seats 9–20. A class that is larger than one table runs several
-  rooms, which Prompt 12 adds.
+- **A room is an open sandbox; an activity is started inside it** (the
+  author, 2026-10-31; superseding the 2026-10-30 note that a room is sized
+  by its exercise). A room takes up to 20 people. An activity's seat range
+  is how many people it takes: Value Cards Trading takes 3, and a Democracy
+  city takes 9–20. A class larger than one activity runs several at once in
+  one room, so Prompt 12 no longer needs several rooms. The facilitator is
+  an optional admin seat that nobody holds by default. Prompt 17 builds
+  this; CLAUDE.md's "Rooms and activities" is the rule.
 - **Call.** Section 0 says Zoom; CLAUDE.md says a separate video or phone
   call. Nothing depends on which.
 - **No principles of engagement.** The six principles that were on the
@@ -1547,6 +1552,64 @@ Read CLAUDE.md. Prepare the Ethics Sandbox for its first real session.
   who has never seen it. Write up every friction point as a numbered list
   with a proposed fix, ordered by how likely it is to spoil a real
   session. Do not fix them in this pass - report them.
+```
+
+---
+
+## 17. Open rooms and activities
+
+**Status: Not started. Runs first.** Added on 2026-10-31 at the author's
+direction, after Prompt 10's server side was built for a room that is one
+exercise. Read CLAUDE.md's "Rooms and activities" first.
+
+**Merging this step's pull request fires the daily routine.** The routine's
+own stored order is 10, 12, 11, 13, 14, 15, 16 and does not name Prompt 17,
+so before this is merged the author must change the routine to do Prompt 17
+first (and, until then, to leave pull request #16 alone: it has had the
+routine's marker line removed so the routine does not touch it). After this
+merges, pull request #16 is rebased onto it and Prompt 10 resumes as the
+Value Cards activity.
+
+```text
+Read CLAUDE.md ("Rooms and activities", "Game definitions", "Who may move
+what"), sandbox/web/rooms.py, sandbox/web/live.py and sandbox/games/. Then:
+
+ROOM
+  A room is no longer created for a game. /start makes an open room, with
+  a free table and a kit: the 36 value cards (content/decks/value-cards/,
+  face down in a deck zone), dice, cubes, meeples and tokens. Up to 20
+  people can be seated. Nobody is the facilitator by default, the creator
+  included: the creator is an ordinary player.
+  The facilitator is an optional admin seat. /join and /start offer "Join
+  as facilitator", and every room has a "Become facilitator" button for
+  anyone sitting there. One holder at a time; the holder may hand it back.
+  Nothing in any activity requires it. Existing "facilitator only" rules
+  apply to whoever holds it, and are unavailable when nobody does.
+
+ACTIVITIES
+  A game definition is an activity. A room's toolbar lists the activities
+  it can start. "Start <activity>" opens a sign-up: anyone may add
+  themselves until `players.max` have, and the facilitator, if there is
+  one, may choose the players instead. When `players.min` have signed up
+  the activity starts: its zones are made for those seats, its setup steps
+  run, and its macros become buttons for them. An activity belongs to its
+  players; everyone else keeps using the sandbox. Several activities, or
+  several of the same one, run in a room at once, and each activity's
+  zones and macros are scoped to its own players. Ending an activity
+  returns its pieces to the sandbox kit.
+  Move per_seat zones, setup, deal and the other steps to run per
+  activity instance. Keep the escape hatch's shape.
+
+KEEP, DO NOT REDO
+  The generic swap operations and owner_moves_only zones from pull request
+  #16 are model work and stay. The room, seat and snapshot code changes.
+
+Tests: an open room seats 20; nobody is facilitator by default; becoming
+and handing back the facilitator seat; starting an activity with the right
+number of volunteers; two activities at once do not touch each other's
+zones; the sandbox is unaffected. validate-games passes, and the live
+tests and the Playwright suite pass. Update this plan's status table.
+Commit.
 ```
 
 ---
