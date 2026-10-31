@@ -127,3 +127,9 @@ buttons:
 
 prompts:
   source: exercises/democracy-simulation/prompts.csv
+
+# Scenario 2 is about two cities, so two tables may be paired; the outcome of
+# their two choices is a row of this file. Scenario 1 has no pairing.
+pairing:
+  source: exercises/democracy-simulation/outcomes.csv
+  when: {phase: "2"}

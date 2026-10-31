@@ -365,6 +365,18 @@ class Prompts(TextSource):
     """Facilitation questions, as a CSV with ``id`` and ``text`` columns."""
 
 
+class Pairing(TextSource):
+    """Tables of a class that may be paired, and what a pair's choices lead to.
+
+    ``source`` is a CSV with ``our_choice``, ``their_choice`` and ``text``
+    columns: one row for each choice a table may make against each choice its
+    partner may make. ``when`` limits pairing to the options it names (the
+    scenario that is about two cities, not the one about one).
+    """
+
+    when: dict[str, str] = Field(default_factory=dict)
+
+
 class Buttons(TextSource):
     """What each macro button says, as a CSV.
 
@@ -387,6 +399,7 @@ class GameDefinition(_Strict):
     macros: tuple[MacroSpec, ...]
     buttons: Buttons
     prompts: Prompts | None = None
+    pairing: Pairing | None = None
 
     @model_validator(mode="after")
     def _unique_and_complete(self) -> GameDefinition:

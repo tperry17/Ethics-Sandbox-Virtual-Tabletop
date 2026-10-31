@@ -104,6 +104,15 @@ class Button:
 
 
 @dataclass(frozen=True)
+class PairOutcome:
+    """What happens when one table chooses ``ours`` and its partner ``theirs``."""
+
+    ours: str
+    theirs: str
+    text: str
+
+
+@dataclass(frozen=True)
 class Game:
     """A loaded, checked game definition and everything it names."""
 
@@ -112,6 +121,7 @@ class Game:
     decks: dict[str, tuple[Card, ...]]
     prompts: tuple[Prompt, ...]
     buttons: dict[str, Button]
+    pair_outcomes: tuple[PairOutcome, ...] = ()
     macro_functions: dict[str, GameFunction] = field(default_factory=dict)
     hooks: dict[Moment, tuple[GameFunction, ...]] = field(default_factory=dict)
 
@@ -274,6 +284,26 @@ def _load_prompts(definition: GameDefinition, root: Path) -> tuple[Prompt, ...]:
             id=row["id"].strip(),
             text=row["text"].strip(),
             group=(row.get("outcome") or "").strip() or None,
+        )
+        for row in rows
+    )
+
+
+def _load_pairing(definition: GameDefinition, root: Path) -> tuple[PairOutcome, ...]:
+    if definition.pairing is None:
+        return ()
+    source = definition.pairing.source
+    _content_path(root, source, what="Pairing")
+    rows = read_rows(source, root=root)
+    if not rows or not {"our_choice", "their_choice", "text"} <= set(rows[0]):
+        raise GameDefinitionError(
+            f"content/{source} needs 'our_choice', 'their_choice' and 'text' columns."
+        )
+    return tuple(
+        PairOutcome(
+            ours=row["our_choice"].strip(),
+            theirs=row["their_choice"].strip(),
+            text=row["text"].strip(),
         )
         for row in rows
     )
@@ -484,6 +514,7 @@ def load_game(directory: Path, content_root: Path = CONTENT_ROOT) -> Game:
         _check_filters(definition, decks)
         prompts = _load_prompts(definition, content_root)
         buttons = _load_buttons(definition, content_root)
+        pair_outcomes = _load_pairing(definition, content_root)
         macro_functions, hooks = _load_rules(directory, definition)
     except GameDefinitionError as error:
         raise GameDefinitionError(f"{directory.name}: {error}") from error
@@ -493,6 +524,7 @@ def load_game(directory: Path, content_root: Path = CONTENT_ROOT) -> Game:
         decks=decks,
         prompts=prompts,
         buttons=buttons,
+        pair_outcomes=pair_outcomes,
         macro_functions=macro_functions,
         hooks=hooks,
     )

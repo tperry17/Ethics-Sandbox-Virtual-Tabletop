@@ -182,3 +182,35 @@ def test_ending_a_class_takes_its_tables_away() -> None:
     class_id = _class(table)
     assert isinstance(run_op(table, "seat-1", EndClass(class_id)), Ok)
     assert not table.classes and not table.activities
+
+
+def test_the_democracy_simulation_pairs_only_scenario_two() -> None:
+    from sandbox.games import GAMES
+    from sandbox.games.pairing import may_pair, pair_outcome, pairing_choices
+
+    game = GAMES["democracy-simulation"]
+    assert may_pair(game, {"city": "potamosia", "phase": "2"})
+    assert not may_pair(game, {"city": "potamosia", "phase": "1"})
+    assert pairing_choices(game, {"phase": "2"}) == ("Attack", "Defenses", "Diplomacy")
+    text = pair_outcome(game, "Attack", "Diplomacy")
+    assert text is not None and "Catastrophic for the defender" in text
+    assert pair_outcome(game, "Attack", "Nothing") is None
+    assert not may_pair(GAMES["value-cards-trading"], {})
+
+
+def test_a_class_survives_a_snapshot() -> None:
+    from sandbox.db.snapshot import from_snapshot, to_snapshot
+
+    table = _room()
+    class_id = _class(table)
+    a, b, _ = table.classes[class_id].tables
+    for op in (
+        PairTables(class_id, a, b),
+        SetClassDecision(class_id, a, "Attack"),
+        StartClassTimer(class_id, 90, 10.0),
+        PushClassPrompt(class_id, "Why?"),
+    ):
+        assert isinstance(run_op(table, "seat-1", op), Ok)
+    again = from_snapshot(to_snapshot(table))
+    assert again.classes == table.classes
+    assert again.activities == table.activities
