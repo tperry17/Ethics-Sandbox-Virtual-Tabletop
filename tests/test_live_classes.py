@@ -108,9 +108,7 @@ async def test_a_guest_cannot_run_the_class() -> None:
         assert class_id in room.runtime.table.classes
 
 
-async def test_sort_preview_goes_to_the_facilitator_only_and_confirming_seats_people() -> (
-    None
-):
+async def test_sort_preview_is_the_facilitators_and_confirming_seats_people() -> None:
     async with open_room(4) as (room, host, guests):
         await _act(room, host, {"action": "start", "slug": "pairs", "tables": 2})
         class_id = next(iter(room.runtime.table.classes))

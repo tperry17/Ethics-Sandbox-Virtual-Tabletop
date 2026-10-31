@@ -86,6 +86,8 @@ export function renderActivities(model: TableModel, send: SendActivity): HTMLEle
   }
 
   for (const activity of model.activities.values()) {
+    // A table of a class is listed with its class.
+    if (activity.class_id) continue;
     const row = document.createElement("div");
     row.className = "toolbar__activity";
     row.dataset.activityId = activity.id;

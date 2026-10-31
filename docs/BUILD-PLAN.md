@@ -41,7 +41,7 @@ shows "Claimed" in this table on `main`.
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
 | 10 | Value Cards Trading | Done | | PR #16 |
 | 11 | Democracy Simulation | Done | | PR #19 |
-| 12 | Running a session (rewritten, lean) | Claimed | `claude/step-12-facilitator-controls` | |
+| 12 | Running a session (rewritten, lean) | Done, with gaps (below); in review as PR #20 | `claude/step-12-facilitator-controls` | |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
@@ -1174,7 +1174,7 @@ PROPOSALS
 
 SCENARIO 2
   Record the decision each city passes. Pairing two rooms and showing the
-  outcome from outcomes.csv belongs to Prompt 12's class page, not to
+  outcome from outcomes.csv belongs to Prompt 12's class panel, not to
   this prompt.
 
 EVENTS
@@ -1191,7 +1191,7 @@ status table. Commit.
 
 ## 12. Running a session
 
-**Status: Claimed.** Restated on 2026-10-31 after the author's answers on
+**Status: Done, with gaps.** Restated on 2026-10-31 after the author's answers on
 the pull request, to fit "A room is an open sandbox" (Prompt 17). The
 2026-10-30 version, a class that owned several rooms with its own page at
 `/c/{code}`, is withdrawn. The longer list from the first version is kept
@@ -1259,6 +1259,15 @@ nothing; a participant cannot act as facilitator on it; the timer running
 out changes nothing on the table; a room accepts 30 people and refuses
 the 31st. Update this plan's status table. Commit.
 ```
+
+**Gaps in what was built** (see the pull request's questions):
+
+- A table of a class has no label for its parts (Hudrosia's council, then its
+  assembly); the game definition has no such field yet.
+- Moving someone between tables is only possible before the tables begin, since
+  a begun table has its zones laid out for the people already there.
+- A pair's decision is recorded by the facilitator, because the software
+  cannot read it out of a written proposal.
 
 **Deferred** from the first version, to be added when a session shows
 they are needed:
