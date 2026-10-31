@@ -42,7 +42,7 @@ shows "Claimed" in this table on `main`.
 | 10 | Value Cards Trading | Done | | PR #16 |
 | 11 | Democracy Simulation | Done | | PR #19 |
 | 12 | Running a session (rewritten, lean) | Done | | PR #20 |
-| 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
+| 13 | Reflection, debrief and the playtest record | Claimed | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
 | 17 | Open rooms and activities | Done | | PR #18 |
