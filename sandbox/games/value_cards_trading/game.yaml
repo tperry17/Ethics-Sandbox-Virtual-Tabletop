@@ -63,9 +63,9 @@ macros:
   - id: deal
     steps:
       - {op: deal, from: deck, to: hand, count: 12, face_up: true}
-  - id: call_time
+  - id: record_hands
     who: anyone
-    python: call_time
+    python: record_hands
   - id: reset
     steps:
       - {op: reset_table}

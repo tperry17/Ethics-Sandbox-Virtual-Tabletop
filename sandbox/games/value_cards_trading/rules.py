@@ -1,14 +1,14 @@
-"""Value Cards Trading's escape hatch: calling time.
+"""Value Cards Trading's escape hatch: recording the hands.
 
-Calling time ends trading and keeps a record of every hand as it stands.
-It never blocks: a pair that has not traded yet is named in the record and
-in the table's announcement, and the group decides what to do about it.
+Trading has no time limit, so nothing here ends it. Recording keeps what
+every hand holds, and which pairs have not yet traded, in the permanent
+log, for the debrief. It never blocks: pressing it again records again.
 """
 
 from __future__ import annotations
 
 from sandbox.games.hatch import GameContext, MacroRefused, macro
-from sandbox.model import CloseOffers, Operation, Record, Table
+from sandbox.model import Operation, Record, Table
 
 HAND = "hand"
 
@@ -23,9 +23,9 @@ def untraded_pairs(table: Table, seats: tuple[str, ...]) -> list[tuple[str, str]
     ]
 
 
-@macro("call_time")
-def call_time(table: Table, context: GameContext) -> list[Operation]:
-    """Close open offers and record each seat's hand and who has not traded."""
+@macro("record_hands")
+def record_hands(table: Table, context: GameContext) -> list[Operation]:
+    """Keep every seat's hand and who has not traded yet."""
     hands = {
         seat: [
             piece.component_id
@@ -41,12 +41,11 @@ def call_time(table: Table, context: GameContext) -> list[Operation]:
         for first, second in untraded_pairs(table, context.seats)
     ]
     return [
-        CloseOffers(),
         Record(
-            label="call_time",
+            label="record_hands",
             data={
                 "hands": {labels[seat]: cards for seat, cards in hands.items()},
                 "not_yet_traded": untraded,
             },
-        ),
+        )
     ]
