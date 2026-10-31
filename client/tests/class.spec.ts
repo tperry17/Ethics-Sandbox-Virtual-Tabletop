@@ -55,6 +55,19 @@ test("a facilitator sorts a class into tables, begins them and times them", asyn
   await expect(guests[0]!.getByText(/Table 1: running/)).toBeVisible();
   await expect(guests[0]!.getByText(/Table 2: running/)).toBeVisible();
 
+  // The facilitator takes someone off a table that has begun, then seats them again.
+  await host
+    .locator(".toolbar__class-tables li")
+    .first()
+    .locator("select[data-seat]")
+    .first()
+    .selectOption({ label: "no table" });
+  await expect(host.getByText(/Table 1: running, 1 of 2/)).toBeVisible();
+  await expect(host.getByText("Not at a table:")).toBeVisible();
+  await host.locator(".toolbar__waiting select").selectOption({ label: "Table 1" });
+  await expect(host.getByText(/Table 1: running, 2 of 2/)).toBeVisible();
+  await expect(host.getByText("Not at a table:")).toHaveCount(0);
+
   await host.getByLabel("Minutes on the timer").fill("2");
   await host.getByRole("button", { name: "Start timer for every table" }).click();
   for (const page of [host, ...guests]) {

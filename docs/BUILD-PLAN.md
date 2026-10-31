@@ -1262,12 +1262,10 @@ the 31st. Update this plan's status table. Commit.
 
 **Gaps in what was built** (see the pull request's questions):
 
-- A table of a class has no label for its parts (Hudrosia's council, then its
-  assembly); the game definition has no such field yet.
-- Moving someone between tables is only possible before the tables begin, since
-  a begun table has its zones laid out for the people already there.
-- A pair's decision is recorded by the facilitator, because the software
-  cannot read it out of a written proposal.
+- A table of a class has no label for each part of the meeting (Hudrosia's
+  council, then its assembly); the game definition has no such field yet.
+- Moving someone off a begun table removes their zones and what is in them;
+  the facilitator deals again if the table needs it.
 
 **Deferred** from the first version, to be added when a session shows
 they are needed:

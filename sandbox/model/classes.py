@@ -172,6 +172,75 @@ class AssignClassTables:
 
 
 @dataclass(frozen=True)
+class ChangeActivitySeats:
+    """The facilitator changes who sits at a table of a class, begun or not.
+
+    ``added_zones`` are the zones the game layer has already made for people
+    who are new to a running table. A person who leaves takes their own
+    zones, and what is in them, off the table.
+    """
+
+    activity_id: str
+    seats: tuple[str, ...]
+    added_zones: tuple[str, ...] = ()
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        activity = table.activities.get(self.activity_id)
+        if activity is None:
+            return "That table is not running any more."
+        if not activity.class_id:
+            return "Only the tables of a class are moved between."
+        if (r := _facilitator_only(table, actor_seat, "move people")) is not None:
+            return r
+        if len(set(self.seats)) != len(self.seats):
+            return "Each person can sit at a table only once."
+        if len(self.seats) > activity.max_players:
+            return f"{activity.title} takes at most {activity.max_players} a table."
+        for seat in self.seats:
+            known = table.seats.get(seat)
+            if known is None or known.participant_id is None:
+                return "Choose people who are at the table."
+            if known.is_facilitator:
+                return "The facilitator runs the class and does not sit at a table."
+            for other_id in table.classes[activity.class_id].tables:
+                other = table.activities.get(other_id)
+                if (
+                    other is not None
+                    and other.id != activity.id
+                    and seat in other.seats
+                ):
+                    return "Take them off their table first."
+        if any(zone not in table.zones for zone in self.added_zones):
+            return "A new person's zones were not made."
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        activity = table.activities[self.activity_id]
+        gone = set(activity.seats) - set(self.seats)
+        patches: list[Patch] = []
+        kept: list[str] = []
+        for zone_id in activity.zones:
+            zone = table.zones.get(zone_id)
+            if zone is not None and zone.owner_seat in gone:
+                for piece in table.pieces_in_zone(zone_id):
+                    del table.pieces[piece.id]
+                    patches.append(
+                        Patch(kind="piece", op="remove", entity_id=piece.id, fields={})
+                    )
+                del table.zones[zone_id]
+                patches.append(
+                    Patch(kind="zone", op="remove", entity_id=zone_id, fields={})
+                )
+            else:
+                kept.append(zone_id)
+        activity.zones = (*kept, *self.added_zones)
+        activity.seats = self.seats
+        patches.append(_class_patch(table.classes[activity.class_id]))
+        return patches
+
+
+@dataclass(frozen=True)
 class StartClassTimer:
     """Start (or restart) one countdown, for every table. Advisory: nothing reads it."""
 
@@ -296,6 +365,8 @@ class UnpairTables:
 class SetClassDecision:
     """Record what a table decided, in the activity's own words. Empty clears it.
 
+    The facilitator may for any table, and the people at a table for theirs.
+
     Whether the words are ones the activity knows is for the layer above to
     check; the model only keeps them.
     """
@@ -308,10 +379,14 @@ class SetClassDecision:
     def validate(self, table: Table, actor_seat: str) -> str | None:
         if (reason := _reason_missing(table, self.class_id)) is not None:
             return reason
-        if (r := _facilitator_only(table, actor_seat, "record a decision")) is not None:
-            return r
-        if self.table_id not in table.classes[self.class_id].tables:
+        group = table.classes[self.class_id]
+        if self.table_id not in group.tables:
             return "That table is not part of this class."
+        sits_there = actor_seat in table.activities[self.table_id].seats
+        if not table.is_facilitator(actor_seat) and not sits_there:
+            return "Only the facilitator or someone at that table can record it."
+        if not any(self.table_id in pair for pair in group.pairs):
+            return "Pair that table first."
         return None
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:

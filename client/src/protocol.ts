@@ -173,6 +173,9 @@ export interface ClassView {
   prompt_serial: number;
   can_pair?: boolean;
   pair_choices?: string[];
+  /** For someone at a paired table: their table, and what it has chosen. */
+  your_table?: string;
+  your_decision?: string | null;
   pairs?: ClassPairView[];
   prompt_choices?: Array<{ id: string; text: string }>;
 }

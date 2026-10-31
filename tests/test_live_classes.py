@@ -258,3 +258,107 @@ async def test_someone_who_arrives_after_the_sort_takes_the_roomiest_table() -> 
         activities = room.runtime.table.activities
         assert late.seat_id in activities[first].seats + activities[second].seats
         assert len(activities[first].seats) + len(activities[second].seats) == 3
+
+
+async def test_a_latecomer_takes_the_roomiest_table_after_others_have_begun() -> None:
+    async with open_room(4) as (room, host, guests):
+        await _act(room, host, {"action": "start", "slug": "pairs", "tables": 2})
+        class_id = next(iter(room.runtime.table.classes))
+        first, second = room.runtime.table.classes[class_id].tables
+        seats = [c.seat_id for c in guests]
+        await _act(
+            room,
+            host,
+            {
+                "action": "assign",
+                "class_id": class_id,
+                "tables": [[seats[0], seats[1]], [seats[2]]],
+            },
+        )
+        await _act(room, host, {"action": "begin", "class_id": class_id})
+        await room.settle()
+        assert room.runtime.table.activities[first].status == "running"
+        room.join("cookie-late", "Late")
+        late = await room.arrive("cookie-late")
+        await room.settle()
+        table = room.runtime.table
+        # The first table is full and running; the second had room.
+        assert table.activities[second].seats == (seats[2], late.seat_id)
+        assert table.activities[first].status == "running"
+
+
+async def test_the_facilitator_moves_people_and_a_guest_cannot() -> None:
+    async with open_room(4) as (room, host, guests):
+        await _act(room, host, {"action": "start", "slug": "pairs", "tables": 2})
+        class_id = next(iter(room.runtime.table.classes))
+        first, second = room.runtime.table.classes[class_id].tables
+        a, b, c, d = (g.seat_id for g in guests)
+        await _act(
+            room,
+            host,
+            {"action": "assign", "class_id": class_id, "tables": [[a, b], [c]]},
+        )
+        await _act(room, host, {"action": "begin", "class_id": class_id})
+        move = {"action": "move", "class_id": class_id, "seat_id": a, "to": second}
+        await _act(room, guests[1], move)
+        assert guests[1].socket.of_type("reject")[-1]["reason"].startswith("Only")
+        await _act(room, host, move)
+        table = room.runtime.table
+        assert table.activities[first].seats == (b,)
+        assert table.activities[second].seats == (c, a)
+        assert f"{first}:hand-{a}" not in table.zones  # it left the begun table
+        await _act(room, host, {**move, "seat_id": d, "to": second})
+        assert host.socket.of_type("reject")[-1]["reason"]  # the table is full
+
+
+async def test_players_at_a_paired_table_pick_its_choice_and_see_only_that() -> None:
+    async with open_room(4) as (room, host, guests):
+        await _act(
+            room,
+            host,
+            {
+                "action": "start",
+                "slug": "democracy-simulation",
+                "tables": 2,
+                "options": {"city": "potamosia", "phase": "2"},
+            },
+        )
+        class_id = next(iter(room.runtime.table.classes))
+        a, b = room.runtime.table.classes[class_id].tables
+        mine, theirs = guests[0], guests[1]
+        # Seat one person at each table (no need to begin).
+        await _act(
+            room,
+            host,
+            {"action": "pair", "class_id": class_id, "first": a, "second": b},
+        )
+        await _act(
+            room,
+            host,
+            {
+                "action": "assign",
+                "class_id": class_id,
+                "tables": [[mine.seat_id], [theirs.seat_id]],
+            },
+        )
+        (view,) = _classes(mine)
+        assert view["your_table"] == a and view["pair_choices"]
+        decide = {
+            "action": "decision",
+            "class_id": class_id,
+            "first": a,
+            "decision": "Attack",
+        }
+        await _act(room, mine, decide)
+        assert mine.socket.of_type("ack")
+        (view,) = _classes(mine)
+        assert view["your_decision"] == "Attack"
+        # Their partner's table sees nothing of it, and nobody else may set it.
+        (other,) = _classes(theirs)
+        assert other["your_decision"] is None and other["pairs"] == []
+        await _act(room, theirs, {**decide, "decision": "Diplomacy"})
+        assert theirs.socket.of_type("reject")
+        assert "'your_decision': 'Attack'" not in str(
+            theirs.socket.of_type("snapshot")[-1]
+        )
+        assert room.runtime.table.classes[class_id].decisions == {a: "Attack"}

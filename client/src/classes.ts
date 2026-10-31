@@ -236,6 +236,76 @@ function renderPairing(model: TableModel, group: ClassView, send: SendClass): HT
   return root;
 }
 
+/** Someone's table, and a way for the facilitator to put them at another. */
+function moveControl(
+  model: TableModel,
+  group: ClassView,
+  seatId: string,
+  current: string | null,
+  send: SendClass,
+): HTMLElement {
+  const label = document.createElement("label");
+  label.className = "toolbar__move";
+  label.append(`${seatName(model, seatId)} → `);
+  const pick = document.createElement("select");
+  pick.dataset.seat = seatId;
+  pick.setAttribute("aria-label", `Table for ${seatName(model, seatId)}`);
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = "no table";
+  none.selected = current === null;
+  pick.append(none);
+  for (const id of group.tables) {
+    const option = document.createElement("option");
+    option.value = id;
+    option.textContent = tableName(group, id);
+    option.selected = id === current;
+    pick.append(option);
+  }
+  pick.addEventListener("change", () =>
+    send({
+      action: "move",
+      class_id: group.id,
+      seat_id: seatId,
+      to: pick.value === "" ? null : pick.value,
+    }),
+  );
+  label.append(pick);
+  return label;
+}
+
+/** What their own table decided, for someone at a paired table. */
+function renderOwnChoice(group: ClassView, send: SendClass): HTMLElement | null {
+  const choices = group.pair_choices ?? [];
+  if (!group.your_table || choices.length === 0) return null;
+  const label = document.createElement("label");
+  label.className = "toolbar__own-choice";
+  label.append("Your table chose ");
+  const pick = document.createElement("select");
+  pick.setAttribute("aria-label", "What your table chose");
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = "not yet";
+  pick.append(none);
+  for (const choice of choices) {
+    const option = document.createElement("option");
+    option.value = choice;
+    option.textContent = choice;
+    option.selected = choice === group.your_decision;
+    pick.append(option);
+  }
+  pick.addEventListener("change", () =>
+    send({
+      action: "decision",
+      class_id: group.id,
+      first: group.your_table,
+      decision: pick.value,
+    }),
+  );
+  label.append(pick);
+  return label;
+}
+
 function renderClass(
   model: TableModel,
   group: ClassView,
@@ -274,11 +344,35 @@ function renderClass(
       if (mine) item.append(button("Leave", () => sendActivity({ action: "leave", activity_id: id })));
       else item.append(button("Join this table", () => sendActivity({ action: "join", activity_id: id })));
     }
+    if (facilitator) {
+      for (const seat of activity.seats) item.append(moveControl(model, group, seat, id, send));
+    }
     tables.append(item);
   }
   root.append(tables);
 
-  if (!facilitator) return root;
+  if (facilitator) {
+    // People in the room who have no table in this class yet.
+    const seated = new Set(
+      group.tables.flatMap((id) => model.activities.get(id)?.seats ?? []),
+    );
+    const waiting = [...model.seats.values()].filter(
+      (seat) => seat.participant_id !== null && !seat.is_facilitator && !seated.has(seat.id),
+    );
+    if (waiting.length > 0) {
+      const line = document.createElement("div");
+      line.className = "toolbar__waiting";
+      line.append("Not at a table: ");
+      for (const seat of waiting) line.append(moveControl(model, group, seat.id, null, send));
+      root.append(line);
+    }
+  }
+
+  if (!facilitator) {
+    const choice = renderOwnChoice(group, send);
+    if (choice !== null) root.append(choice);
+    return root;
+  }
 
   const sort = renderSort(model, group, send, redraw);
   root.append(

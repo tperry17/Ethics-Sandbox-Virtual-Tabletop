@@ -7,6 +7,7 @@ from _games_support import pairs
 from sandbox.games.engine import build_activity_start, build_seat, build_table
 from sandbox.model import (
     AssignClassTables,
+    ChangeActivitySeats,
     ClearClassTimer,
     EndClass,
     JoinActivity,
@@ -214,3 +215,68 @@ def test_a_class_survives_a_snapshot() -> None:
     again = from_snapshot(to_snapshot(table))
     assert again.classes == table.classes
     assert again.activities == table.activities
+
+
+def _begun_class(table: Table) -> tuple[str, str, str]:
+    """A class of two Pairs tables with seat-2/3 and seat-4/5, both begun."""
+    class_id = _class(table, 2)
+    first, second = table.classes[class_id].tables
+    seated = AssignClassTables(class_id, (("seat-2", "seat-3"), ("seat-4", "seat-5")))
+    assert isinstance(run_op(table, "seat-1", seated), Ok)
+    for activity_id in (first, second):
+        built = build_activity_start(pairs(), table, "seat-1", activity_id)
+        assert not isinstance(built, Reject), built
+        assert isinstance(run_op(table, "seat-1", built), Ok)
+    return class_id, first, second
+
+
+def test_the_facilitator_moves_a_person_between_begun_tables() -> None:
+    from sandbox.games.engine import build_seat_move
+
+    table = _room()
+    class_id, first, second = _begun_class(table)
+    # Make room at the second table, then bring seat-2 over.
+    out = build_seat_move(pairs(), table, "seat-1", "seat-5", None)
+    assert not isinstance(out, Reject), out
+    assert isinstance(run_op(table, "seat-1", out), Ok)
+    assert table.activities[second].seats == ("seat-4",)
+    assert not any(z.endswith("-seat-5") for z in table.activities[second].zones)
+    assert f"{second}:hand-seat-5" not in table.zones
+
+    moved = build_seat_move(pairs(), table, "seat-1", "seat-2", second)
+    assert not isinstance(moved, Reject), moved
+    assert isinstance(run_op(table, "seat-1", moved), Ok)
+    assert table.activities[first].seats == ("seat-3",)
+    assert table.activities[second].seats == ("seat-4", "seat-2")
+    assert f"{second}:hand-seat-2" in table.zones
+    assert f"{first}:hand-seat-2" not in table.zones
+    assert f"{second}:hand-seat-2" in table.activities[second].zones
+    # The new hand does not sit on top of seat-4's.
+    here = table.zones[f"{second}:hand-seat-2"].geometry
+    there = table.zones[f"{second}:hand-seat-4"].geometry
+    assert here != there
+
+
+def test_a_person_cannot_be_at_two_tables_and_only_the_facilitator_moves() -> None:
+    from sandbox.games.engine import build_seat_move
+
+    table = _room()
+    class_id, first, second = _begun_class(table)
+    full = build_seat_move(pairs(), table, "seat-1", "seat-2", second)
+    assert isinstance(full, Reject)  # the second table is full
+    direct = ChangeActivitySeats(second, ("seat-4", "seat-5", "seat-2"))
+    assert isinstance(run_op(table, "seat-1", direct), Reject)
+    sneaky = ChangeActivitySeats(first, ("seat-2",))
+    assert isinstance(run_op(table, "seat-2", sneaky), Reject)
+
+
+def test_people_at_a_paired_table_record_its_decision() -> None:
+    table = _room()
+    class_id, first, second = _begun_class(table)
+    decide = SetClassDecision(class_id, first, "Attack")
+    assert isinstance(run_op(table, "seat-2", decide), Reject)  # not paired yet
+    assert isinstance(run_op(table, "seat-1", PairTables(class_id, first, second)), Ok)
+    assert isinstance(run_op(table, "seat-2", decide), Ok)
+    other_table = SetClassDecision(class_id, second, "Defenses")
+    assert isinstance(run_op(table, "seat-2", other_table), Reject)
+    assert table.classes[class_id].decisions == {first: "Attack"}

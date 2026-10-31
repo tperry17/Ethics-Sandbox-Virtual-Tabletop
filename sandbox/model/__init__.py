@@ -17,6 +17,7 @@ from sandbox.model.activities import (
 )
 from sandbox.model.classes import (
     AssignClassTables,
+    ChangeActivitySeats,
     ClearClassTimer,
     EndClass,
     PairTables,
@@ -116,6 +117,7 @@ __all__ = [
     "SYSTEM_SEAT",
     "Activity",
     "AssignClassTables",
+    "ChangeActivitySeats",
     "ClassGroup",
     "ClearClassTimer",
     "EndClass",
