@@ -44,7 +44,9 @@ async def open_room(
         for number in range(guests):
             fixture.join(f"cookie-{number}", f"Guest {number}")
             people.append(await fixture.arrive(f"cookie-{number}"))
-        await fixture.settle()
+            # Let the room save before the next person sits, so the test's own
+            # database write never races the room's.
+            await fixture.settle()
         yield fixture, host, people
     finally:
         for client in fixture.clients:
@@ -248,6 +250,7 @@ async def test_someone_who_arrives_after_the_sort_takes_the_roomiest_table() -> 
                 "tables": [[guests[0].seat_id], [guests[1].seat_id]],
             },
         )
+        await room.settle()
         room.join("cookie-late", "Late")
         late = await room.arrive("cookie-late")
         await asyncio.sleep(0.05)
