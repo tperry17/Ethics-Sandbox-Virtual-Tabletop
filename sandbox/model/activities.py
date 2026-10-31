@@ -93,6 +93,14 @@ class JoinActivity:
             return "You have already signed up."
         if len(activity.seats) >= activity.max_players:
             return "That activity is full."
+        if activity.class_id and table.is_facilitator(actor_seat):
+            return "The facilitator runs a class and does not sit at a table."
+        if activity.class_id and any(
+            actor_seat in table.activities[other].seats
+            for other in table.classes[activity.class_id].tables
+            if other in table.activities
+        ):
+            return "You already have a table in this class. Leave it first."
         return None
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
@@ -121,7 +129,8 @@ class LeaveActivity:
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         activity = table.activities[self.activity_id]
         activity.seats = tuple(seat for seat in activity.seats if seat != actor_seat)
-        if not activity.seats:
+        # A table of a class stays until the facilitator ends the class.
+        if not activity.seats and not activity.class_id:
             del table.activities[activity.id]
             return [_removed(activity.id)]
         return [_patch(activity)]
@@ -202,12 +211,19 @@ class EndActivity:
         if (reason := _reason_missing(table, self.activity_id)) is not None:
             return reason
         activity = table.activities[self.activity_id]
+        if activity.class_id and not table.is_facilitator(actor_seat):
+            return "Only the facilitator can end a table of a class."
         if actor_seat not in activity.seats and not table.is_facilitator(actor_seat):
             return "Only its players or the facilitator can end it."
         return None
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         activity = table.activities.pop(self.activity_id)
+        group = table.classes.get(activity.class_id)
+        if group is not None:
+            group.tables = tuple(t for t in group.tables if t != activity.id)
+            group.pairs = tuple(p for p in group.pairs if activity.id not in p)
+            group.decisions.pop(activity.id, None)
         patches: list[Patch] = []
         for zone_id in activity.zones:
             for piece in table.pieces_in_zone(zone_id):

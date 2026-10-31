@@ -175,7 +175,33 @@ class Activity:
     status: str = "signup"
     zones: tuple[str, ...] = ()
     options: dict[str, str] = field(default_factory=dict)
-    """The choices made when it was opened (which city, which phase)."""
+    """The choices made when it was opened (which city, which scenario)."""
+    class_id: str = ""
+    """The class this activity is one table of, or "" when it stands alone."""
+
+
+@dataclass
+class ClassGroup:
+    """One activity run as several tables at once, by one facilitator.
+
+    Every table is an ``Activity`` in the same room, listed in ``tables``.
+    The timer and the pushed prompt belong to the class, so every table
+    sees them. The timer is advisory: nothing in the model reads it.
+    ``decisions`` and ``pairs`` serve activities whose definition says its
+    tables may be paired; the model does not know what a decision means.
+    """
+
+    id: str
+    kind: str
+    title: str
+    tables: tuple[str, ...]
+    options: dict[str, str] = field(default_factory=dict)
+    timer_ends_at: float | None = None
+    timer_seconds: int = 0
+    prompt: str = ""
+    prompt_serial: int = 0
+    pairs: tuple[tuple[str, str], ...] = ()
+    decisions: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -197,6 +223,8 @@ class Table:
     """Each pair of seats that has completed a swap with each other."""
     activities: dict[str, Activity] = field(default_factory=dict)
     activity_serial: int = 0
+    classes: dict[str, ClassGroup] = field(default_factory=dict)
+    class_serial: int = 0
     rng: TableRng = field(default_factory=lambda: TableRng(seed=0))
     version: int = 0
     applied_op_ids: set[str] = field(default_factory=set)

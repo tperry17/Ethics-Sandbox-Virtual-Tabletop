@@ -92,6 +92,7 @@ class ViewActivity:
     seats: tuple[str, ...]
     status: str
     options: tuple[tuple[str, str], ...] = ()
+    class_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -261,6 +262,7 @@ def project(table: Table, viewer_seat: str | None) -> ViewTable:
                 seats=a.seats,
                 status=a.status,
                 options=tuple(a.options.items()),
+                class_id=a.class_id,
             )
             for a in table.activities.values()
         ),

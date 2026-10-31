@@ -142,7 +142,7 @@ Where these conflict with a prompt below, these win.
   and 11 correct it.
 - **A room is an open sandbox; an activity is started inside it** (the
   author, 2026-10-31; superseding the 2026-10-30 note that a room is sized
-  by its exercise). A room takes up to 20 people. An activity's seat range
+  by its exercise). A room takes up to 30 people. An activity's seat range
   is how many people it takes: Value Cards Trading takes 3, and a Democracy
   city takes 9–20. A class larger than one activity runs several at once in
   one room, so Prompt 12 no longer needs several rooms. The facilitator is
@@ -1591,7 +1591,7 @@ what"), sandbox/web/rooms.py, sandbox/web/live.py and sandbox/games/. Then:
 ROOM
   A room is no longer created for a game. /start makes an open room, with
   a free table and a kit: the 36 value cards (content/decks/value-cards/,
-  face down in a deck zone), dice, cubes, meeples and tokens. Up to 20
+  face down in a deck zone), dice, cubes, meeples and tokens. Up to 30
   people can be seated. Nobody is the facilitator by default, the creator
   included: the creator is an ordinary player.
   The facilitator is an optional admin seat. /join and /start offer "Join
