@@ -71,6 +71,8 @@
   --card-back: #a41034;
   --card-back-edge: #f8e6ea;
   --card-back-ink: #ffffff;
+  --card-frame-deck: #a41034;
+  --card-frame-sidebar: #172d4a;
   --text-primary: #172d4a;
   --text-secondary: #3c4b5f;
   --text-muted: #5e6b7c;
@@ -148,6 +150,8 @@
     --card-back: #a41034;
     --card-back-edge: #ec8aa0;
     --card-back-ink: #ffffff;
+    --card-frame-deck: #a41034;
+    --card-frame-sidebar: #172d4a;
     --text-primary: #eef1f5;
     --text-secondary: #c2cad5;
     --text-muted: #919dad;
@@ -186,6 +190,8 @@
   --card-back: #a41034;
   --card-back-edge: #ec8aa0;
   --card-back-ink: #ffffff;
+  --card-frame-deck: #a41034;
+  --card-frame-sidebar: #172d4a;
   --text-primary: #eef1f5;
   --text-secondary: #c2cad5;
   --text-muted: #919dad;

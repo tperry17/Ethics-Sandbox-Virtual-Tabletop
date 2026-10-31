@@ -51,11 +51,13 @@ from sandbox.games.engine import (
     may_use_facilitator_button,
 )
 from sandbox.model import (
+    AcceptSwap,
     AddSeat,
     AddZone,
     AssignSeat,
     ClearInk,
     Deal,
+    DeclineSwap,
     Despawn,
     Draw,
     EndActivity,
@@ -72,6 +74,7 @@ from sandbox.model import (
     Lock,
     Move,
     MoveToZone,
+    OfferSwap,
     Ok,
     OpenActivity,
     Operation,
@@ -101,6 +104,7 @@ from sandbox.model import (
     Ungroup,
     Unlock,
     ViewTable,
+    WithdrawSwap,
     Zone,
     piece_actions,
     project,
@@ -256,6 +260,17 @@ class ZoneView(BaseModel):
     visibility: str
     layout: str
     owner_seat: str | None
+    owner_moves_only: bool = False
+
+
+class OfferView(BaseModel):
+    """An open swap offer. Mirrors ``ViewOffer``; the whole table sees it."""
+
+    id: str
+    from_seat: str
+    to_seat: str
+    give: list[str]
+    want: list[str]
 
 
 class ActivityView(BaseModel):
@@ -290,6 +305,8 @@ class ComponentView(BaseModel):
     body: str | None = None
     folio: str | None = None
     image: str | None = None
+    group: str | None = None
+    badge: str | None = None
     tint_index: int | None = None
     width: float | None = None
     height: float | None = None
@@ -348,6 +365,8 @@ class TableView(BaseModel):
     seats: list[SeatView]
     strokes: list[StrokeView]
     version: int
+    offers: list[OfferView] = Field(default_factory=list)
+    swapped: list[tuple[str, str]] = Field(default_factory=list)
     activities: list[ActivityView] = Field(default_factory=list)
 
 
@@ -498,6 +517,10 @@ _OPERATION_TYPES: tuple[type, ...] = (
     ShowTo,
     EndShow,
     Peek,
+    OfferSwap,
+    AcceptSwap,
+    DeclineSwap,
+    WithdrawSwap,
     TakeFacilitator,
     ReleaseFacilitator,
 )
@@ -572,6 +595,8 @@ def component_views(game: Game | None) -> dict[str, ComponentView]:
             body=face.body,
             folio=face.folio,
             image=face.image,
+            group=face.group,
+            badge=face.badge,
             tint_index=face.tint_index,
             width=face.width,
             height=face.height,
@@ -1034,6 +1059,7 @@ class RoomRuntime:
                 layout=zone.layout,
                 owner_seat=zone.owner_seat,
                 capacity=zone.capacity,
+                owner_moves_only=zone.owner_moves_only,
             )
             for zone in zones
             if zone.id not in self.table.zones
@@ -1546,6 +1572,7 @@ class RoomRuntime:
                     visibility=str(zone.visibility),
                     layout=str(zone.layout),
                     owner_seat=zone.owner_seat,
+                    owner_moves_only=zone.owner_moves_only,
                 )
                 for zone in view.zones
             ],
@@ -1561,6 +1588,17 @@ class RoomRuntime:
                 for stroke in view.strokes
             ],
             version=view.version,
+            offers=[
+                OfferView(
+                    id=offer.id,
+                    from_seat=offer.from_seat,
+                    to_seat=offer.to_seat,
+                    give=list(offer.give),
+                    want=list(offer.want),
+                )
+                for offer in view.offers
+            ],
+            swapped=list(view.swapped),
             activities=[
                 ActivityView(
                     id=a.id,

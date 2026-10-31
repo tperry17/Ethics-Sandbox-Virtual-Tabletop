@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>{{ game.title }} deck · Ethics Sandbox</title>
+    <link rel="icon" href="{{ url_for('static', path='/icons/favicon.ico') }}" sizes="48x48">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/deck.css') }}">
+  </head>
+  <body>
+    <main class="site">
+      <p class="site__back"><a href="/exercises/{{ game.slug }}">← {{ game.title }}</a></p>
+      <header class="site__header">
+        <p class="eyebrow">Printable deck</p>
+        <h1>{{ game.title }}</h1>
+        <div class="prose site__lede">
+          <p>Print this page and cut out the cards. A crimson frame marks a
+          Deck card and a navy one a Sidebar card.</p>
+        </div>
+      </header>
+      {% for cards in decks %}
+      <ol class="deck-sheet">
+        {% for card in cards %}
+        {% set group = card.fields.get("group", "") %}
+        {% set schwartz = card.fields.get("schwartz", "") %}
+        <li class="deck-card deck-card--{{ group|lower or 'plain' }}">
+          <h2 class="deck-card__title">{{ card.face.title }}</h2>
+          <p class="deck-card__body">{{ card.face.body }}</p>
+          {% if card.face.image %}
+          <img class="deck-card__art" src="{{ card.face.image }}" alt="">
+          {% endif %}
+          <p class="deck-card__folio">
+            <span>{{ card.face.folio }}</span>
+            {% if schwartz %}
+            <img class="deck-card__icon" src="/content/decks/value-cards/images/icons/{{ schwartz }}.png" alt="{{ schwartz }}" title="{{ schwartz }}">
+            {% endif %}
+          </p>
+        </li>
+        {% endfor %}
+      </ol>
+      {% endfor %}
+    </main>
+  </body>
+</html>

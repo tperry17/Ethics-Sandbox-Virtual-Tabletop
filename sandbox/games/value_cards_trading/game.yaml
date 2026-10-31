@@ -1,0 +1,91 @@
+# Value Cards Trading. The rules are in docs/BUILD-PLAN.md, Prompt 10.
+meta:
+  slug: value-cards-trading
+  title: Value Cards Trading
+  players: {min: 3, max: 3}
+  duration_minutes: 30
+  facilitator: optional
+  listed: true
+
+components:
+  decks:
+    - id: values
+      source: decks/value-cards/cards.csv
+      key: key
+      title: name
+      body: definition
+      folio: number
+      image: art
+      group: group
+      badge: schwartz
+      width: 150
+      height: 210
+
+seats:
+  labels: [First player, Second player, Third player]
+
+zones:
+  - id: table
+    kind: table
+    label: The table
+    rect: [0, 0, 2200, 1200]
+    visibility: public
+    layout: free
+  - id: deck
+    kind: deck
+    label: Deck
+    rect: [40, 40, 240, 320]
+    visibility: hidden
+    layout: stack
+  - id: hand
+    kind: hand
+    label: Hand
+    rect: [40, 400, 1600, 230]
+    visibility: public            # hands are open within the trio
+    owner_moves_only: true        # but only the owner arranges them
+    layout: spread
+    per_seat: true
+    step: [0, 260]
+  - id: top-three
+    kind: slot
+    label: Top three
+    rect: [1680, 400, 480, 230]
+    visibility: private_to_owner  # shared only by the owner's choice, with Show
+    layout: spread
+    capacity: 3
+    per_seat: true
+    step: [0, 260]
+
+setup:
+  - {op: spawn_deck, deck: values, zone: deck}
+
+macros:
+  - id: setup
+    steps:
+      - {op: reset_table}
+      - {op: setup}
+  - id: deal
+    steps:
+      - {op: deal, from: deck, to: hand, count: 12, face_up: true}
+  - id: record_hands
+    who: anyone
+    python: record_hands
+  - id: reset
+    steps:
+      - {op: reset_table}
+  - id: shuffle
+    steps:
+      - {op: shuffle, zone: deck}
+  - id: collect
+    steps:
+      - {op: collect, to: deck, kinds: [card], face_up: false}
+      - {op: shuffle, zone: deck}
+  - id: clear_ink
+    steps:
+      - {op: clear_ink}
+
+buttons:
+  source: exercises/value-cards-trading/buttons.csv
+
+prompts:
+  source: exercises/value-cards-trading/prompts.csv

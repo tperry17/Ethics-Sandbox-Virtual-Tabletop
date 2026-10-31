@@ -110,7 +110,7 @@ class Scope:
         return f"{self.activity_id}:"
 
 
-ACTIVITY_SPACING = 2000.0
+ACTIVITY_SPACING = 2600.0
 
 
 def scope_of(table: Table, activity_id: str) -> Scope:
@@ -151,6 +151,7 @@ def _add_zone(
         layout=spec.layout,
         owner_seat=seat_id,
         capacity=spec.capacity,
+        owner_moves_only=spec.owner_moves_only,
     )
 
 

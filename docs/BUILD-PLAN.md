@@ -39,7 +39,7 @@ shows "Claimed" in this table on `main`.
 | 7 | The table client — rendering | Done | | `9c86f37` |
 | 8 | The table client — interaction | Done | | `d8c383d` (PR #1) |
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
-| 10 | Value Cards Trading | Claimed | `claude/step-10-value-cards-trading` | |
+| 10 | Value Cards Trading | Done | | PR #16 |
 | 11 | Democracy Simulation | Ready to run | `claude/step-11-democracy-simulation` | |
 | 12 | Running a session (rewritten, lean) | Not started | `claude/step-12-facilitator-controls` | |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
@@ -745,7 +745,13 @@ Reveal). Keep it in the repo as the worked example, fully tested. Commit.
 
 ## 10. Value Cards Trading
 
-**Status: Ready to run.** The rules and the deck below were copied on
+**Status: Done (PR #16).** Built: the swap and owner-moves-only model, Value
+Cards Trading as an activity (3 players, started from an open room),
+`record_hands`, the debrief prompts, the catalog row, the card faces (group
+frame, Schwartz icon, picture), the table client's offer controls and pair
+checklist, and the printable deck page. Not built: a snapshot of each hand
+as dealt (the deal is in the log and replays to it). The rules and the
+deck below were copied on
 2026-10-30 from the Center's Civil Discourse Wiki on Notion. The pages
 render only with JavaScript: a plain fetch returns an empty page, so open
 them in a browser (or headless Chromium) to check them.
@@ -915,14 +921,14 @@ TRADING
 MACROS (every game also has setup, deal, reset, shuffle, collect and
 clear_ink)
   deal: 12 cards to each seat, face up.
-  call_time: ends trading and opens the top-three zones. If a pair has
-  not traded, it names them in its confirm sentence. It warns and never
-  blocks (the author's decision, 2026-10-30).
+  record_hands (the author, 2026-10-31: trading has no time limit, so this
+  replaces call_time and ends nothing): keeps a record of every hand and of
+  the pairs that have not traded, named in the record. It never blocks.
 
 EVENTS
   Log every offer, acceptance, refusal and withdrawal, and every move into
   or out of a top-three zone. Record each seat's hand as dealt and as it
-  stands at call_time. Prompt 13's debrief is built from these.
+  stands when record_hands is pressed. Prompt 13's debrief is built from these.
 
 Tests: equal-count enforcement, the refusal of gifts and taking, the
 atomic swap, the pair checklist, and dealing 12 each. validate-games must

@@ -55,6 +55,12 @@
 .piece--card .piece__copy { font-size: var(--text-sm); }
 .piece--card .piece__folio { align-self: end; color: var(--text-muted); font-family: var(--font-mono); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
 
+.piece--card[data-group="deck"] { border: var(--line-strong) solid var(--card-frame-deck); }
+.piece--card[data-group="sidebar"] { border: var(--line-strong) solid var(--card-frame-sidebar); }
+.piece--card .piece__foot { display: flex; align-items: center; justify-content: space-between; align-self: end; gap: var(--space-2); }
+.piece--card .piece__badge { width: 1.4rem; height: 1.4rem; object-fit: contain; }
+.piece--card .piece__image { min-height: 0; max-width: 100%; object-fit: contain; }
+
 .piece--card.is-face-down {
   place-items: center;
   border-color: var(--card-back-edge);

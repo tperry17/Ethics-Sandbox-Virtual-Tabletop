@@ -111,6 +111,10 @@ export interface ComponentView {
   body: string | null;
   folio: string | null;
   image: string | null;
+  /** A card's group, drawn as a frame colour. */
+  group?: string | null;
+  /** An icon drawn beside the folio. */
+  badge?: string | null;
   tint_index: number | null;
   width: number | null;
   height: number | null;
@@ -139,6 +143,15 @@ export interface ActivityView {
   status: "signup" | "running";
 }
 
+/** An open swap offer. The whole table sees who offers what to whom. */
+export interface OfferView {
+  id: string;
+  from_seat: string;
+  to_seat: string;
+  give: string[];
+  want: string[];
+}
+
 /** An activity this room can start. */
 export interface ActivityChoiceView {
   slug: string;
@@ -163,10 +176,13 @@ export interface TableView {
   strokes: StrokeView[];
   version: number;
   activities?: ActivityView[];
+  offers?: OfferView[];
+  /** Each pair of seats that has completed a swap. */
+  swapped?: Array<[string, string]>;
 }
 
 export interface PatchView {
-  kind: "piece" | "zone" | "seat" | "stroke" | "activity" | "table";
+  kind: "piece" | "zone" | "seat" | "stroke" | "activity" | "offer" | "table";
   op: "upsert" | "remove" | "event";
   entity_id: string | null;
   fields: Record<string, unknown>;

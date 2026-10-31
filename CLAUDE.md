@@ -336,6 +336,8 @@ assent/agreed, tension/contested, and caution/time short.
   `--table-zone-private`, `--table-drop-target`
 - Card back: `--card-back`, `--card-back-edge`, `--card-back-ink` (crimson in
   both themes, so a face-down card looks the same in light and dark)
+- Card frames: `--card-frame-deck` (crimson) and `--card-frame-sidebar` (navy),
+  the printed Value Cards' two groups, the same in both themes
 - Text: `--text-primary`, `--text-secondary`, `--text-muted`, `--text-inverse`,
   `--text-on-felt`
 - Accent: `--accent-rubric`, `--accent-rubric-soft`

@@ -18,6 +18,7 @@ from sandbox.model.activities import (
 from sandbox.model.entities import (
     SYSTEM_SEAT,
     Activity,
+    Offer,
     Piece,
     Polygon,
     Rect,
@@ -69,6 +70,14 @@ from sandbox.model.ops import (
 from sandbox.model.results import Ok, OpOutcome, Patch, Reject
 from sandbox.model.rng import TableRng
 from sandbox.model.roles import ReleaseFacilitator, TakeFacilitator, facilitator_seat
+from sandbox.model.trading import (
+    AcceptSwap,
+    CloseOffers,
+    DeclineSwap,
+    OfferSwap,
+    Record,
+    WithdrawSwap,
+)
 from sandbox.model.types import Layout, PieceKind, Visibility, ZoneKind
 from sandbox.model.visibility import (
     ViewPiece,
@@ -83,6 +92,13 @@ from sandbox.model.visibility import (
 )
 
 __all__ = [
+    "CloseOffers",
+    "Record",
+    "AcceptSwap",
+    "DeclineSwap",
+    "Offer",
+    "OfferSwap",
+    "WithdrawSwap",
     "SYSTEM_SEAT",
     "Activity",
     "BeginActivity",
@@ -91,9 +107,6 @@ __all__ = [
     "LeaveActivity",
     "OpenActivity",
     "SetActivityPlayers",
-    "ReleaseFacilitator",
-    "TakeFacilitator",
-    "facilitator_seat",
     "ReleaseFacilitator",
     "TakeFacilitator",
     "facilitator_seat",

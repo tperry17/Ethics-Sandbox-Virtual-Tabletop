@@ -90,6 +90,7 @@ export class PieceNode {
    * must track the pointer exactly, and for a piece that has just appeared.
    */
   setTarget(piece: LocalPiece, animate: boolean, now: number): void {
+    this.element.dataset.zoneId = piece.zone_id;
     const target = { x: piece.x, y: piece.y, rotation: piece.rotation };
     if (!animate) {
       this.from = target;
@@ -207,6 +208,8 @@ export class PieceNode {
             component?.body ?? "",
             component?.folio ?? "",
             component?.image ?? "",
+            component?.group ?? "",
+            component?.badge ?? "",
             piece.value ?? "",
             label,
           ].join("\u0000");
@@ -223,6 +226,8 @@ export class PieceNode {
       component?.title ?? label ?? `A ${piece.kind}`,
     );
     if (component !== undefined) appendFace(this.body, component);
+    if (component?.group) this.element.dataset.group = component.group.toLowerCase();
+    else delete this.element.dataset.group;
     // A component the client has not been sent gets a blank face rather
     // than an invented one; a rolled die still shows what it landed on.
     if (piece.value !== undefined && piece.value !== null) {
@@ -277,8 +282,19 @@ export function appendFace(container: HTMLElement, component: ComponentView): vo
   if (component.body !== null) {
     container.append(span("piece__copy", component.body));
   }
-  if (component.folio !== null) {
-    container.append(span("piece__folio", component.folio));
+  if (component.folio !== null || (component.badge ?? null) !== null) {
+    const foot = document.createElement("span");
+    foot.className = "piece__foot";
+    if (component.folio !== null) foot.append(span("piece__folio", component.folio));
+    if (component.badge) {
+      const badge = document.createElement("img");
+      badge.className = "piece__badge";
+      badge.src = component.badge;
+      badge.alt = "";
+      badge.draggable = false;
+      foot.append(badge);
+    }
+    container.append(foot);
   }
 }
 
