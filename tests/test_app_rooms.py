@@ -41,7 +41,18 @@ def test_start_form_renders(client: TestClient) -> None:
     response = client.get("/start")
 
     assert response.status_code == 200
-    assert "Value Cards Trading" in response.text
+    assert "Open a room" in response.text
+    assert 'name="game_slug"' not in response.text
+
+
+def test_starting_with_no_game_opens_the_sandbox_with_no_facilitator(
+    client: TestClient,
+) -> None:
+    response = client.post("/start", data={"display_name": "Ada"})
+
+    assert response.status_code == 303
+    page = client.get(response.headers["location"]).text
+    assert "Facilitator</span>" not in page
 
 
 def test_starting_a_room_redirects_to_the_table_and_sets_a_cookie(
@@ -49,7 +60,10 @@ def test_starting_a_room_redirects_to_the_table_and_sets_a_cookie(
 ) -> None:
     response = client.post(
         "/start",
-        data={"game_slug": "value-cards-trading", "display_name": "Ada"},
+        data={
+            "display_name": "Ada",
+            "as_facilitator": "true",
+        },
     )
 
     assert response.status_code == 303
@@ -59,9 +73,7 @@ def test_starting_a_room_redirects_to_the_table_and_sets_a_cookie(
 
 
 def test_starting_a_room_without_a_name_shows_an_error(client: TestClient) -> None:
-    response = client.post(
-        "/start", data={"game_slug": "value-cards-trading", "display_name": "  "}
-    )
+    response = client.post("/start", data={"display_name": "  "})
 
     assert response.status_code == 400
     assert "Enter a name" in response.text
@@ -70,7 +82,10 @@ def test_starting_a_room_without_a_name_shows_an_error(client: TestClient) -> No
 def test_the_facilitator_can_open_their_own_table(client: TestClient) -> None:
     start = client.post(
         "/start",
-        data={"game_slug": "value-cards-trading", "display_name": "Ada"},
+        data={
+            "display_name": "Ada",
+            "as_facilitator": "true",
+        },
     )
     code = start.headers["location"].removeprefix("/t/")
 
@@ -83,7 +98,11 @@ def test_the_facilitator_can_open_their_own_table(client: TestClient) -> None:
 
 def test_visiting_a_table_before_joining_redirects_to_join(client: TestClient) -> None:
     start = client.post(
-        "/start", data={"game_slug": "value-cards-trading", "display_name": "Ada"}
+        "/start",
+        data={
+            "display_name": "Ada",
+            "as_facilitator": "true",
+        },
     )
     code = start.headers["location"].removeprefix("/t/")
 
@@ -106,7 +125,11 @@ def test_joining_a_room_seats_the_participant_and_redirects(
     client: TestClient,
 ) -> None:
     start = client.post(
-        "/start", data={"game_slug": "value-cards-trading", "display_name": "Ada"}
+        "/start",
+        data={
+            "display_name": "Ada",
+            "as_facilitator": "true",
+        },
     )
     code = start.headers["location"].removeprefix("/t/")
 

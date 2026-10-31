@@ -36,15 +36,15 @@ def client() -> Iterator[TestClient]:
 def test_the_preview_draws_the_table_after_setup_without_a_single_face(
     client: TestClient,
 ) -> None:
-    response = client.get("/games/two-doors/preview")
+    response = client.get("/games/pairs/preview")
 
     assert response.status_code == 200
-    assert "The two doors" in response.text
+    assert "Pairs caught" in response.text
     assert "Hand · Second seat" in response.text
-    for card in GAMES["two-doors"].decks["doors"]:
+    for card in GAMES["pairs"].decks["cards"]:
         assert card.face.title is not None
         assert card.face.title not in response.text
-    assert response.text.count('class="table-picture__piece') == 6
+    assert response.text.count('class="table-picture__piece') == 8
 
 
 def test_an_unknown_games_preview_is_not_found(client: TestClient) -> None:
@@ -63,14 +63,14 @@ def test_a_card_image_is_served(client: TestClient) -> None:
 @pytest.mark.parametrize(
     "path",
     [
-        "/content/exercises/two-doors/cards.csv",
+        "/content/exercises/pairs/cards.csv",
         "/content/exercises/value-cards-trading/cards.csv",
         "/content/decks/value-cards/cards.csv",
         "/content/exercises/democracy-simulation/roles.csv",
         "/content/exercises/democracy-simulation/elite_sheets.csv",
         "/content/../pyproject.toml",
         "/content/%2e%2e/pyproject.toml",
-        "/content/exercises/two-doors/images/README.md",
+        "/content/exercises/pairs/images/README.md",
     ],
 )
 def test_nothing_but_images_is_served_from_content(
@@ -79,27 +79,26 @@ def test_nothing_but_images_is_served_from_content(
     assert client.get(path).status_code == 404
 
 
-def test_the_start_page_offers_an_unlisted_game_only_when_asked(
+def test_the_start_page_opens_a_room_and_offers_no_game(client: TestClient) -> None:
+    page = client.get("/start").text
+
+    assert "Pairs" not in page
+    assert 'name="game_slug"' not in page
+    assert client.get("/start?game=pairs").text == page
+
+
+def test_a_game_slug_sent_to_start_is_ignored_the_room_is_still_open(
     client: TestClient,
 ) -> None:
-    assert "Two Doors" not in client.get("/start").text
-
-    asked = client.get("/start?game=two-doors").text
-
-    assert "Two Doors" in asked
-    assert 'value="two-doors" required checked' in asked
-
-
-def test_a_two_doors_room_starts_set_up(client: TestClient) -> None:
     response = client.post(
-        "/start", data={"game_slug": "two-doors", "display_name": "Ines"}
+        "/start", data={"game_slug": "pairs", "display_name": "Ines"}
     )
     assert response.status_code == 303
 
     table_page = client.get(response.headers["location"])
 
     assert table_page.status_code == 200
-    assert "<title>Two Doors ·" in table_page.text
+    assert "<title>Open table ·" in table_page.text
 
 
 def test_an_exercise_without_a_definition_keeps_its_drawn_preview(

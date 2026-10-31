@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from sandbox.model.entities import (
+    SYSTEM_SEAT,
     Geometry,
     Piece,
     Polygon,
@@ -1341,18 +1342,21 @@ class Transaction:
     name: str = ""
     label: str = ""
     op_id: str = field(default_factory=new_op_id)
+    system: bool = False
 
     def validate(self, table: Table, actor_seat: str) -> str | None:
         trial = copy.deepcopy(table)
+        actor = SYSTEM_SEAT if self.system else actor_seat
         for step in self.steps:
-            reason = step.validate(trial, actor_seat)
+            reason = step.validate(trial, actor)
             if reason is not None:
                 return reason
-            step.apply(trial, actor_seat)
+            step.apply(trial, actor)
         return None
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         patches: list[Patch] = []
+        actor = SYSTEM_SEAT if self.system else actor_seat
         for step in self.steps:
-            patches.extend(step.apply(table, actor_seat))
+            patches.extend(step.apply(table, actor))
         return patches

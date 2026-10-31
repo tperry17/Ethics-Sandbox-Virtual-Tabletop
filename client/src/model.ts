@@ -11,6 +11,8 @@
  */
 
 import type {
+  ActivityChoiceView,
+  ActivityView,
   ComponentView,
   CursorView,
   MacroView,
@@ -100,6 +102,8 @@ export class TableModel {
    */
   zoneOrder = new Map<string, number>();
   macros: MacroView[] = [];
+  activities = new Map<string, ActivityView>();
+  activityChoices: ActivityChoiceView[] = [];
   cursors: CursorView[] = [];
   you: YouView | null = null;
   version = 0;
@@ -141,6 +145,10 @@ export class TableModel {
       message.components.map((component) => [component.id, { ...component }]),
     );
     this.macros = message.macros.map((macro) => ({ ...macro }));
+    this.activities = new Map(
+      (message.view_table.activities ?? []).map((activity) => [activity.id, { ...activity }]),
+    );
+    this.activityChoices = (message.activity_choices ?? []).map((choice) => ({ ...choice }));
     this.you = { ...message.you };
     this.version = message.view_table.version;
     this.seq = message.seq;
@@ -197,6 +205,18 @@ export class TableModel {
     }
     if (patch.kind === "seat") {
       this.applySeatPatch(patch.entity_id, patch, diff);
+      return;
+    }
+    if (patch.kind === "activity") {
+      if (patch.op === "remove") this.activities.delete(patch.entity_id);
+      else {
+        const existing = this.activities.get(patch.entity_id);
+        this.activities.set(patch.entity_id, {
+          ...(existing ?? ({ id: patch.entity_id } as ActivityView)),
+          ...(patch.fields as Partial<ActivityView>),
+        });
+      }
+      diff.catalog = true;
     }
   }
 

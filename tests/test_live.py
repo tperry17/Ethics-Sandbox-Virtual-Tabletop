@@ -56,7 +56,7 @@ def _pieces_in(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def test_every_operation_has_a_wire_name() -> None:
     assert live.OPERATIONS["move_to_zone"] is MoveToZone
     assert live.OPERATIONS["move"] is Move
-    assert len(live.OPERATIONS) == 34
+    assert len(live.OPERATIONS) == 36
 
 
 def test_decode_intent_reads_a_payload_into_an_operation() -> None:
@@ -653,7 +653,11 @@ def test_a_browser_that_has_not_joined_is_refused_the_socket(
     socket_client: TestClient,
 ) -> None:
     started = socket_client.post(
-        "/start", data={"game_slug": "value-cards-trading", "display_name": "Ada"}
+        "/start",
+        data={
+            "display_name": "Ada",
+            "as_facilitator": "true",
+        },
     )
     code = started.headers["location"].removeprefix("/t/")
     socket_client.cookies.clear()
@@ -668,7 +672,11 @@ def test_the_facilitator_socket_answers_hello_with_a_snapshot(
     socket_client: TestClient,
 ) -> None:
     started = socket_client.post(
-        "/start", data={"game_slug": "value-cards-trading", "display_name": "Ada"}
+        "/start",
+        data={
+            "display_name": "Ada",
+            "as_facilitator": "true",
+        },
     )
     code = started.headers["location"].removeprefix("/t/")
 

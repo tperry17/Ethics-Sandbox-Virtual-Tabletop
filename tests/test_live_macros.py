@@ -23,7 +23,7 @@ GUEST_COOKIE = "cookie-guest"
 
 
 class GameRoom(LiveFixture):
-    """A live Two Doors room whose people connect the way a browser does."""
+    """A live Pairs room whose people connect the way a browser does."""
 
     async def arrive(self, cookie_id: str) -> Client:
         loaded = await asyncio.to_thread(
@@ -74,15 +74,16 @@ class GameRoom(LiveFixture):
 
 
 @asynccontextmanager
-async def two_doors_room() -> AsyncIterator[GameRoom]:
+async def pairs_room() -> AsyncIterator[GameRoom]:
     engine = make_test_engine()
     factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     with session_scope(factory) as session:
         room, _facilitator = rooms.create_room(
             session,
-            game_slug="two-doors",
+            game_slug="pairs",
             facilitator_cookie_id=FACILITATOR_COOKIE,
             facilitator_name="Ines",
+            as_facilitator=True,
         )
         code = room.code
     hub = LiveHub(session_factory=factory)
@@ -118,7 +119,7 @@ def _faces_received(client: Client) -> set[str]:
 
 
 async def test_the_snapshot_carries_the_exercises_buttons_and_no_deck_faces() -> None:
-    async with two_doors_room() as room:
+    async with pairs_room() as room:
         host = await room.arrive(FACILITATOR_COOKIE)
         await room.settle()
 
@@ -126,7 +127,7 @@ async def test_the_snapshot_carries_the_exercises_buttons_and_no_deck_faces() ->
         assert [macro["id"] for macro in snapshot["macros"]] == [
             "setup",
             "deal",
-            "reveal",
+            "call_pairs",
             "reset",
             "shuffle",
             "collect",
@@ -138,7 +139,7 @@ async def test_the_snapshot_carries_the_exercises_buttons_and_no_deck_faces() ->
 
 
 async def test_a_seat_taken_while_the_room_is_live_reaches_its_table() -> None:
-    async with two_doors_room() as room:
+    async with pairs_room() as room:
         host, guest = await _two_seated(room)
 
         assert "seat-2" in room.runtime.table.seats
@@ -153,22 +154,24 @@ async def test_a_seat_taken_while_the_room_is_live_reaches_its_table() -> None:
 
 
 async def test_pressing_deal_sends_each_person_only_their_own_card() -> None:
-    async with two_doors_room() as room:
+    async with pairs_room() as room:
         host, guest = await _two_seated(room)
 
         await room.press(host, "deal")
 
         assert host.socket.of_type("ack")[-1]["client_id"] == "press-deal"
-        mine = room.runtime.table.pieces_in_zone("hand-seat-1")[0].component_id
-        theirs = room.runtime.table.pieces_in_zone("hand-seat-2")[0].component_id
-        assert _faces_received(host) == {mine}
-        assert _faces_received(guest) == {theirs}
+        table = room.runtime.table
+        mine = {p.component_id for p in table.pieces_in_zone("hand-seat-1")}
+        theirs = {p.component_id for p in table.pieces_in_zone("hand-seat-2")}
+        assert len(mine) == len(theirs) == 3
+        assert _faces_received(host) == mine
+        assert _faces_received(guest) == theirs
         notices = [n["text"] for n in guest.socket.of_type("notice")]
-        assert "Ines dealt one card to each seat." in notices
+        assert "Ines dealt three cards to each seat." in notices
 
 
 async def test_a_macro_is_one_event_in_the_log_and_one_snapshot() -> None:
-    async with two_doors_room() as room:
+    async with pairs_room() as room:
         host, _guest = await _two_seated(room)
 
         await room.press(host, "deal")
@@ -182,39 +185,39 @@ async def test_a_macro_is_one_event_in_the_log_and_one_snapshot() -> None:
             state = session.get(TableState, room.runtime.room_id)
             assert state is not None
             stored = from_snapshot(state.snapshot)
-        assert len(stored.pieces_in_zone("hand-seat-2")) == 1
+        assert len(stored.pieces_in_zone("hand-seat-2")) == 3
 
 
 async def test_a_repeated_press_is_applied_once() -> None:
-    async with two_doors_room() as room:
+    async with pairs_room() as room:
         host, _guest = await _two_seated(room)
 
         await room.press(host, "deal", op_id="the-same-press")
         await room.press(host, "deal", op_id="the-same-press")
 
-        assert len(room.runtime.table.pieces_in_zone("hand-seat-1")) == 1
+        assert len(room.runtime.table.pieces_in_zone("hand-seat-1")) == 3
         assert [name for _op, name in room.logged()].count("macro:deal") == 1
 
 
 async def test_a_refused_macro_comes_back_as_a_sentence_and_changes_nothing() -> None:
-    async with two_doors_room() as room:
+    async with pairs_room() as room:
         host, guest = await _two_seated(room)
         version = room.runtime.table.version
 
         await room.press(guest, "reset")
-        await room.press(host, "reveal")
+        await room.press(host, "call_pairs")
 
         assert guest.socket.of_type("reject")[-1]["reason"] == (
             "Only the facilitator can use “Reset”."
         )
         assert host.socket.of_type("reject")[-1]["reason"] == (
-            "First seat has no card to reveal. Deal first."
+            "Nobody holds any cards yet. Deal first."
         )
         assert room.runtime.table.version == version
 
 
 async def test_a_seat_the_live_room_has_not_seen_survives_its_snapshot() -> None:
-    async with two_doors_room() as room:
+    async with pairs_room() as room:
         host = await room.arrive(FACILITATOR_COOKIE)
         room.join(GUEST_COOKIE, "Tomas")  # sits down, has not connected yet
 
@@ -229,7 +232,7 @@ async def test_a_seat_the_live_room_has_not_seen_survives_its_snapshot() -> None
 
 
 async def test_a_seat_reaches_the_live_table_as_soon_as_it_is_taken() -> None:
-    async with two_doors_room() as room:
+    async with pairs_room() as room:
         host = await room.arrive(FACILITATOR_COOKIE)
         room.join(GUEST_COOKIE, "Tomas")
         with session_scope(room.factory) as session:
@@ -243,7 +246,7 @@ async def test_a_seat_reaches_the_live_table_as_soon_as_it_is_taken() -> None:
         await room.hub.seat_taken(room.runtime.code, guest_id)
         await room.press(host, "deal")
 
-        assert len(room.runtime.table.pieces_in_zone("hand-seat-2")) == 1
+        assert len(room.runtime.table.pieces_in_zone("hand-seat-2")) == 3
 
 
 # -- what survives a live room ------------------------------------------------------
@@ -257,7 +260,7 @@ def _stored(room: GameRoom) -> Table:
 
 
 async def test_the_table_is_saved_as_it_was_left_when_the_last_person_goes() -> None:
-    async with two_doors_room() as room:
+    async with pairs_room() as room:
         host = await room.arrive(FACILITATOR_COOKIE)
         await room.press(host, "deal")
         card = room.runtime.table.pieces_in_zone("hand-seat-1")[0].id
@@ -277,7 +280,7 @@ async def test_the_table_is_saved_as_it_was_left_when_the_last_person_goes() -> 
 async def test_a_seat_change_made_while_the_room_is_live_reaches_it_and_is_kept() -> (
     None
 ):
-    async with two_doors_room() as room:
+    async with pairs_room() as room:
         host, guest = await _two_seated(room)
         with session_scope(room.factory) as session:
             db_room = rooms.get_room_by_code(session, room.runtime.code)

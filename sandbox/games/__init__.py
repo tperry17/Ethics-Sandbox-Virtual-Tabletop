@@ -31,6 +31,9 @@ EXERCISES_BY_SLUG: dict[str, Exercise] = {
     exercise.slug: exercise for exercise in EXERCISES
 }
 
+# The game of an open room: the sandbox itself, which is not an activity.
+OPEN_ROOM_SLUG = "sandbox"
+
 EXTRA_GAMES_VARIABLE = "SANDBOX_EXTRA_GAMES"
 
 
@@ -66,6 +69,7 @@ __all__ = [
     "EXERCISES_BY_SLUG",
     "Exercise",
     "GAMES",
+    "OPEN_ROOM_SLUG",
     "Game",
     "extra_game_roots",
     "playable_slugs",

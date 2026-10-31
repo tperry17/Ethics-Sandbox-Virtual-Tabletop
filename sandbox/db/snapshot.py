@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from sandbox.model import (
+    Activity,
     Layout,
     Offer,
     Piece,
@@ -52,6 +53,19 @@ def to_snapshot(table: Table) -> Snapshot:
             for offer_id, offer in table.offers.items()
         },
         "swapped": sorted(sorted(pair) for pair in table.swapped),
+        "activities": {
+            activity_id: {
+                "kind": a.kind,
+                "title": a.title,
+                "min_players": a.min_players,
+                "max_players": a.max_players,
+                "seats": list(a.seats),
+                "status": a.status,
+                "zones": list(a.zones),
+            }
+            for activity_id, a in table.activities.items()
+        },
+        "activity_serial": table.activity_serial,
         "rng": _dump_rng(table.rng),
         "version": table.version,
         "applied_op_ids": sorted(table.applied_op_ids),
@@ -89,6 +103,21 @@ def from_snapshot(data: Snapshot) -> Table:
             for offer_id, fields in data.get("offers", {}).items()
         },
         swapped={frozenset(pair) for pair in data.get("swapped", [])},
+        # Snapshots written before activities existed have neither key.
+        activities={
+            activity_id: Activity(
+                id=activity_id,
+                kind=fields["kind"],
+                title=fields["title"],
+                min_players=fields["min_players"],
+                max_players=fields["max_players"],
+                seats=tuple(fields["seats"]),
+                status=fields["status"],
+                zones=tuple(fields["zones"]),
+            )
+            for activity_id, fields in data.get("activities", {}).items()
+        },
+        activity_serial=data.get("activity_serial", 0),
         rng=_load_rng(data["rng"]),
         version=data["version"],
         applied_op_ids=set(data["applied_op_ids"]),

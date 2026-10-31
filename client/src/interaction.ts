@@ -86,6 +86,7 @@ export class InteractionController {
   private readonly keyboardSettle = new Map<string, string>();
   private toolButtons: { point: HTMLButtonElement; pen: HTMLButtonElement } | null = null;
   private clearAllButton: HTMLButtonElement | null = null;
+  private facilitatorButton: HTMLButtonElement | null = null;
 
   constructor(private readonly table: TableRenderer) {}
 
@@ -104,6 +105,8 @@ export class InteractionController {
       onSnapshot: () => this.syncTools(),
     };
     this.buildTools();
+    // A snapshot may have arrived before this listener was set.
+    this.syncTools();
   }
 
   private get root(): HTMLElement {
@@ -133,17 +136,30 @@ export class InteractionController {
       this.table.intents.send("clear_ink", { everyone: true });
     });
     clearAll.hidden = true;
+    const facilitator = plainButton("Become facilitator", () => {
+      const holding = this.model.you?.is_facilitator === true;
+      this.table.intents.send(holding ? "release_facilitator" : "take_facilitator", {});
+    });
+    facilitator.hidden = true;
 
-    group.append(point, pen, clearMine, clearAll);
+    group.append(point, pen, clearMine, clearAll, facilitator);
     this.table.toolArea.prepend(group);
     this.toolButtons = { point, pen };
     this.clearAllButton = clearAll;
+    this.facilitatorButton = facilitator;
   }
 
   /** Show the facilitator's own tools to the facilitator. Whether they work is the server's call. */
   private syncTools(): void {
     if (this.clearAllButton !== null) {
       this.clearAllButton.hidden = this.model.you?.is_facilitator !== true;
+    }
+    if (this.facilitatorButton !== null) {
+      // Whether it works is the server's call; this only offers it while it could.
+      const holding = this.model.you?.is_facilitator === true;
+      const taken = [...this.model.seats.values()].some((seat) => seat.is_facilitator);
+      this.facilitatorButton.hidden = this.model.seatId === null || (taken && !holding);
+      this.facilitatorButton.textContent = holding ? "Hand back facilitator" : "Become facilitator";
     }
     this.cancelGesture();
   }

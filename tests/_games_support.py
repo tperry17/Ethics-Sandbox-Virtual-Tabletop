@@ -16,8 +16,8 @@ FIXTURE_GAMES = Path(__file__).resolve().parent / "games"
 FIXTURE_CONTENT = FIXTURE_GAMES / "content"
 
 
-def two_doors() -> Game:
-    return GAMES["two-doors"]
+def pairs() -> Game:
+    return GAMES["pairs"]
 
 
 def hooked() -> Game:
@@ -27,7 +27,9 @@ def hooked() -> Game:
 def seated(game: Game, people: int, *, seed: int = 0) -> Table:
     """``game``'s table, set up, with ``people`` seats taken."""
     table = Table(rng=TableRng(seed=seed))
-    seat_id, transaction = build_table(game, table, participant_id="p-1")
+    seat_id, transaction = build_table(
+        game, table, participant_id="p-1", as_facilitator=True
+    )
     assert isinstance(run_op(table, seat_id, transaction), Ok)
     for person in range(2, people + 1):
         seat_id, transaction = build_seat(game, table, participant_id=f"p-{person}")

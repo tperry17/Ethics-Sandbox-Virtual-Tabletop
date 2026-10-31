@@ -38,6 +38,12 @@ class Polygon:
 Geometry = Rect | Polygon
 
 
+# The room itself, acting for an activity's own button: a macro the definition
+# gives its players may do what the exercise needs, such as turning over
+# everyone's card, which no single player could do alone.
+SYSTEM_SEAT = "room"
+
+
 @dataclass
 class Piece:
     """One physical object on the table.
@@ -142,6 +148,26 @@ class Offer:
 
 
 @dataclass
+class Activity:
+    """A guided activity started in the room, for some of its seats.
+
+    It begins as a sign-up (``status`` ``"signup"``) and runs once its zones
+    have been laid out. ``zones`` names every zone it made, so ending it can
+    take exactly those and their pieces away. ``kind`` names the game
+    definition; the model does not know what that is.
+    """
+
+    id: str
+    kind: str
+    title: str
+    min_players: int
+    max_players: int
+    seats: tuple[str, ...]
+    status: str = "signup"
+    zones: tuple[str, ...] = ()
+
+
+@dataclass
 class Table:
     """The whole state of one room's tabletop at one instant.
 
@@ -158,6 +184,8 @@ class Table:
     offers: dict[str, Offer] = field(default_factory=dict)
     swapped: set[frozenset[str]] = field(default_factory=set)
     """Each pair of seats that has completed a swap with each other."""
+    activities: dict[str, Activity] = field(default_factory=dict)
+    activity_serial: int = 0
     rng: TableRng = field(default_factory=lambda: TableRng(seed=0))
     version: int = 0
     applied_op_ids: set[str] = field(default_factory=set)
@@ -178,5 +206,7 @@ class Table:
         return pieces[-1].z + 1 if pieces else 0
 
     def is_facilitator(self, seat_id: str) -> bool:
+        if seat_id == SYSTEM_SEAT:
+            return True
         seat = self.seats.get(seat_id)
         return seat is not None and seat.is_facilitator

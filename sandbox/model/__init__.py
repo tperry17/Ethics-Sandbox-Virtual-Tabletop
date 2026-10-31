@@ -7,7 +7,17 @@ and, where noted, the table's own seeded RNG.
 """
 
 from sandbox.model.actions import MenuEntry, piece_actions
+from sandbox.model.activities import (
+    BeginActivity,
+    EndActivity,
+    JoinActivity,
+    LeaveActivity,
+    OpenActivity,
+    SetActivityPlayers,
+)
 from sandbox.model.entities import (
+    SYSTEM_SEAT,
+    Activity,
     Offer,
     Piece,
     Polygon,
@@ -59,6 +69,7 @@ from sandbox.model.ops import (
 )
 from sandbox.model.results import Ok, OpOutcome, Patch, Reject
 from sandbox.model.rng import TableRng
+from sandbox.model.roles import ReleaseFacilitator, TakeFacilitator, facilitator_seat
 from sandbox.model.trading import (
     AcceptSwap,
     CloseOffers,
@@ -88,6 +99,17 @@ __all__ = [
     "Offer",
     "OfferSwap",
     "WithdrawSwap",
+    "SYSTEM_SEAT",
+    "Activity",
+    "BeginActivity",
+    "EndActivity",
+    "JoinActivity",
+    "LeaveActivity",
+    "OpenActivity",
+    "SetActivityPlayers",
+    "ReleaseFacilitator",
+    "TakeFacilitator",
+    "facilitator_seat",
     "AddSeat",
     "AddZone",
     "AssignSeat",

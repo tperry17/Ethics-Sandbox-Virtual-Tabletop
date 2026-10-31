@@ -33,6 +33,11 @@
       <form class="site__section" method="post" action="/join">
         {{ ui.field("room_code", "Room code", value=code, placeholder="ABC123") }}
         {{ ui.field("display_name", "Your name", value=display_name, placeholder="Shown to the table") }}
+        <label class="field__check">
+          <input type="checkbox" name="as_facilitator" value="true">
+          Join as facilitator <span class="field__hint">(optional; one person at a time)</span>
+        </label>
+
         <div class="toolbar" role="group" aria-label="Join actions">
           {{ ui.button("Join table", variant="primary", size="lg", type="submit") }}
         </div>
