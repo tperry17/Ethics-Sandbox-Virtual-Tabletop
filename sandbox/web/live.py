@@ -247,6 +247,18 @@ class ZoneView(BaseModel):
     owner_seat: str | None
 
 
+class ActivityView(BaseModel):
+    """An activity in the room. Mirrors ``ViewActivity``."""
+
+    id: str
+    kind: str
+    title: str
+    min_players: int
+    max_players: int
+    seats: list[str]
+    status: str
+
+
 class ComponentView(BaseModel):
     """What one component looks like, for a viewer entitled to see its face.
 
@@ -314,6 +326,7 @@ class TableView(BaseModel):
     seats: list[SeatView]
     strokes: list[StrokeView]
     version: int
+    activities: list[ActivityView] = Field(default_factory=list)
 
 
 class YouView(BaseModel):
@@ -1393,6 +1406,18 @@ class RoomRuntime:
                 for stroke in view.strokes
             ],
             version=view.version,
+            activities=[
+                ActivityView(
+                    id=a.id,
+                    kind=a.kind,
+                    title=a.title,
+                    min_players=a.min_players,
+                    max_players=a.max_players,
+                    seats=list(a.seats),
+                    status=a.status,
+                )
+                for a in view.activities
+            ],
         )
 
     def _components_for(self, view: ViewTable) -> list[ComponentView]:

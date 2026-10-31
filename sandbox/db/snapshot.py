@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from sandbox.model import (
+    Activity,
     Layout,
     Piece,
     PieceKind,
@@ -41,6 +42,19 @@ def to_snapshot(table: Table) -> Snapshot:
             stroke_id: _dump_stroke(stroke)
             for stroke_id, stroke in table.strokes.items()
         },
+        "activities": {
+            activity_id: {
+                "kind": a.kind,
+                "title": a.title,
+                "min_players": a.min_players,
+                "max_players": a.max_players,
+                "seats": list(a.seats),
+                "status": a.status,
+                "zones": list(a.zones),
+            }
+            for activity_id, a in table.activities.items()
+        },
+        "activity_serial": table.activity_serial,
         "rng": _dump_rng(table.rng),
         "version": table.version,
         "applied_op_ids": sorted(table.applied_op_ids),
@@ -66,6 +80,21 @@ def from_snapshot(data: Snapshot) -> Table:
             stroke_id: _load_stroke(stroke_id, fields)
             for stroke_id, fields in data["strokes"].items()
         },
+        # Snapshots written before activities existed have neither key.
+        activities={
+            activity_id: Activity(
+                id=activity_id,
+                kind=fields["kind"],
+                title=fields["title"],
+                min_players=fields["min_players"],
+                max_players=fields["max_players"],
+                seats=tuple(fields["seats"]),
+                status=fields["status"],
+                zones=tuple(fields["zones"]),
+            )
+            for activity_id, fields in data.get("activities", {}).items()
+        },
+        activity_serial=data.get("activity_serial", 0),
         rng=_load_rng(data["rng"]),
         version=data["version"],
         applied_op_ids=set(data["applied_op_ids"]),

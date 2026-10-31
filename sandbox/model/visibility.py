@@ -61,6 +61,19 @@ class ViewZone:
 
 
 @dataclass(frozen=True)
+class ViewActivity:
+    """An activity in the room. Who is playing what is public to the room."""
+
+    id: str
+    kind: str
+    title: str
+    min_players: int
+    max_players: int
+    seats: tuple[str, ...]
+    status: str
+
+
+@dataclass(frozen=True)
 class ViewSeat:
     id: str
     label: str
@@ -87,6 +100,7 @@ class ViewTable:
     seats: tuple[ViewSeat, ...]
     strokes: tuple[ViewStroke, ...]
     version: int
+    activities: tuple[ViewActivity, ...] = ()
 
 
 def entitled_to_face(
@@ -201,6 +215,18 @@ def project(table: Table, viewer_seat: str | None) -> ViewTable:
         seats=seats,
         strokes=strokes,
         version=table.version,
+        activities=tuple(
+            ViewActivity(
+                id=a.id,
+                kind=a.kind,
+                title=a.title,
+                min_players=a.min_players,
+                max_players=a.max_players,
+                seats=a.seats,
+                status=a.status,
+            )
+            for a in table.activities.values()
+        ),
     )
 
 

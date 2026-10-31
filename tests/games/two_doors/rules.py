@@ -18,7 +18,8 @@ HAND = "hand"
 @macro("reveal")
 def reveal(table: Table, context: GameContext) -> list[Operation]:
     """Each seat's card, in seat order, face up on the doors."""
-    if table.pieces_in_zone(DOORS):
+    doors = context.zone(DOORS)
+    if table.pieces_in_zone(doors):
         raise MacroRefused("The doors already hold cards. Collect them first.")
     operations: list[Operation] = []
     for seat in context.seats:
@@ -27,6 +28,6 @@ def reveal(table: Table, context: GameContext) -> list[Operation]:
             label = table.seats[seat].label
             raise MacroRefused(f"{label} has no card to reveal. Deal first.")
         card = hand[-1]
-        operations.append(MoveToZone(piece_id=card.id, zone_id=DOORS))
+        operations.append(MoveToZone(piece_id=card.id, zone_id=doors))
         operations.append(Flip(piece_id=card.id, face_up=True))
     return operations

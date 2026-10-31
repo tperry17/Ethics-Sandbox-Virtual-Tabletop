@@ -22,7 +22,7 @@ class Patch:
     happens when a patch is projected for a viewer, on its way to a browser.
     """
 
-    kind: Literal["piece", "zone", "seat", "stroke", "table"]
+    kind: Literal["piece", "zone", "seat", "stroke", "activity", "table"]
     op: Literal["upsert", "remove", "event"]
     entity_id: str | None
     fields: dict[str, object]
