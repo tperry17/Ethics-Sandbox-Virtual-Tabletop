@@ -41,7 +41,7 @@ shows "Claimed" in this table on `main`.
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
 | 10 | Value Cards Trading | Done | | PR #16 |
 | 11 | Democracy Simulation | Done | | PR #19 |
-| 12 | Running a session (rewritten, lean) | Claimed | `claude/step-12-facilitator-controls` | |
+| 12 | Running a session (rewritten, lean) | Done, with gaps (below); in review as PR #20 | `claude/step-12-facilitator-controls` | |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
@@ -142,7 +142,7 @@ Where these conflict with a prompt below, these win.
   and 11 correct it.
 - **A room is an open sandbox; an activity is started inside it** (the
   author, 2026-10-31; superseding the 2026-10-30 note that a room is sized
-  by its exercise). A room takes up to 20 people. An activity's seat range
+  by its exercise). A room takes up to 30 people. An activity's seat range
   is how many people it takes: Value Cards Trading takes 3, and a Democracy
   city takes 9–20. A class larger than one activity runs several at once in
   one room, so Prompt 12 no longer needs several rooms. The facilitator is
@@ -955,12 +955,12 @@ read on 2026-10-30:
 - **"Leadership and knowledge in democracies and oligarchies"** (Tomer J.
   Perry): the rules, read in full (both tabs). Its "Running the exercise
   remotely" and "Observation Sheet" headings are empty so far.
-- **"role cards"** (a Google Sheet): all 80 cards, 20 per city per phase,
+- **"role cards"** (a Google Sheet): all 80 cards, 20 per city per scenario,
   plus the job, feature and moderator text. These are now exported to
   `content/exercises/democracy-simulation/` as `roles.csv`, `jobs.csv` and
   `features.csv`. The values are unchanged; only the whitespace was tidied.
-- **The four "Printouts" Google Docs,** one per city per phase: each
-  city's invitation and its five elite information sheets. Phase 2
+- **The four "Printouts" Google Docs,** one per city per scenario: each
+  city's invitation and its five elite information sheets. Scenario 2
   Potamosia is the clean copy the author made on 2026-10-30
   (<https://docs.google.com/document/d/1nNzufIhuVVw9oXG1NVnZRjUwBYiYLFYA-JroTQII5jo/edit>),
   not the older doc with suggested edits. All four are exported to
@@ -979,11 +979,11 @@ read on 2026-10-30:
   knowledge. The one difference in the cards is that Potamosia's two
   mayors are Hudrosia's two kings. A class runs either democracy-only
   cities or half and half.
-- **Two phases.** Each is a separate session, and either can be run
-  alone. Phase 1, "Construction Project": the city has 30 gold, enough
+- **Two scenarios.** Each is a separate session, and either can be run
+  alone. Scenario 1, "Construction Project": the city has 30 gold, enough
   for one of three projects (the dam, real cost 18; the bridge, 20; the
   walls, 21). The richer citizens' private wealth could pay for all
-  three, but that is not public. Phase 2, "Going to war?": the choice is
+  three, but that is not public. Scenario 2, "Going to war?": the choice is
   attack, defences or diplomacy. The outcome depends on what the other
   city chooses, through a three-by-three outcomes table that forms a
   cycle like rock-paper-scissors.
@@ -1027,22 +1027,22 @@ read on 2026-10-30:
 ### Checked against the document
 
 - The card order in `roles.csv` matches the document's role mix at every
-  size from 9 to 20, in both phases.
-- The river and rumour counts match the document's shares: in Phase 1, 7
-  river dwellers and 5 rumours at 20; in Phase 2, 8 river dwellers (40%)
+  size from 9 to 20, in both scenarios.
+- The river and rumour counts match the document's shares: in Scenario 1, 7
+  river dwellers and 5 rumours at 20; in Scenario 2, 8 river dwellers (40%)
   and 6 rumours (30%) at 20.
-- Elite sheets exist for exactly the elite card numbers: Phase 1 cards
-  1, 10 (Mayor/King), 2, 4 (Merchant) and 14 (Noble); Phase 2 cards 1, 10,
+- Elite sheets exist for exactly the elite card numbers: Scenario 1 cards
+  1, 10 (Mayor/King), 2, 4 (Merchant) and 14 (Noble); Scenario 2 cards 1, 10,
   4, 13 (Merchant) and 7 (Noble).
 
 ### Resolved by the author on 2026-10-30
 
-- The Phase 2 Hudrosia council flags are corrected in the sheet: card 13
+- The Scenario 2 Hudrosia council flags are corrected in the sheet: card 13
   (a Merchant) is on the council and card 2 (a Shepherd) is not.
   `roles.csv` was re-exported to match.
 - A card that is both a council member and a river dweller shows both
-  lines. The sheet now gives Phase 2 Hudrosia cards 1 and 4 both.
-- The repeated title line on the Phase 1 Hudrosia King card 1 sheet is
+  lines. The sheet now gives Scenario 2 Hudrosia cards 1 and 4 both.
+- The repeated title line on the Scenario 1 Hudrosia King card 1 sheet is
   gone.
 - Where the slide deck and the printouts differ, the printouts are
   current.
@@ -1114,10 +1114,10 @@ CONTENT, in content/exercises/democracy-simulation/
     elite_sheets.csv: key, phase, city, card_number, job, text. One row per
     elite card (20). Text in both files uses the small Markdown subset
     described under "Typos corrected in the copy".
-    invitations.csv: key, phase, city, text. One row per city per phase
+    invitations.csv: key, phase, city, text. One row per city per scenario
     (4).
   To add, from the rules document:
-    outcomes.csv: our_choice, their_choice, text (Phase 2).
+    outcomes.csv: our_choice, their_choice, text (Scenario 2).
   images/ holds the job, moderator and river-resident icons and the two
   city seals (potamosia-seal.png, hudrosia-seal.png), exported from the
   author's Drive.
@@ -1128,7 +1128,7 @@ CONTENT, in content/exercises/democracy-simulation/
 
 OPTIONS
   The room is created with two choices: city (Potamosia or Hudrosia) and
-  phase (1 or 2). Add `options` to the definition format in generic
+  scenario (1 or 2; the column and option id stay `phase`). Add `options` to the definition format in generic
   terms: named choices offered on /start, and readable by steps and by
   rules.py through GameContext. Mayor/King is a label that depends on the
   city. Nothing in sandbox/web/ may know about either city.
@@ -1172,9 +1172,9 @@ PROPOSALS
   proposal to the vote moves it to "On the floor"; the result moves it to
   "Passed" or "Not passed".
 
-PHASE 2
+SCENARIO 2
   Record the decision each city passes. Pairing two rooms and showing the
-  outcome from outcomes.csv belongs to Prompt 12's class page, not to
+  outcome from outcomes.csv belongs to Prompt 12's class panel, not to
   this prompt.
 
 EVENTS
@@ -1183,7 +1183,7 @@ EVENTS
 
 Unit-test the count: majority, a tie, nobody voting, and a secret council
 vote that must not leak to the table's projection. validate-games plays
-both cities and both phases at 9 and at 20 seats. Update this plan's
+both cities and both scenarios at 9 and at 20 seats. Update this plan's
 status table. Commit.
 ```
 
@@ -1191,79 +1191,79 @@ status table. Commit.
 
 ## 12. Running a session
 
-**Status: Not started.** Rewritten on 2026-10-30. The author asked for
-only the facilitator controls needed to run these two exercises, on a
-platform that works and can be extended later. The longer list from the
-first version is kept under "Deferred" below.
+**Status: Done, with gaps.** Restated on 2026-10-31 after the author's answers on
+the pull request, to fit "A room is an open sandbox" (Prompt 17). The
+2026-10-30 version, a class that owned several rooms with its own page at
+`/c/{code}`, is withdrawn. The longer list from the first version is kept
+under "Deferred" below.
 
-What the two exercises actually need:
+Decisions (the author, 2026-10-31):
 
-- **Several rooms at once.** Value Cards is played in threes, so a class
-  of 24 means 8 rooms. The Democracy Simulation has 9–20 people per city
-  and several cities. In both, the teacher is not a player in any room.
-- **Phase 2 of the Democracy Simulation pairs two cities.** Its outcome
-  depends on both cities' decisions.
-- **A timer.** Both run on about 30 minutes.
-- **Debrief questions** both exercises supply, which the teacher may want
-  on everyone's screen.
-
-Today, starting a room seats the person who started it as its facilitator
-(`sandbox/web/rooms.py`, `create_room`). That suits a single group with a
-facilitator at the table, which still has to work. It does not suit a
-teacher running eight trios.
+- **A class is a kind of activity with several tables.** In a sandbox room
+  someone may start an activity, or start a class. A class starts one
+  activity as several tables at once, each running it, all in the same
+  room. The person who starts it becomes the facilitator of every table,
+  as a non-playing admin: they are not seated at any table.
+- **The room cap is 30** (was 20), so a class of 24 (eight trios) fits.
+- **Sort at random: yes.**
+- **The timer and pushed prompts go to every table at once.**
+- **Pairing exists for Scenario 2 of the Democracy Simulation only.**
+  Scenarios 1 and 2 are independent: a class may run either without the
+  other. Value Cards Trading has no scenarios and no pairing.
 
 ```text
 Read CLAUDE.md. Build what a facilitator needs to run a class through the
 Ethics Sandbox, and no more.
 
 A CLASS
-  /start offers "one table" (as now) or "a class". A class is an exercise,
-  its options, and a number of tables, all created in one transaction.
-  It has its own code and a page at /c/{code}.
-  The class page, seen by the facilitator: one row per table, showing the
-  table's join link and code, who is seated, who is connected, and
-  whether its macros have run (set up, dealt, time called). There is one
-  button to open any table as its facilitator. The facilitator is not
-  seated at any table: they join it as an observer with facilitator
-  powers.
-  The class page, seen by a participant: a list of the tables with open
-  seats. They type a name and choose one. The facilitator can also move a
-  participant from one table to another.
-  Sort at random: one press deals everyone who has joined the class into
-  tables at random, as evenly as each table's seat range allows. It is a
-  logged shuffle, not global randomness. It is shown before it is
-  applied, and the facilitator can sort again or adjust by hand before
-  confirming. People who arrive later are placed in the table with the
-  most room.
-  A class page never shows a card face or a token value. Test that.
-  The facilitator is recognised by their existing identity cookie. There
-  is no login.
+  Beside "Start the <activity>", a room offers "Start a class": choose the
+  activity, its options, and a number of tables. The tables are created in
+  one transaction, whole or not at all, in the same room. The starter
+  takes the facilitator seat (if another person holds it, the starter
+  must be that person) and is not seated at any table.
+  The class panel, seen by the facilitator: one row per table, showing who
+  is seated, who is connected, and whether its macros have run (set up,
+  dealt, time called), and a button to go to that table's zones.
+  The class panel, seen by a participant: the tables with open seats. They
+  choose one. The facilitator can also move a participant between tables.
+  Sort at random: one press deals everyone in the room who is not seated
+  into the class's tables at random, as evenly as each table's player
+  range allows. It is a logged shuffle, not global randomness. It is shown
+  before it is applied, and the facilitator can sort again or adjust by
+  hand before confirming. People who arrive later are placed in the table
+  with the most room.
+  The panel never shows a card face or a token value. Test that.
+  The facilitator is recognised by the existing identity cookie.
 
 IN EACH TABLE
   The macro toolbar already exists. Add a roster showing who is connected
   and who is away. The facilitator gets "make observer" and "remove",
   using the existing room services.
-  A timer: the facilitator starts it for one table, or for every table
-  from the class page. Every screen shows the time remaining. It chimes
-  once when it runs out. It is advisory and never refuses anything.
-  A label for each part of the meeting (Hudrosia's council, then its
-  assembly) comes from the game definition.
-  Push a prompt: the facilitator picks one of the game's prompts and
-  shows it as a dismissable card on every screen, at one table or at all
-  of them.
+  A timer: the facilitator starts it for every table of the class at once.
+  Every screen shows the time remaining. It chimes once when it runs out.
+  It is advisory and never refuses anything.
+  Push a prompt: the facilitator picks one of the game's prompts and shows
+  it as a dismissable card on every screen of every table.
 
-PAIRED TABLES (Democracy Simulation, Phase 2)
-  On the class page the facilitator pairs two tables. Once both have
-  passed a decision, the class page shows the facilitator the matching
-  row of outcomes.csv. The facilitator decides when to announce it. This
-  is game data read through the definition; the web layer only knows
-  that a game may declare pairing.
+PAIRED TABLES (Democracy Simulation, Scenario 2 only)
+  The facilitator pairs two tables of a class. Once both have passed a
+  decision, the panel shows the facilitator the matching row of
+  outcomes.csv. The facilitator decides when to announce it. This is game
+  data read through the definition; the web layer only knows that a game
+  may declare pairing.
 
-Tests: a class of N tables is created whole or not at all; the class
-page leaks nothing; a participant cannot act as facilitator on it; the
-timer running out changes nothing on the table. Update this plan's status
-table. Commit.
+Tests: a class of N tables is created whole or not at all; the panel leaks
+nothing; a participant cannot act as facilitator on it; the timer running
+out changes nothing on the table; a room accepts 30 people and refuses
+the 31st. Update this plan's status table. Commit.
 ```
+
+Settled on the pull request (2026-10-31): the facilitator may move anyone
+between tables at any time, and a latecomer takes the roomiest table, begun or
+not; a person moved off a begun table puts their cards back in their decks,
+which are shuffled; the people at a paired table propose its choice and the
+facilitator confirms it; the class has one timer; and the per-part meeting
+label is dropped.
 
 **Deferred** from the first version, to be added when a session shows
 they are needed:
@@ -1349,7 +1349,7 @@ THE DEBRIEF PAGE: /t/{code}/debrief
     rumour on the cards dealt. The facilitator ticks the ones that
     surfaced (the software cannot hear the call), or picks them from
     their notes.
-    Phase 2: the decisions of the two paired cities and the outcome.
+    Scenario 2: the decisions of the two paired cities and the outcome.
     The document's debrief questions, grouped by learning outcome.
 
 THE CLASS DEBRIEF: /c/{code}/debrief
@@ -1596,7 +1596,7 @@ what"), sandbox/web/rooms.py, sandbox/web/live.py and sandbox/games/. Then:
 ROOM
   A room is no longer created for a game. /start makes an open room, with
   a free table and a kit: the 36 value cards (content/decks/value-cards/,
-  face down in a deck zone), dice, cubes, meeples and tokens. Up to 20
+  face down in a deck zone), dice, cubes, meeples and tokens. Up to 30
   people can be seated. Nobody is the facilitator by default, the creator
   included: the creator is an ordinary player.
   The facilitator is an optional admin seat. /join and /start offer "Join

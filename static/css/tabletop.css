@@ -766,3 +766,56 @@
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
+
+/* The class's countdown and pushed prompt, over the top of every screen. */
+.tabletop__banner {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: min(36rem, calc(100% - var(--space-6)));
+  pointer-events: none;
+}
+
+.tabletop__banner > * {
+  pointer-events: auto;
+}
+
+.tabletop__timer {
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border: var(--line-hairline) solid var(--surface-border-strong);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+}
+
+.tabletop__prompt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border: var(--line-hairline) solid var(--surface-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-raised);
+  font-family: var(--font-reading);
+}
+
+.tabletop__prompt[hidden],
+.tabletop__timer[hidden],
+.tabletop__banner[hidden] {
+  display: none;
+}
+
+.tabletop__prompt-text {
+  margin: 0;
+  line-height: var(--leading-reading);
+}

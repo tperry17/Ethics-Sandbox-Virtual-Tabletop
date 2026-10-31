@@ -31,6 +31,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import secrets
 import time
 import uuid
 from collections import deque
@@ -48,19 +49,26 @@ from sandbox.games.engine import (
     announcement,
     build_activity_start,
     build_macro,
+    build_seat_move,
     may_use_facilitator_button,
 )
+from sandbox.games.pairing import may_pair, pair_outcome, pairing_choices
 from sandbox.model import (
+    SYSTEM_SEAT,
     AcceptSwap,
     AddSeat,
     AddZone,
+    AssignClassTables,
     AssignSeat,
+    ClassGroup,
+    ClearClassTimer,
     ClearInk,
     Deal,
     DeclineSwap,
     Despawn,
     Draw,
     EndActivity,
+    EndClass,
     EndShow,
     EraseInk,
     Flip,
@@ -79,9 +87,11 @@ from sandbox.model import (
     OpenActivity,
     Operation,
     OpOutcome,
+    PairTables,
     Patch,
     Peek,
     Point,
+    PushClassPrompt,
     Rect,
     Reject,
     Release,
@@ -93,22 +103,28 @@ from sandbox.model import (
     Rotate,
     Seat,
     SetActivityPlayers,
+    SetClassDecision,
     SetText,
     ShowTo,
     Shuffle,
     Spawn,
     StackOnto,
+    StartClass,
+    StartClassTimer,
     Table,
+    TableRng,
     TakeFacilitator,
     Transaction,
     Ungroup,
     Unlock,
+    UnpairTables,
     ViewTable,
     WithdrawSwap,
     Zone,
     piece_actions,
     project,
     run_op,
+    sort_into_tables,
 )
 from sandbox.model.entities import Geometry
 from sandbox.model.visibility import project_patches
@@ -285,6 +301,57 @@ class ActivityView(BaseModel):
     seats: list[str]
     status: str
     options: dict[str, str] = Field(default_factory=dict)
+    class_id: str = ""
+
+
+class ClassPairView(BaseModel):
+    """Two paired tables and, once both have decided, what follows."""
+
+    first: str
+    second: str
+    first_decision: str | None = None
+    second_decision: str | None = None
+    first_proposed: str | None = None
+    second_proposed: str | None = None
+    outcome: str | None = None
+
+
+class ClassPromptChoiceView(BaseModel):
+    id: str
+    text: str
+
+
+class ClassView(BaseModel):
+    """A class: one activity at several tables. Mirrors ``ViewClass``.
+
+    The timer and the pushed prompt are for every screen. Pairing, decisions
+    and outcomes are the facilitator's, so they are empty for anyone else.
+    The panel never carries a card face or a token value.
+    """
+
+    id: str
+    kind: str
+    title: str
+    tables: list[str]
+    timer_remaining: float | None = None
+    timer_seconds: int = 0
+    prompt: str = ""
+    prompt_serial: int = 0
+    can_pair: bool = False
+    pair_choices: list[str] = Field(default_factory=list)
+    your_table: str = ""
+    your_decision: str | None = None
+    your_proposal: str | None = None
+    pairs: list[ClassPairView] = Field(default_factory=list)
+    prompt_choices: list[ClassPromptChoiceView] = Field(default_factory=list)
+
+
+class ClassSortMessage(BaseModel):
+    """A proposed sorting of people into tables. Sent to the facilitator only."""
+
+    type: Literal["class_sort"] = "class_sort"
+    class_id: str
+    tables: list[list[str]]
 
 
 class ComponentView(BaseModel):
@@ -427,6 +494,7 @@ class SnapshotMessage(BaseModel):
     components: list[ComponentView] = Field(default_factory=list)
     macros: list[MacroView] = Field(default_factory=list)
     activity_choices: list[ActivityChoiceView] = Field(default_factory=list)
+    classes: list[ClassView] = Field(default_factory=list)
 
 
 class PatchesMessage(BaseModel):
@@ -497,6 +565,7 @@ ServerMessage = (
     | RejectMessage
     | PresenceMessage
     | NoticeMessage
+    | ClassSortMessage
 )
 
 
@@ -580,6 +649,9 @@ MACRO_INTENT = "macro"
 
 # The intent that opens, joins, begins and ends an activity in the room.
 ACTIVITY_INTENT = "activity"
+
+# The intent that starts and runs a class: several tables of one activity.
+CLASS_INTENT = "class"
 
 
 def chosen_options(game: Game, sent: object) -> dict[str, str] | str:
@@ -1112,6 +1184,7 @@ class RoomRuntime:
         )
         if not isinstance(outcome, Ok):
             return
+        self._seat_latecomer(seat.id)
         self.seq += 1
         self._history.clear()
         self._snapshot_due = True
@@ -1211,6 +1284,9 @@ class RoomRuntime:
             return
         if message.op_type == ACTIVITY_INTENT:
             self._on_activity(connection, seat_id, message)
+            return
+        if message.op_type == CLASS_INTENT:
+            self._on_class(connection, seat_id, message)
             return
         try:
             operation = decode_intent(message.op_type, message.payload)
@@ -1343,6 +1419,265 @@ class RoomRuntime:
             if activity.id in before or isinstance(operation, OpenActivity):
                 self._begin(seat_id, activity.id)
         self._resend_everyone()
+
+    def _seat_latecomer(self, seat_id: str) -> None:
+        """Seat someone who arrives after a sort at the roomiest table.
+
+        A table that has begun is given the new person's own zones.
+        """
+        seat = self.table.seats.get(seat_id)
+        if seat is None or seat.is_facilitator or seat.participant_id is None:
+            return
+        for group in self.table.classes.values():
+            tables = [self.table.activities[t] for t in group.tables]
+            if not tables or not any(t.seats for t in tables):
+                continue  # nobody has been sorted: people choose for themselves
+            open_tables = [t for t in tables if len(t.seats) < t.max_players]
+            if not open_tables:
+                continue
+            roomiest = min(open_tables, key=lambda t: len(t.seats) - t.max_players)
+            game = GAMES.get(group.kind)
+            if game is None:
+                continue
+            built = build_seat_move(game, self.table, SYSTEM_SEAT, seat_id, roomiest.id)
+            if isinstance(built, Transaction):
+                self._apply(SYSTEM_SEAT, built, log=True)
+            return
+
+    def _on_class(
+        self, connection: Connection, seat_id: str, message: IntentMessage
+    ) -> None:
+        """Start, sort, begin, time, prompt, pair or end a class.
+
+        Each is one model operation, logged like any other; beginning the
+        tables is one transaction per table, built from the definition. The
+        person who starts a class becomes the facilitator if nobody is.
+        """
+        payload = message.payload
+        action = payload.get("action")
+        class_id = payload.get("class_id")
+        operation: Operation
+        if action == "start":
+            game = GAMES.get(str(payload.get("slug")))
+            tables = payload.get("tables")
+            if game is None or game.slug == OPEN_ROOM_SLUG:
+                self._reject(
+                    connection, message.client_id, "There is no such activity."
+                )
+                return
+            if not isinstance(tables, int) or isinstance(tables, bool):
+                self._reject(connection, message.client_id, "Choose how many tables.")
+                return
+            chosen = chosen_options(game, payload.get("options"))
+            if isinstance(chosen, str):
+                self._reject(connection, message.client_id, chosen)
+                return
+            if not any(s.is_facilitator for s in self.table.seats.values()):
+                took = self._apply(seat_id, TakeFacilitator(), log=True)
+                if not isinstance(took, Ok):
+                    self._reject(connection, message.client_id, took.reason)
+                    return
+            meta = game.definition.meta
+            operation = StartClass(
+                kind=game.slug,
+                title=game.title,
+                min_players=meta.players.min,
+                max_players=meta.players.max,
+                tables=tables,
+                options=tuple(chosen.items()),
+            )
+        elif isinstance(class_id, str) and action in {
+            "sort_preview",
+            "assign",
+            "begin",
+            "timer",
+            "timer_clear",
+            "prompt",
+            "pair",
+            "unpair",
+            "decision",
+            "move",
+            "end",
+        }:
+            group = self.table.classes.get(class_id)
+            if group is None:
+                self._reject(
+                    connection, message.client_id, "That class is not running any more."
+                )
+                return
+            if action == "move":
+                moved = self._move_person(seat_id, group, payload)
+                if isinstance(moved, Reject):
+                    self._reject(connection, message.client_id, moved.reason)
+                    return
+                connection.send(AckMessage(client_id=message.client_id))
+                self._resend_everyone()
+                return
+            built = self._class_operation(seat_id, action, group, payload)
+            if isinstance(built, str):
+                self._reject(connection, message.client_id, built)
+                return
+            if built is None:
+                # A preview, a begin: answered without one operation.
+                if action == "sort_preview":
+                    proposed = self._sort_proposal(group)
+                    if isinstance(proposed, str):
+                        self._reject(connection, message.client_id, proposed)
+                        return
+                    connection.send(
+                        ClassSortMessage(
+                            class_id=group.id, tables=[list(t) for t in proposed]
+                        )
+                    )
+                    connection.send(AckMessage(client_id=message.client_id))
+                    return
+                begun = self._begin_class(seat_id, group.id)
+                if isinstance(begun, Reject):
+                    self._reject(connection, message.client_id, begun.reason)
+                    return
+                connection.send(AckMessage(client_id=message.client_id))
+                self._resend_everyone()
+                return
+            operation = built
+        else:
+            self._reject(connection, message.client_id, "That was not understood.")
+            return
+
+        self._land_drags(list(self._pending_moves))
+        reason = operation.validate(self.table, seat_id)
+        if reason is not None:
+            self._reject(connection, message.client_id, reason)
+            return
+        outcome = self._apply(seat_id, operation, log=True)
+        if not isinstance(outcome, Ok):
+            self._reject(connection, message.client_id, outcome.reason)
+            return
+        connection.send(AckMessage(client_id=message.client_id))
+        self._resend_everyone()
+
+    def _class_operation(
+        self, seat_id: str, action: str, group: ClassGroup, payload: dict[str, Any]
+    ) -> Operation | str | None:
+        """The operation for an action on ``group``, a sentence, or None for none."""
+        if action in ("sort_preview", "begin"):
+            if not self.table.is_facilitator(seat_id):
+                return "Only the facilitator can do that."
+            return None
+        game = GAMES.get(group.kind)
+        if action == "assign":
+            tables = payload.get("tables")
+            if not isinstance(tables, list) or not all(
+                isinstance(people, list) and all(isinstance(p, str) for p in people)
+                for people in tables
+            ):
+                return "Give each table its people."
+            return AssignClassTables(
+                group.id, tuple(tuple(people) for people in tables)
+            )
+        if action == "timer":
+            seconds = payload.get("seconds")
+            if not isinstance(seconds, int) or isinstance(seconds, bool):
+                return "Choose a time."
+            return StartClassTimer(group.id, seconds, time.time())
+        if action == "timer_clear":
+            return ClearClassTimer(group.id)
+        if action == "prompt":
+            prompt_id = payload.get("prompt_id")
+            if prompt_id in (None, ""):
+                return PushClassPrompt(group.id, "")
+            found = next(
+                (p for p in (game.prompts if game else ()) if p.id == prompt_id), None
+            )
+            if found is None:
+                return "That prompt is not one this activity has."
+            return PushClassPrompt(group.id, found.text)
+        if action in ("pair", "unpair", "decision"):
+            if game is None or not may_pair(game, group.options):
+                return "This activity does not pair tables."
+            first, second = payload.get("first"), payload.get("second")
+            if action == "pair":
+                if not isinstance(first, str) or not isinstance(second, str):
+                    return "Choose two tables."
+                return PairTables(group.id, first, second)
+            if action == "unpair":
+                if not isinstance(first, str):
+                    return "Choose a table."
+                return UnpairTables(group.id, first)
+            decision = payload.get("decision", "")
+            if not isinstance(first, str) or not isinstance(decision, str):
+                return "Choose a table and what it decided."
+            if decision and decision not in pairing_choices(game, group.options):
+                return "That is not a choice this activity offers."
+            return SetClassDecision(group.id, first, decision)
+        return EndClass(group.id)
+
+    def _move_person(
+        self, seat_id: str, group: ClassGroup, payload: dict[str, Any]
+    ) -> OpOutcome:
+        """Take someone off their table and seat them at another, begun or not."""
+        if not self.table.is_facilitator(seat_id):
+            return Reject("Only the facilitator can move people.")
+        person, to = payload.get("seat_id"), payload.get("to")
+        game = GAMES.get(group.kind)
+        if game is None or not isinstance(person, str):
+            return Reject("Choose a person to move.")
+        if to is not None and (not isinstance(to, str) or to not in group.tables):
+            return Reject("Choose a table of this class.")
+        built = build_seat_move(game, self.table, seat_id, person, to)
+        if not isinstance(built, Transaction):
+            return built
+        self._land_drags(list(self._pending_moves))
+        outcome = self._apply(seat_id, built, log=True)
+        if isinstance(outcome, Ok):
+            self._notice("A person was moved to another table.")
+        return outcome
+
+    def _sort_proposal(self, group: ClassGroup) -> list[tuple[str, ...]] | str:
+        """People dealt into the class's tables at random, to look at first.
+
+        The draw uses a fresh generator, so previewing changes nothing and
+        pressing "sort again" gives another; what is confirmed is the
+        assignment itself, and that is what is logged.
+        """
+        people = sorted(
+            seat.id
+            for seat in self.table.seats.values()
+            if seat.participant_id is not None and not seat.is_facilitator
+        )
+        limits = [
+            (self.table.activities[t].min_players, self.table.activities[t].max_players)
+            for t in group.tables
+        ]
+        return sort_into_tables(people, limits, TableRng(seed=secrets.randbits(32)))
+
+    def _begin_class(self, seat_id: str, class_id: str) -> OpOutcome:
+        """Begin every table that has the people it needs; say which could not."""
+        group = self.table.classes.get(class_id)
+        if group is None:
+            return Reject("That class is not running any more.")
+        if not self.table.is_facilitator(seat_id):
+            return Reject("Only the facilitator can begin the tables.")
+        began = 0
+        waiting: list[str] = []
+        for number, tid in enumerate(group.tables, start=1):
+            activity = self.table.activities.get(tid)
+            if activity is None or activity.status != "signup":
+                continue
+            if not activity.min_players <= len(activity.seats) <= activity.max_players:
+                waiting.append(str(number))
+                continue
+            outcome = self._begin(seat_id, tid)
+            if isinstance(outcome, Ok):
+                began += 1
+        if waiting:
+            self._notice(
+                f"Table {', '.join(waiting)} cannot begin yet: it needs a different "
+                "number of people.",
+                level="warning",
+            )
+        if began == 0 and waiting:
+            return Reject("No table has the number of people it needs.")
+        return Ok([])
 
     def _begin(self, seat_id: str, activity_id: str) -> OpOutcome:
         """Lay out an activity's zones and mark it running, as ``seat_id``."""
@@ -1658,10 +1993,82 @@ class RoomRuntime:
                     seats=list(a.seats),
                     status=a.status,
                     options=dict(a.options),
+                    class_id=a.class_id,
                 )
                 for a in view.activities
             ],
         )
+
+    def _class_views(
+        self, is_facilitator: bool, seat_id: str | None = None
+    ) -> list[ClassView]:
+        """Every class, as one viewer may see it.
+
+        Decisions and outcomes are the facilitator's. Nothing here reads a
+        piece, so no card face or token value can be in it.
+        """
+        now = time.time()
+        views: list[ClassView] = []
+        for group in self.table.classes.values():
+            game = GAMES.get(group.kind)
+            remaining = (
+                None
+                if group.timer_ends_at is None
+                else max(0.0, group.timer_ends_at - now)
+            )
+            view = ClassView(
+                id=group.id,
+                kind=group.kind,
+                title=group.title,
+                tables=list(group.tables),
+                timer_remaining=remaining,
+                timer_seconds=group.timer_seconds,
+                prompt=group.prompt,
+                prompt_serial=group.prompt_serial,
+            )
+            if is_facilitator and game is not None:
+                view.can_pair = may_pair(game, group.options)
+                view.pair_choices = list(pairing_choices(game, group.options))
+                view.prompt_choices = [
+                    ClassPromptChoiceView(id=p.id, text=p.text) for p in game.prompts
+                ]
+                for first, second in group.pairs:
+                    ours = group.decisions.get(first)
+                    theirs = group.decisions.get(second)
+                    view.pairs.append(
+                        ClassPairView(
+                            first=first,
+                            second=second,
+                            first_decision=ours,
+                            second_decision=theirs,
+                            first_proposed=group.proposed.get(first),
+                            second_proposed=group.proposed.get(second),
+                            outcome=(
+                                pair_outcome(game, ours, theirs)
+                                if ours is not None and theirs is not None
+                                else None
+                            ),
+                        )
+                    )
+            elif game is not None and seat_id is not None:
+                # Someone at a paired table proposes what their table chose;
+                # the facilitator confirms it.
+                mine = next(
+                    (
+                        t
+                        for t in group.tables
+                        if seat_id in self.table.activities[t].seats
+                        and any(t in pair for pair in group.pairs)
+                    ),
+                    None,
+                )
+                if mine is not None:
+                    view.your_table = mine
+                    view.your_decision = group.decisions.get(mine)
+                    view.your_proposal = group.proposed.get(mine)
+                    view.pair_choices = list(pairing_choices(game, group.options))
+            views.append(view)
+        return views
 
     def _components_for(self, view: ViewTable) -> list[ComponentView]:
         """The faces this viewer already holds, and not one more.
@@ -1731,6 +2138,7 @@ class RoomRuntime:
             components=components,
             macros=self._macros_for(connection),
             activity_choices=activity_choices(),
+            classes=self._class_views(connection.is_facilitator, connection.seat_id),
         )
         connection.last_seq_sent = self.seq
         connection.send(message)

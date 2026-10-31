@@ -145,6 +145,51 @@ export interface ActivityView {
   status: "signup" | "running";
   /** What was chosen when it was opened, such as which city. */
   options?: Record<string, string>;
+  /** The class this is one table of, or "" when it stands alone. */
+  class_id?: string;
+}
+
+/** Two paired tables of a class. Sent to the facilitator only. */
+export interface ClassPairView {
+  first: string;
+  second: string;
+  first_decision: string | null;
+  second_decision: string | null;
+  /** What someone at each table proposed, waiting for the facilitator. */
+  first_proposed?: string | null;
+  second_proposed?: string | null;
+  /** What follows from the two decisions, once both are in. */
+  outcome: string | null;
+}
+
+/** A class: one activity at several tables, run by the facilitator. */
+export interface ClassView {
+  id: string;
+  kind: string;
+  title: string;
+  tables: string[];
+  /** Seconds left at the moment this was sent, or null with no timer. */
+  timer_remaining: number | null;
+  timer_seconds: number;
+  prompt: string;
+  /** Counts up with each prompt pushed, so a dismissed one stays dismissed. */
+  prompt_serial: number;
+  can_pair?: boolean;
+  pair_choices?: string[];
+  /** For someone at a paired table: their table, and what it has chosen. */
+  your_table?: string;
+  your_decision?: string | null;
+  /** What this person's table proposed, until the facilitator confirms it. */
+  your_proposal?: string | null;
+  pairs?: ClassPairView[];
+  prompt_choices?: Array<{ id: string; text: string }>;
+}
+
+/** A proposed sorting of people into a class's tables. Facilitator only. */
+export interface ClassSortMessage {
+  type: "class_sort";
+  class_id: string;
+  tables: string[][];
 }
 
 /** An open swap offer. The whole table sees who offers what to whom. */
@@ -215,6 +260,7 @@ export interface SnapshotMessage {
   components: ComponentView[];
   macros: MacroView[];
   activity_choices?: ActivityChoiceView[];
+  classes?: ClassView[];
 }
 
 export interface PatchesMessage {
@@ -273,7 +319,8 @@ export type ServerMessage =
   | MenuMessage
   | RejectMessage
   | PresenceMessage
-  | NoticeMessage;
+  | NoticeMessage
+  | ClassSortMessage;
 
 export interface HelloMessage {
   type: "hello";

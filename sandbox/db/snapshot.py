@@ -12,6 +12,7 @@ from typing import Any
 
 from sandbox.model import (
     Activity,
+    ClassGroup,
     Layout,
     Offer,
     Piece,
@@ -63,10 +64,28 @@ def to_snapshot(table: Table) -> Snapshot:
                 "status": a.status,
                 "zones": list(a.zones),
                 "options": dict(a.options),
+                "class_id": a.class_id,
             }
             for activity_id, a in table.activities.items()
         },
         "activity_serial": table.activity_serial,
+        "classes": {
+            class_id: {
+                "kind": c.kind,
+                "title": c.title,
+                "tables": list(c.tables),
+                "options": dict(c.options),
+                "timer_ends_at": c.timer_ends_at,
+                "timer_seconds": c.timer_seconds,
+                "prompt": c.prompt,
+                "prompt_serial": c.prompt_serial,
+                "pairs": [list(pair) for pair in c.pairs],
+                "decisions": dict(c.decisions),
+                "proposed": dict(c.proposed),
+            }
+            for class_id, c in table.classes.items()
+        },
+        "class_serial": table.class_serial,
         "rng": _dump_rng(table.rng),
         "version": table.version,
         "applied_op_ids": sorted(table.applied_op_ids),
@@ -116,10 +135,30 @@ def from_snapshot(data: Snapshot) -> Table:
                 status=fields["status"],
                 zones=tuple(fields["zones"]),
                 options=dict(fields.get("options", {})),
+                class_id=fields.get("class_id", ""),
             )
             for activity_id, fields in data.get("activities", {}).items()
         },
         activity_serial=data.get("activity_serial", 0),
+        # Snapshots written before classes existed have neither key.
+        classes={
+            class_id: ClassGroup(
+                id=class_id,
+                kind=fields["kind"],
+                title=fields["title"],
+                tables=tuple(fields["tables"]),
+                options=dict(fields.get("options", {})),
+                timer_ends_at=fields.get("timer_ends_at"),
+                timer_seconds=fields.get("timer_seconds", 0),
+                prompt=fields.get("prompt", ""),
+                prompt_serial=fields.get("prompt_serial", 0),
+                pairs=tuple((a, b) for a, b in fields.get("pairs", [])),
+                decisions=dict(fields.get("decisions", {})),
+                proposed=dict(fields.get("proposed", {})),
+            )
+            for class_id, fields in data.get("classes", {}).items()
+        },
+        class_serial=data.get("class_serial", 0),
         rng=_load_rng(data["rng"]),
         version=data["version"],
         applied_op_ids=set(data["applied_op_ids"]),

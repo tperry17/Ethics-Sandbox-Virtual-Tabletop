@@ -15,6 +15,7 @@
  */
 
 import { renderActivities, renderTrades } from "./activities.js";
+import { clock, renderClasses } from "./classes.js";
 import { Announcer } from "./announcer.js";
 import { InkLayer } from "./ink.js";
 import { IntentTracker } from "./intents.js";
@@ -93,6 +94,14 @@ export class TableRenderer {
   private readonly trayFan: HTMLElement;
   private readonly trayLabel: HTMLElement;
   private readonly status: HTMLElement;
+  private readonly banner: HTMLElement;
+  private readonly timerText: HTMLElement;
+  private readonly promptCard: HTMLElement;
+  /** Prompts this person has put away, as `<class>:<serial>`. */
+  private readonly dismissedPrompts = new Set<string>();
+  /** Classes whose timer has been seen running, so each chimes once. */
+  private readonly timerArmed = new Set<string>();
+  private audio: AudioContext | null = null;
   private readonly notices: HTMLElement;
   private readonly controller: ViewportController;
   private readonly ink: InkLayer;
@@ -132,6 +141,12 @@ export class TableRenderer {
     this.canvas = document.createElement("canvas");
     this.canvas.className = "tabletop__ink";
     this.status = element("p", "tabletop__status");
+    this.banner = element("div", "tabletop__banner");
+    this.timerText = element("p", "tabletop__timer");
+    this.timerText.setAttribute("role", "timer");
+    this.promptCard = element("aside", "tabletop__prompt");
+    this.banner.append(this.timerText, this.promptCard);
+    this.banner.hidden = true;
     this.notices = element("div", "tabletop__notices");
     this.notices.setAttribute("role", "status");
     this.notices.setAttribute("aria-live", "polite");
@@ -139,7 +154,7 @@ export class TableRenderer {
     this.world.append(this.zoneLayer, this.pieceLayer);
     this.controlsElement = this.controls();
     this.surface.append(this.world, this.canvas, this.controlsElement, this.status);
-    this.surface.append(this.notices);
+    this.surface.append(this.notices, this.banner);
 
     this.tray = element("div", "hand-tray");
     this.tray.hidden = true;
@@ -193,9 +208,74 @@ export class TableRenderer {
     this.options.link.onStatus((status) => this.setStatus(status));
     this.options.link.start();
     this.renderToolbar();
+    this.bannerTimer = window.setInterval(() => this.updateBanner(), 500);
+  }
+
+  private bannerTimer = 0;
+
+  /**
+   * The class's countdown and pushed prompt, drawn on every screen. The
+   * countdown is advisory: reaching zero chimes once and changes nothing.
+   */
+  private updateBanner(): void {
+    const now = performance.now();
+    const mine = this.model.classes.find((group) => group.timer_remaining !== null);
+    const lines: string[] = [];
+    for (const group of this.model.classes) {
+      const ends = this.model.classTimerEnds.get(group.id);
+      if (ends === undefined) {
+        this.timerArmed.delete(group.id);
+        continue;
+      }
+      const left = (ends - now) / 1000;
+      lines.push(left > 0 ? clock(left) : "Time");
+      if (left > 0) this.timerArmed.add(group.id);
+      else if (this.timerArmed.delete(group.id)) {
+        this.chime();
+        this.announcer.announce("Time is up.");
+      }
+    }
+    const shown = lines.length > 0 && mine !== undefined;
+    this.timerText.hidden = !shown;
+    if (shown) this.timerText.textContent = lines.join(" · ");
+    const group = this.model.classes.find(
+      (g) => g.prompt !== "" && !this.dismissedPrompts.has(`${g.id}:${g.prompt_serial}`),
+    );
+    if (group === undefined) this.promptCard.hidden = true;
+    else if (this.promptCard.dataset.key !== `${group.id}:${group.prompt_serial}`) {
+      this.promptCard.hidden = false;
+      this.promptCard.dataset.key = `${group.id}:${group.prompt_serial}`;
+      const text = element("p", "tabletop__prompt-text");
+      text.textContent = group.prompt;
+      const close = button("Put away", () => {
+        this.dismissedPrompts.add(`${group.id}:${group.prompt_serial}`);
+        this.updateBanner();
+      });
+      this.promptCard.replaceChildren(text, close);
+    }
+    this.banner.hidden = this.timerText.hidden && this.promptCard.hidden;
+  }
+
+  private chime(): void {
+    try {
+      const AudioCtor = window.AudioContext;
+      this.audio ??= new AudioCtor();
+      const tone = this.audio.createOscillator();
+      const gain = this.audio.createGain();
+      tone.frequency.value = 660;
+      gain.gain.setValueAtTime(0.0001, this.audio.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.2, this.audio.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, this.audio.currentTime + 1.2);
+      tone.connect(gain).connect(this.audio.destination);
+      tone.start();
+      tone.stop(this.audio.currentTime + 1.3);
+    } catch {
+      // No sound is available; the banner and the live region still say it.
+    }
   }
 
   stop(): void {
+    window.clearInterval(this.bannerTimer);
     this.controller.detach();
     this.resizeObserver?.disconnect();
     this.options.link.stop();
@@ -248,6 +328,11 @@ export class TableRenderer {
     }
     if (message.type === "menu") {
       this.menu.receive(message);
+      return;
+    }
+    if (message.type === "class_sort") {
+      this.model.classSort = message;
+      this.renderToolbar();
       return;
     }
     if (message.type === "presence") {
@@ -666,6 +751,13 @@ export class TableRenderer {
       this.intents.send("activity", payload),
     );
     if (activities !== null) toolbar.append(activities);
+    const classes = renderClasses(
+      this.model,
+      (payload) => this.intents.send("class", payload),
+      (payload) => this.intents.send("activity", payload),
+      () => this.renderToolbar(),
+    );
+    if (classes !== null) toolbar.append(classes);
     const trades = renderTrades(this.model, () => this.selection, (opType, payload) =>
       this.intents.send(opType, payload),
     );

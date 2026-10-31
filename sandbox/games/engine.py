@@ -44,6 +44,7 @@ from sandbox.model import (
     AddSeat,
     AddZone,
     BeginActivity,
+    ChangeActivitySeats,
     ClearInk,
     Deal,
     Draw,
@@ -570,6 +571,143 @@ def build_activity_start(
     return builder.transaction(
         name=f"activity:{activity_id}", label=f"Begin {activity.title}"
     )
+
+
+def _used_seat_indexes(
+    builder: _Builder, scope: Scope, seats: tuple[str, ...]
+) -> set[int]:
+    """Which places along each per-seat zone's step the given seats already hold."""
+    used: set[int] = set()
+    game = builder._game()
+    ox, oy = scope.origin
+    for spec in game.definition.zones:
+        if not spec.per_seat or not builder._wanted(spec):
+            continue
+        x, y, _, _ = spec.rect
+        dx, dy = spec.step
+        for seat in seats:
+            zone = builder.trial.zones.get(seat_zone_id(scope.prefix + spec.id, seat))
+            if zone is None or not isinstance(zone.geometry, Rect):
+                continue
+            if dx:
+                used.add(round((zone.geometry.x - ox - x) / dx))
+            elif dy:
+                used.add(round((zone.geometry.y - oy - y) / dy))
+            else:
+                used.add(0)
+    return used
+
+
+def deck_homes(game: Game) -> dict[str, str]:
+    """Where each deck lives: the zone its first ``spawn_deck`` step names."""
+    homes: dict[str, str] = {}
+    steps = [*game.definition.setup]
+    for macro in game.definition.macros:
+        steps.extend(macro.steps or ())
+    for step in steps:
+        if isinstance(step, SpawnDeckStep):
+            homes.setdefault(step.deck, step.zone)
+    return homes
+
+
+def _return_cards(builder: _Builder, scope: Scope, gone: set[str]) -> None:
+    """Put the cards in the zones of people leaving a table back in their decks.
+
+    Each goes face down into the zone its deck was laid out in, and every
+    deck that took a card back is shuffled, so nobody can tell where it went.
+    """
+    activity = builder.trial.activities[scope.activity_id]
+    homes = deck_homes(builder._game())
+    shuffled: list[str] = []
+    for zone_id in activity.zones:
+        zone = builder.trial.zones.get(zone_id)
+        if zone is None or zone.owner_seat not in gone:
+            continue
+        for piece in builder.trial.pieces_in_zone(zone_id):
+            deck = piece.component_id.split(":", 1)[0]
+            home = homes.get(deck)
+            if piece.kind is not PieceKind.CARD or home is None:
+                continue
+            home_id = scope.prefix + home
+            if home_id not in builder.trial.zones:
+                continue
+            builder.run(Flip(piece_id=piece.id, face_up=False))
+            builder.run(MoveToZone(piece_id=piece.id, zone_id=home_id))
+            if home_id not in shuffled:
+                shuffled.append(home_id)
+    for home_id in shuffled:
+        if builder.trial.zones[home_id].visibility is Visibility.HIDDEN:
+            builder.run(Shuffle(zone_id=home_id))
+
+
+def _change_seats(builder: _Builder, activity_id: str, seats: tuple[str, ...]) -> None:
+    """Add the steps that change who sits at one table, making zones for new people."""
+    activity = builder.trial.activities[activity_id]
+    scope = scope_of(builder.trial, activity_id)
+    builder.scope = scope
+    added: list[str] = []
+    if activity.status == "running":
+        _return_cards(builder, scope, set(activity.seats) - set(seats))
+        staying = tuple(seat for seat in seats if seat in activity.seats)
+        used = _used_seat_indexes(builder, scope, staying)
+        for seat_id in (seat for seat in seats if seat not in activity.seats):
+            index = next(i for i in range(len(seats) + len(used) + 1) if i not in used)
+            used.add(index)
+            label = builder.trial.seats[seat_id].label
+            for spec in builder._game().definition.zones:
+                if spec.per_seat and builder._wanted(spec):
+                    zone = _add_zone(
+                        spec,
+                        seat_id=seat_id,
+                        seat_index=index,
+                        label=f"{spec.label} · {label}",
+                        scope=scope,
+                    )
+                    builder.run(zone)
+                    added.append(zone.zone_id)
+    builder.run(ChangeActivitySeats(activity_id, seats, tuple(added)))
+
+
+def build_seat_move(
+    game: Game,
+    table: Table,
+    actor_seat: str,
+    seat_id: str,
+    to_activity_id: str | None,
+) -> Transaction | Reject:
+    """Take someone off their table in a class and seat them at another (or none).
+
+    One transaction, so nobody is ever at two tables or at none in between.
+    A person new to a begun table gets that activity's own zones for them.
+    """
+    to = table.activities.get(to_activity_id) if to_activity_id else None
+    if to_activity_id is not None and (to is None or not to.class_id):
+        return Reject("That table is not part of a class.")
+    classes = {a.class_id for a in table.activities.values() if seat_id in a.seats}
+    classes.discard("")
+    if to is not None:
+        classes.add(to.class_id)
+    if len(classes) != 1:
+        return Reject("Choose a table of the class they are in.")
+    (class_id,) = classes
+    group = table.classes[class_id]
+    if group.kind != game.slug:
+        return Reject("That class is running something else.")
+    builder = _Builder(game, table, actor_seat)
+    try:
+        for tid in group.tables:
+            activity = builder.trial.activities.get(tid)
+            if activity is None:
+                continue
+            if seat_id in activity.seats and tid != to_activity_id:
+                _change_seats(
+                    builder, tid, tuple(s for s in activity.seats if s != seat_id)
+                )
+        if to is not None and seat_id not in to.seats:
+            _change_seats(builder, to.id, (*to.seats, seat_id))
+    except _Refused as refusal:
+        return Reject(refusal.reason)
+    return builder.transaction(name=f"move:{seat_id}", label="Move a person")
 
 
 def build_macro(

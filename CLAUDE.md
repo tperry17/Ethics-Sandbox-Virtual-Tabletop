@@ -14,7 +14,9 @@ Facilitators—teachers, community organisers, and workshop leads—run groups o
 
 ## Rooms and activities
 
-A room is an open sandbox, not one exercise. Up to 20 people join it and use the table however they please: the free table, the value cards, dice, tokens and other loose pieces. No activity is built into a room. An activity is a guided exercise started inside a room: someone presses "Start the <activity>", a sign-up opens for the activity's players (the facilitator may choose them instead), and the activity lays out its own zones for those seats and guides them through its steps. Everyone else keeps using the sandbox, and several activities, or several groups doing the same one, can run in a room at once. An activity's `players: {min, max}` is how many people it takes (three for Value Cards Trading), never the room's capacity.
+A room is an open sandbox, not one exercise. Up to 30 people join it and use the table however they please: the free table, the value cards, dice, tokens and other loose pieces. No activity is built into a room. An activity is a guided exercise started inside a room: someone presses "Start the <activity>", a sign-up opens for the activity's players (the facilitator may choose them instead), and the activity lays out its own zones for those seats and guides them through its steps. Everyone else keeps using the sandbox, and several activities, or several groups doing the same one, can run in a room at once. An activity's `players: {min, max}` is how many people it takes (three for Value Cards Trading), never the room's capacity.
+
+A class is an activity run as several tables at once. Someone presses "Start a class" instead of "Start the <activity>", chooses how many tables, and becomes the facilitator of all of them, as a non-playing admin: they sit at none. The facilitator can sort the room's people into the tables at random (shown first, adjustable by hand, then confirmed), begin the tables, run one timer and push one prompt to every table at once, and, for a game that declares `pairing`, pair two tables so their decisions are read together. The facilitator can move anyone to another table at any time, begun or not (at a begun table their cards go back face down into the decks they came from, which are shuffled, their other zones go, and they get fresh ones at the new table), and a person who arrives after the sort takes the table with the most room. Players at a paired table propose their table's choice and the facilitator confirms it; they see only their own table's. The class is a `ClassGroup` in `sandbox/model/classes.py`; its tables are ordinary activities.
 
 The facilitator is optional, an admin seat. Nobody is the facilitator by default, the room's creator included. Any participant may take the seat with a "Become facilitator" button, or choose it when joining; only one person holds it, and nothing in any activity requires it.
 
@@ -88,6 +90,10 @@ person did: no rule, no deck, and no face it was not given.
 - `intents.ts` — sending intents and matching each `ack` or `reject` to it
 - `menu.ts` — the context menu, whose contents the server supplies
 - `reveal.ts` — reveals in progress, and a close look at your own card
+- `classes.ts` — the toolbar's classes: starting one, the sort proposal,
+  the timer and prompt controls, and pairing. The timer and a pushed prompt
+  are drawn by `table.ts` on every screen; reaching zero chimes once and
+  changes nothing
 - `activities.ts` — the toolbar's activities: what can be started, who has
   signed up, and the buttons that act on one
 - `announcer.ts` — the live region that says what happened, in words
@@ -189,6 +195,7 @@ server do.
   row per macro: `id`, `label`, `hint`, `confirm` (asked first; give one to
   anything destructive) and `announce` (`{name}` and `{label}`).
 - `prompts` — `source:` a CSV with `id` and `text` columns.
+- `pairing` — optional: `source:` a CSV of `our_choice`, `their_choice` and `text`, and `when:` the options it applies to (Democracy Simulation scenario 2). A class may pair two of its tables; someone at a table proposes that table's choice, the facilitator confirms it (or sets it), and once both are confirmed the facilitator sees the matching row.
 
 Steps are `{op: ..., ...}`: `setup` (run the setup steps here),
 `spawn_deck`, `spawn`, `shuffle`, `deal` and `draw` (`from`, `to`,

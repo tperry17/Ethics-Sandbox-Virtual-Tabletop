@@ -48,7 +48,7 @@ does not read its sheets directly: `role_cards.csv`, `moderator_cards.csv`,
 a card's back is made of several of them. **After editing any of those five,
 run `uv run python sandbox/games/democracy_simulation/compose.py`** and commit
 the four files it writes; a test fails until you do. `outcomes.csv` (the nine
-outcomes of Phase 2's war table) is kept for the class page, and
+outcomes of Scenario 2's war table) is kept for the class page, and
 `prompts.csv` holds the debrief questions, each under its learning outcome.
 
 The Democracy Simulation's three files come from the author's "role

@@ -13,6 +13,8 @@
 import type {
   ActivityChoiceView,
   ActivityView,
+  ClassSortMessage,
+  ClassView,
   OfferView,
   ComponentView,
   CursorView,
@@ -105,6 +107,11 @@ export class TableModel {
   macros: MacroView[] = [];
   activities = new Map<string, ActivityView>();
   activityChoices: ActivityChoiceView[] = [];
+  classes: ClassView[] = [];
+  /** When each class's timer runs out, on this browser's clock, in ms. */
+  classTimerEnds = new Map<string, number>();
+  /** The facilitator's proposed sorting, until it is confirmed or dropped. */
+  classSort: ClassSortMessage | null = null;
   offers = new Map<string, OfferView>();
   /** Pairs of seats that have swapped, each as its two seat ids joined by `|`, sorted. */
   swapped = new Set<string>();
@@ -159,6 +166,15 @@ export class TableModel {
       (message.view_table.swapped ?? []).map((pair) => [...pair].sort().join("|")),
     );
     this.activityChoices = (message.activity_choices ?? []).map((choice) => ({ ...choice }));
+    this.classes = (message.classes ?? []).map((group) => ({ ...group }));
+    this.classTimerEnds = new Map(
+      this.classes
+        .filter((group) => group.timer_remaining !== null)
+        .map((group) => [group.id, performance.now() + (group.timer_remaining ?? 0) * 1000]),
+    );
+    if (this.classSort !== null && !this.classes.some((g) => g.id === this.classSort?.class_id)) {
+      this.classSort = null;
+    }
     this.you = { ...message.you };
     this.version = message.view_table.version;
     this.seq = message.seq;
