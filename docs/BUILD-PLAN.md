@@ -45,7 +45,7 @@ shows "Claimed" in this table on `main`.
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
-| 17 | Open rooms and activities (added 2026-10-31; first in the order) | Claimed | `claude/step-17-open-rooms-and-activities` | |
+| 17 | Open rooms and activities | Claimed; in progress (PR #18): optional facilitator seat done; open sandbox room and activities to do | `claude/step-17-open-rooms-and-activities` | PR #18 |
 | 16 | Launch pass | Not started; hosting is the Mac on the local network (below) | `claude/step-16-launch-pass` | |
 
 ### Claiming a step
@@ -1558,7 +1558,9 @@ Read CLAUDE.md. Prepare the Ethics Sandbox for its first real session.
 
 ## 17. Open rooms and activities
 
-**Status: Not started. Runs first.** Added on 2026-10-31 at the author's
+**Status: In progress (PR #18).** Done: the optional, transferable facilitator
+seat (model, rooms, live, `/start`, `/join`, the table's button). To do: the
+open 20-person sandbox room and the activity sign-up and scoping. Added on 2026-10-31 at the author's
 direction, after Prompt 10's server side was built for a room that is one
 exercise. Read CLAUDE.md's "Rooms and activities" first.
 

@@ -462,6 +462,8 @@ _OPERATION_TYPES: tuple[type, ...] = (
     ShowTo,
     EndShow,
     Peek,
+    TakeFacilitator,
+    ReleaseFacilitator,
 )
 
 

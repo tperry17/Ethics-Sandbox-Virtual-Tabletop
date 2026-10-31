@@ -266,3 +266,8 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
+
+/* A button given the hidden attribute stays hidden whatever display it has. */
+.button[hidden] {
+  display: none;
+}

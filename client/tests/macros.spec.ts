@@ -9,6 +9,7 @@ async function startTwoDoors(browser: Browser): Promise<{ page: Page; code: stri
   const page = await (await browser.newContext()).newPage();
   await page.goto("/start?game=two-doors");
   await page.getByLabel("Your name").fill("Ines");
+  await page.getByLabel(/Join as facilitator/).check();
   await page.getByRole("button", { name: "Start a table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
   const code = page.url().split("/t/")[1]!;
@@ -65,4 +66,24 @@ test("a participant does not get the facilitator's buttons", async ({ browser })
   const guest = await join(browser, code, "Tomas");
 
   await expect(guest.locator("[data-macro-id]")).toHaveCount(0);
+});
+
+test("nobody is the facilitator until someone takes the seat, and only one at a time", async ({
+  browser,
+}) => {
+  const page = await (await browser.newContext()).newPage();
+  await page.goto("/start?game=two-doors");
+  await page.getByLabel("Your name").fill("Ines");
+  await page.getByRole("button", { name: "Start a table" }).click();
+  await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+  const code = page.url().split("/t/")[1]!;
+  const guest = await join(browser, code, "Tomas");
+
+  await expect(page.getByRole("button", { name: "Become facilitator" })).toBeVisible();
+  await page.getByRole("button", { name: "Become facilitator" }).click();
+  await expect(page.getByRole("button", { name: "Hand back facilitator" })).toBeVisible();
+  await expect(guest.getByRole("button", { name: "Become facilitator" })).toBeHidden();
+
+  await page.getByRole("button", { name: "Hand back facilitator" }).click();
+  await expect(guest.getByRole("button", { name: "Become facilitator" })).toBeVisible();
 });
