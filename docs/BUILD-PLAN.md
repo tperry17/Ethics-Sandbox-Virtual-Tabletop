@@ -40,7 +40,7 @@ shows "Claimed" in this table on `main`.
 | 8 | The table client — interaction | Done | | `d8c383d` (PR #1) |
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
 | 10 | Value Cards Trading | Done | | PR #16 |
-| 11 | Democracy Simulation | Built; awaiting review (PR #19) | `claude/step-11-democracy-simulation` | PR #19 |
+| 11 | Democracy Simulation | Done | | PR #19 |
 | 12 | Running a session (rewritten, lean) | Not started | `claude/step-12-facilitator-controls` | |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
@@ -940,7 +940,7 @@ Update this plan's status table. Commit.
 
 ## 11. Democracy Simulation
 
-**Status: Built, awaiting review (PR #19).** Built: options (city and
+**Status: Done (PR #19).** Built: options (city and
 phase), the cards, the deal, the co-Chairs, written proposals, the speaking
 queue, and the count in both cities, with tests. The author decided on
 2026-10-31: text can be written on a note (a generic `SetText`, by
