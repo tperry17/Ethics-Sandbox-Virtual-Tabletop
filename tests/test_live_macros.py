@@ -83,6 +83,7 @@ async def two_doors_room() -> AsyncIterator[GameRoom]:
             game_slug="two-doors",
             facilitator_cookie_id=FACILITATOR_COOKIE,
             facilitator_name="Ines",
+            as_facilitator=True,
         )
         code = room.code
     hub = LiveHub(session_factory=factory)

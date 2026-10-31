@@ -50,6 +50,7 @@ from sandbox.model.ops import (
 )
 from sandbox.model.results import Ok, OpOutcome, Patch, Reject
 from sandbox.model.rng import TableRng
+from sandbox.model.roles import ReleaseFacilitator, TakeFacilitator, facilitator_seat
 from sandbox.model.types import Layout, PieceKind, Visibility, ZoneKind
 from sandbox.model.visibility import (
     ViewPiece,
@@ -64,6 +65,12 @@ from sandbox.model.visibility import (
 )
 
 __all__ = [
+    "ReleaseFacilitator",
+    "TakeFacilitator",
+    "facilitator_seat",
+    "ReleaseFacilitator",
+    "TakeFacilitator",
+    "facilitator_seat",
     "AddSeat",
     "AddZone",
     "AssignSeat",

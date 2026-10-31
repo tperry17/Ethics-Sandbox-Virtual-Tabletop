@@ -32,6 +32,7 @@ from sandbox.web.identity import (
 from sandbox.web.live import hub
 from sandbox.web.preview import table_preview as picture_of_table
 from sandbox.web.rooms import (
+    FacilitatorTakenError,
     RoomClosedError,
     RoomNotFoundError,
     UnknownExerciseError,
@@ -182,9 +183,13 @@ def start_room(
     request: Request,
     game_slug: str = Form(...),
     display_name: str = Form(...),
+    as_facilitator: bool = Form(False),
     session: Session = Depends(get_session),
 ) -> Response:
-    """Create a room for ``game_slug`` and seat its facilitator."""
+    """Create a room for ``game_slug`` and seat its creator.
+
+    The creator is a player unless they ticked "Join as facilitator".
+    """
     cookie_id = _identify(request)
 
     if not display_name.strip():
@@ -196,7 +201,7 @@ def start_room(
                 "exercises": EXERCISES,
                 "games": _start_choices(game_slug),
                 "chosen": game_slug,
-                "error": "Enter a name for the facilitator.",
+                "error": "Enter a name to join with.",
             },
         )
         set_participant_cookie(response, request, cookie_id)
@@ -208,6 +213,7 @@ def start_room(
             game_slug=game_slug,
             facilitator_cookie_id=cookie_id,
             facilitator_name=display_name,
+            as_facilitator=as_facilitator,
         )
     except UnknownExerciseError:
         response = templates.TemplateResponse(
@@ -244,6 +250,7 @@ def join_room_route(
     request: Request,
     room_code: str = Form(...),
     display_name: str = Form(...),
+    as_facilitator: bool = Form(False),
     session: Session = Depends(get_session),
 ) -> Response:
     """Seat the caller at the room named by ``room_code``."""
@@ -266,12 +273,18 @@ def join_room_route(
 
     try:
         participant = join_room(
-            session, code=room_code, cookie_id=cookie_id, display_name=display_name
+            session,
+            code=room_code,
+            cookie_id=cookie_id,
+            display_name=display_name,
+            as_facilitator=as_facilitator,
         )
     except RoomNotFoundError:
         return _error(f"There is no room with the code {room_code.strip().upper()!r}.")
     except RoomClosedError:
         return _error("That room is closed.")
+    except FacilitatorTakenError:
+        return _error("That room already has a facilitator. Join as a player.")
     if participant.seat_id is not None:
         # Committed first, so a live room that reads the seat finds it.
         session.commit()

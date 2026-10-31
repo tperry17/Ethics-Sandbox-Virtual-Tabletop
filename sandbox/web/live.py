@@ -72,6 +72,7 @@ from sandbox.model import (
     Point,
     Rect,
     Release,
+    ReleaseFacilitator,
     ReorderZ,
     ResetTable,
     ResetZone,
@@ -84,6 +85,7 @@ from sandbox.model import (
     Spawn,
     StackOnto,
     Table,
+    TakeFacilitator,
     Transaction,
     Ungroup,
     Unlock,
@@ -1117,6 +1119,12 @@ class RoomRuntime:
         # Sent after the patches, so by the time the client hears "accepted"
         # it already holds the table that resulted.
         connection.send(AckMessage(client_id=message.client_id))
+        if isinstance(operation, TakeFacilitator | ReleaseFacilitator):
+            # The toolbar differs for the facilitator, so everyone is sent
+            # their table again.
+            for other in list(self._connections.values()):
+                if other.ready:
+                    self._send_snapshot(other)
 
     def _on_macro(
         self, connection: Connection, seat_id: str, message: IntentMessage
@@ -1405,7 +1413,13 @@ class RoomRuntime:
             if component_id in wanted
         ]
 
+    def _refresh_role(self, connection: Connection) -> None:
+        """The table says who is the facilitator, and that changes as people play."""
+        seat = connection.seat_id
+        connection.is_facilitator = seat is not None and self.table.is_facilitator(seat)
+
     def _macros_for(self, connection: Connection) -> list[MacroView]:
+        self._refresh_role(connection)
         return [
             macro
             for macro in self.macros
@@ -1413,6 +1427,7 @@ class RoomRuntime:
         ]
 
     def _send_snapshot(self, connection: Connection) -> None:
+        self._refresh_role(connection)
         seats = self._seat_views()
         view = project(self.table, connection.seat_id)
         components = self._components_for(view)
@@ -1668,7 +1683,7 @@ class LiveHub:
             participant_id=participant.id,
             display_name=participant.display_name,
             seat_id=participant.seat_id,
-            is_facilitator=room.facilitator_participant_id == participant.id,
+            is_facilitator=False,  # read from the table once the room task has it
             is_observer=participant.is_observer,
             stored_seat=stored_seat,
         )

@@ -49,7 +49,11 @@ def test_starting_a_room_redirects_to_the_table_and_sets_a_cookie(
 ) -> None:
     response = client.post(
         "/start",
-        data={"game_slug": "value-cards-trading", "display_name": "Ada"},
+        data={
+            "game_slug": "value-cards-trading",
+            "display_name": "Ada",
+            "as_facilitator": "true",
+        },
     )
 
     assert response.status_code == 303
@@ -70,7 +74,11 @@ def test_starting_a_room_without_a_name_shows_an_error(client: TestClient) -> No
 def test_the_facilitator_can_open_their_own_table(client: TestClient) -> None:
     start = client.post(
         "/start",
-        data={"game_slug": "value-cards-trading", "display_name": "Ada"},
+        data={
+            "game_slug": "value-cards-trading",
+            "display_name": "Ada",
+            "as_facilitator": "true",
+        },
     )
     code = start.headers["location"].removeprefix("/t/")
 
@@ -83,7 +91,12 @@ def test_the_facilitator_can_open_their_own_table(client: TestClient) -> None:
 
 def test_visiting_a_table_before_joining_redirects_to_join(client: TestClient) -> None:
     start = client.post(
-        "/start", data={"game_slug": "value-cards-trading", "display_name": "Ada"}
+        "/start",
+        data={
+            "game_slug": "value-cards-trading",
+            "display_name": "Ada",
+            "as_facilitator": "true",
+        },
     )
     code = start.headers["location"].removeprefix("/t/")
 
@@ -106,7 +119,12 @@ def test_joining_a_room_seats_the_participant_and_redirects(
     client: TestClient,
 ) -> None:
     start = client.post(
-        "/start", data={"game_slug": "value-cards-trading", "display_name": "Ada"}
+        "/start",
+        data={
+            "game_slug": "value-cards-trading",
+            "display_name": "Ada",
+            "as_facilitator": "true",
+        },
     )
     code = start.headers["location"].removeprefix("/t/")
 

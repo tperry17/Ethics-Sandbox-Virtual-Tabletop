@@ -169,6 +169,7 @@ async def live_room(deck_size: int = 6) -> AsyncIterator[LiveFixture]:
             game_slug=GAME_SLUG,
             facilitator_cookie_id="cookie-facilitator",
             facilitator_name="Facilitator",
+            as_facilitator=True,
         )
         session.flush()
         rooms.save_table_state(session, room, build_sample_table(deck_size=deck_size))

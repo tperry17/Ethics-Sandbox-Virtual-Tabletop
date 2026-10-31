@@ -97,7 +97,9 @@ def test_seat_order_counts_rather_than_sorting_text() -> None:
 
 def test_a_game_without_a_definition_gets_seats_and_nothing_else() -> None:
     table = Table()
-    seat_id, transaction = build_table(None, table, participant_id="p-1")
+    seat_id, transaction = build_table(
+        None, table, participant_id="p-1", as_facilitator=True
+    )
 
     assert isinstance(run_op(table, seat_id, transaction), Ok)
     assert list(table.seats) == ["seat-1"]
@@ -265,7 +267,9 @@ def test_a_table_replayed_from_its_transactions_is_the_same_table() -> None:
     original = Table(rng=TableRng(seed=11))
     log: list[tuple[str, Transaction]] = []
 
-    seat_id, transaction = build_table(game, original, participant_id="p-1")
+    seat_id, transaction = build_table(
+        game, original, participant_id="p-1", as_facilitator=True
+    )
     log.append((seat_id, transaction))
     run_op(original, seat_id, transaction)
     seat_id, transaction = build_seat(game, original, participant_id="p-2")

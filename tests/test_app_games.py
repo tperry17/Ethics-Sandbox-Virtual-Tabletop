@@ -92,7 +92,12 @@ def test_the_start_page_offers_an_unlisted_game_only_when_asked(
 
 def test_a_two_doors_room_starts_set_up(client: TestClient) -> None:
     response = client.post(
-        "/start", data={"game_slug": "two-doors", "display_name": "Ines"}
+        "/start",
+        data={
+            "game_slug": "two-doors",
+            "display_name": "Ines",
+            "as_facilitator": "true",
+        },
     )
     assert response.status_code == 303
 

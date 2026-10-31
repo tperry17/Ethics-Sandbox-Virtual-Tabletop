@@ -345,20 +345,29 @@ class _Builder:
 
 
 def build_table(
-    game: Game | None, table: Table, *, participant_id: str | None
+    game: Game | None,
+    table: Table,
+    *,
+    participant_id: str | None,
+    as_facilitator: bool = False,
 ) -> tuple[str, Transaction]:
-    """Everything a new room's table needs, with its facilitator seated.
+    """Everything a new room's table needs, with its creator seated.
+
+    Nobody is the facilitator unless ``as_facilitator`` says the creator
+    chose to be.
 
     Shared zones first, so their place in the zone list - which is the order
     the table draws them in - does not depend on how many people join; then
-    the facilitator's seat and its own zones; then the definition's setup.
-    Returns the facilitator's seat id and the transaction to apply as them.
+    the creator's seat and its own zones; then the definition's setup.
+    Returns the creator's seat id and the transaction to apply as them.
     """
     builder = _Builder(game, table, actor_seat="seat-1")
     try:
         if game is not None:
             builder.shared_zones()
-        seat_id = builder.seat(participant_id=participant_id, is_facilitator=True)
+        seat_id = builder.seat(
+            participant_id=participant_id, is_facilitator=as_facilitator
+        )
         if game is not None:
             builder.step(SetupStep(op="setup"))
     except _Refused as refusal:

@@ -653,7 +653,12 @@ def test_a_browser_that_has_not_joined_is_refused_the_socket(
     socket_client: TestClient,
 ) -> None:
     started = socket_client.post(
-        "/start", data={"game_slug": "value-cards-trading", "display_name": "Ada"}
+        "/start",
+        data={
+            "game_slug": "value-cards-trading",
+            "display_name": "Ada",
+            "as_facilitator": "true",
+        },
     )
     code = started.headers["location"].removeprefix("/t/")
     socket_client.cookies.clear()
@@ -668,7 +673,12 @@ def test_the_facilitator_socket_answers_hello_with_a_snapshot(
     socket_client: TestClient,
 ) -> None:
     started = socket_client.post(
-        "/start", data={"game_slug": "value-cards-trading", "display_name": "Ada"}
+        "/start",
+        data={
+            "game_slug": "value-cards-trading",
+            "display_name": "Ada",
+            "as_facilitator": "true",
+        },
     )
     code = started.headers["location"].removeprefix("/t/")
 
