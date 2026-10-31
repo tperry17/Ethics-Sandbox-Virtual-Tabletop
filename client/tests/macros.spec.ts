@@ -10,7 +10,7 @@ async function startTwoDoors(browser: Browser): Promise<{ page: Page; code: stri
   await page.goto("/start?game=two-doors");
   await page.getByLabel("Your name").fill("Ines");
   await page.getByLabel(/Join as facilitator/).check();
-  await page.getByRole("button", { name: "Start a table" }).click();
+  await page.getByRole("button", { name: "Open a room" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
   const code = page.url().split("/t/")[1]!;
   return { page, code };
@@ -74,7 +74,7 @@ test("nobody is the facilitator until someone takes the seat, and only one at a 
   const page = await (await browser.newContext()).newPage();
   await page.goto("/start?game=two-doors");
   await page.getByLabel("Your name").fill("Ines");
-  await page.getByRole("button", { name: "Start a table" }).click();
+  await page.getByRole("button", { name: "Open a room" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
   const code = page.url().split("/t/")[1]!;
   const guest = await join(browser, code, "Tomas");
@@ -86,4 +86,33 @@ test("nobody is the facilitator until someone takes the seat, and only one at a 
 
   await page.getByRole("button", { name: "Hand back facilitator" }).click();
   await expect(guest.getByRole("button", { name: "Become facilitator" })).toBeVisible();
+});
+
+test("an open room starts an activity for those who sign up, and its buttons are theirs", async ({
+  browser,
+}) => {
+  const host = await (await browser.newContext()).newPage();
+  await host.goto("/start");
+  await host.getByLabel("Your name").fill("Ines");
+  await host.getByRole("button", { name: "Open a room" }).click();
+  await host.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+  const code = host.url().split("/t/")[1]!;
+  const guest = await join(browser, code, "Tomas");
+  const bystander = await join(browser, code, "Wren");
+
+  await host.getByLabel("Activity to start").selectOption("two-doors");
+  await host.getByRole("button", { name: "Start this activity" }).click();
+  await expect(host.getByText(/Two Doors: signing up, 1 of 2/)).toBeVisible();
+
+  await guest.getByRole("button", { name: "Join" }).click();
+  await expect(host.getByText(/Two Doors: running/)).toBeVisible();
+  await expect(guest.getByText(/Two Doors: running/)).toBeVisible();
+  // A player can use the facilitator's buttons while nobody facilitates; the bystander cannot.
+  await expect(host.locator('button[data-activity-id]', { hasText: "Deal one each" })).toBeVisible();
+  await expect(guest.locator('button[data-activity-id]', { hasText: "Deal one each" })).toBeVisible();
+  await expect(bystander.locator('button[data-activity-id]')).toHaveCount(0);
+
+  await host.getByRole("button", { name: "End" }).click();
+  await expect(host.getByText(/Two Doors: running/)).toBeHidden();
+  await expect(guest.locator('button[data-activity-id]')).toHaveCount(0);
 });

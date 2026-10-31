@@ -544,7 +544,10 @@ ACTIVITY_INTENT = "activity"
 
 
 def activity_choices() -> list[ActivityChoiceView]:
-    """The activities any room can start: every listed game with a definition."""
+    """The activities any room can start: every game but the open room itself.
+
+    Whether a game is in the public catalog (``listed``) is a separate matter.
+    """
     return [
         ActivityChoiceView(
             slug=game.slug,
@@ -554,7 +557,7 @@ def activity_choices() -> list[ActivityChoiceView]:
             duration_minutes=game.definition.meta.duration_minutes,
         )
         for game in GAMES.values()
-        if game.definition.meta.listed and game.slug != OPEN_ROOM_SLUG
+        if game.slug != OPEN_ROOM_SLUG
     ]
 
 

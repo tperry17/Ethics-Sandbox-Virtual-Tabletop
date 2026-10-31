@@ -88,6 +88,8 @@ person did: no rule, no deck, and no face it was not given.
 - `intents.ts` — sending intents and matching each `ack` or `reject` to it
 - `menu.ts` — the context menu, whose contents the server supplies
 - `reveal.ts` — reveals in progress, and a close look at your own card
+- `activities.ts` — the toolbar's activities: what can be started, who has
+  signed up, and the buttons that act on one
 - `announcer.ts` — the live region that says what happened, in words
 
 Pieces are DOM elements positioned with `translate3d` inside a single

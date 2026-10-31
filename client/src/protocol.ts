@@ -124,6 +124,28 @@ export interface MacroView {
   facilitator_only: boolean;
   /** Asked before the button runs, when the server says it is destructive. */
   confirm: string | null;
+  /** Set when the button belongs to a running activity rather than the room. */
+  activity_id?: string | null;
+}
+
+/** An activity in the room: signing up, or running. Who plays is public. */
+export interface ActivityView {
+  id: string;
+  kind: string;
+  title: string;
+  min_players: number;
+  max_players: number;
+  seats: string[];
+  status: "signup" | "running";
+}
+
+/** An activity this room can start. */
+export interface ActivityChoiceView {
+  slug: string;
+  title: string;
+  min_players: number;
+  max_players: number;
+  duration_minutes: number;
 }
 
 export interface YouView {
@@ -140,10 +162,11 @@ export interface TableView {
   seats: SeatView[];
   strokes: StrokeView[];
   version: number;
+  activities?: ActivityView[];
 }
 
 export interface PatchView {
-  kind: "piece" | "zone" | "seat" | "stroke" | "table";
+  kind: "piece" | "zone" | "seat" | "stroke" | "activity" | "table";
   op: "upsert" | "remove" | "event";
   entity_id: string | null;
   fields: Record<string, unknown>;
@@ -163,6 +186,7 @@ export interface SnapshotMessage {
   you: YouView;
   components: ComponentView[];
   macros: MacroView[];
+  activity_choices?: ActivityChoiceView[];
 }
 
 export interface PatchesMessage {
