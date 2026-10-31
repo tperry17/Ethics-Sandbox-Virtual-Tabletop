@@ -172,9 +172,9 @@ function renderPairing(model: TableModel, group: ClassView, send: SendClass): HT
     const heading = document.createElement("span");
     heading.textContent = `${tableName(group, pair.first)} with ${tableName(group, pair.second)}: `;
     row.append(heading);
-    for (const [table, decision] of [
-      [pair.first, pair.first_decision],
-      [pair.second, pair.second_decision],
+    for (const [table, decision, proposed] of [
+      [pair.first, pair.first_decision, pair.first_proposed],
+      [pair.second, pair.second_decision, pair.second_proposed],
     ] as const) {
       const label = document.createElement("label");
       label.append(`${tableName(group, table)} decided `);
@@ -196,6 +196,13 @@ function renderPairing(model: TableModel, group: ClassView, send: SendClass): HT
       );
       label.append(pick);
       row.append(label);
+      if (proposed !== null && proposed !== undefined) {
+        row.append(
+          button(`Confirm ${tableName(group, table)}: ${proposed}`, () =>
+            send({ action: "decision", class_id: group.id, first: table, decision: proposed }),
+          ),
+        );
+      }
     }
     row.append(
       button("Unpair", () => send({ action: "unpair", class_id: group.id, first: pair.first })),
@@ -283,6 +290,7 @@ function renderOwnChoice(group: ClassView, send: SendClass): HTMLElement | null 
   label.append("Your table chose ");
   const pick = document.createElement("select");
   pick.setAttribute("aria-label", "What your table chose");
+  const shown = group.your_proposal ?? group.your_decision ?? null;
   const none = document.createElement("option");
   none.value = "";
   none.textContent = "not yet";
@@ -291,7 +299,7 @@ function renderOwnChoice(group: ClassView, send: SendClass): HTMLElement | null 
     const option = document.createElement("option");
     option.value = choice;
     option.textContent = choice;
-    option.selected = choice === group.your_decision;
+    option.selected = choice === shown;
     pick.append(option);
   }
   pick.addEventListener("change", () =>
@@ -303,6 +311,16 @@ function renderOwnChoice(group: ClassView, send: SendClass): HTMLElement | null 
     }),
   );
   label.append(pick);
+  const status = document.createElement("span");
+  status.className = "toolbar__hint";
+  status.setAttribute("role", "status");
+  status.textContent =
+    group.your_proposal
+      ? "Waiting for the facilitator to confirm."
+      : group.your_decision
+        ? `The facilitator confirmed: ${group.your_decision}.`
+        : "";
+  label.append(" ", status);
   return label;
 }
 

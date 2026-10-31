@@ -202,6 +202,9 @@ class ClassGroup:
     prompt_serial: int = 0
     pairs: tuple[tuple[str, str], ...] = ()
     decisions: dict[str, str] = field(default_factory=dict)
+    """Each paired table's decision, as the facilitator confirmed it."""
+    proposed: dict[str, str] = field(default_factory=dict)
+    """What someone at a table proposed it decided, waiting for the facilitator."""
 
 
 @dataclass

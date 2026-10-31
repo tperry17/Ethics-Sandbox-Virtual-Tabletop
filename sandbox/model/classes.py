@@ -357,6 +357,7 @@ class UnpairTables:
             if self.table_id in pair:
                 for member in pair:
                     group.decisions.pop(member, None)
+                    group.proposed.pop(member, None)
         group.pairs = tuple(p for p in group.pairs if self.table_id not in p)
         return [_class_patch(group)]
 
@@ -365,7 +366,9 @@ class UnpairTables:
 class SetClassDecision:
     """Record what a table decided, in the activity's own words. Empty clears it.
 
-    The facilitator may for any table, and the people at a table for theirs.
+    Someone at the table proposes it; it counts once the facilitator confirms
+    it. The facilitator may also set any table's decision directly, which
+    confirms it and clears what was proposed.
 
     Whether the words are ones the activity knows is for the layer above to
     check; the model only keeps them.
@@ -391,6 +394,13 @@ class SetClassDecision:
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         group = table.classes[self.class_id]
+        if not table.is_facilitator(actor_seat):
+            if self.decision:
+                group.proposed[self.table_id] = self.decision
+            else:
+                group.proposed.pop(self.table_id, None)
+            return [_class_patch(group)]
+        group.proposed.pop(self.table_id, None)
         if self.decision:
             group.decisions[self.table_id] = self.decision
         else:

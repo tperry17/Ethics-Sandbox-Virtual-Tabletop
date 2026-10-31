@@ -311,6 +311,8 @@ class ClassPairView(BaseModel):
     second: str
     first_decision: str | None = None
     second_decision: str | None = None
+    first_proposed: str | None = None
+    second_proposed: str | None = None
     outcome: str | None = None
 
 
@@ -339,6 +341,7 @@ class ClassView(BaseModel):
     pair_choices: list[str] = Field(default_factory=list)
     your_table: str = ""
     your_decision: str | None = None
+    your_proposal: str | None = None
     pairs: list[ClassPairView] = Field(default_factory=list)
     prompt_choices: list[ClassPromptChoiceView] = Field(default_factory=list)
 
@@ -2032,22 +2035,24 @@ class RoomRuntime:
                 for first, second in group.pairs:
                     ours = group.decisions.get(first)
                     theirs = group.decisions.get(second)
-                    both = ours is not None and theirs is not None
                     view.pairs.append(
                         ClassPairView(
                             first=first,
                             second=second,
                             first_decision=ours,
                             second_decision=theirs,
+                            first_proposed=group.proposed.get(first),
+                            second_proposed=group.proposed.get(second),
                             outcome=(
                                 pair_outcome(game, ours, theirs)
-                                if ours is not None and theirs is not None and both
+                                if ours is not None and theirs is not None
                                 else None
                             ),
                         )
                     )
             elif game is not None and seat_id is not None:
-                # Someone at a paired table may record what their table chose.
+                # Someone at a paired table proposes what their table chose;
+                # the facilitator confirms it.
                 mine = next(
                     (
                         t
@@ -2060,6 +2065,7 @@ class RoomRuntime:
                 if mine is not None:
                     view.your_table = mine
                     view.your_decision = group.decisions.get(mine)
+                    view.your_proposal = group.proposed.get(mine)
                     view.pair_choices = list(pairing_choices(game, group.options))
             views.append(view)
         return views

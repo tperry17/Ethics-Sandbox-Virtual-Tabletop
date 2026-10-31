@@ -1242,8 +1242,6 @@ IN EACH TABLE
   A timer: the facilitator starts it for every table of the class at once.
   Every screen shows the time remaining. It chimes once when it runs out.
   It is advisory and never refuses anything.
-  A label for each part of the meeting (Hudrosia's council, then its
-  assembly) comes from the game definition.
   Push a prompt: the facilitator picks one of the game's prompts and shows
   it as a dismissable card on every screen of every table.
 
@@ -1260,12 +1258,12 @@ out changes nothing on the table; a room accepts 30 people and refuses
 the 31st. Update this plan's status table. Commit.
 ```
 
-**Gaps in what was built** (see the pull request's questions):
-
-- A table of a class has no label for each part of the meeting (Hudrosia's
-  council, then its assembly); the game definition has no such field yet.
-- Moving someone off a begun table removes their zones and what is in them;
-  the facilitator deals again if the table needs it.
+Settled on the pull request (2026-10-31): the facilitator may move anyone
+between tables at any time, and a latecomer takes the roomiest table, begun or
+not; a person moved off a begun table puts their cards back in their decks,
+which are shuffled; the people at a paired table propose its choice and the
+facilitator confirms it; the class has one timer; and the per-part meeting
+label is dropped.
 
 **Deferred** from the first version, to be added when a session shows
 they are needed:

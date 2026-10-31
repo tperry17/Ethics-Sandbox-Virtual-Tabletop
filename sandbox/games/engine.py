@@ -598,6 +598,48 @@ def _used_seat_indexes(
     return used
 
 
+def deck_homes(game: Game) -> dict[str, str]:
+    """Where each deck lives: the zone its first ``spawn_deck`` step names."""
+    homes: dict[str, str] = {}
+    steps = [*game.definition.setup]
+    for macro in game.definition.macros:
+        steps.extend(macro.steps or ())
+    for step in steps:
+        if isinstance(step, SpawnDeckStep):
+            homes.setdefault(step.deck, step.zone)
+    return homes
+
+
+def _return_cards(builder: _Builder, scope: Scope, gone: set[str]) -> None:
+    """Put the cards in the zones of people leaving a table back in their decks.
+
+    Each goes face down into the zone its deck was laid out in, and every
+    deck that took a card back is shuffled, so nobody can tell where it went.
+    """
+    activity = builder.trial.activities[scope.activity_id]
+    homes = deck_homes(builder._game())
+    shuffled: list[str] = []
+    for zone_id in activity.zones:
+        zone = builder.trial.zones.get(zone_id)
+        if zone is None or zone.owner_seat not in gone:
+            continue
+        for piece in builder.trial.pieces_in_zone(zone_id):
+            deck = piece.component_id.split(":", 1)[0]
+            home = homes.get(deck)
+            if piece.kind is not PieceKind.CARD or home is None:
+                continue
+            home_id = scope.prefix + home
+            if home_id not in builder.trial.zones:
+                continue
+            builder.run(Flip(piece_id=piece.id, face_up=False))
+            builder.run(MoveToZone(piece_id=piece.id, zone_id=home_id))
+            if home_id not in shuffled:
+                shuffled.append(home_id)
+    for home_id in shuffled:
+        if builder.trial.zones[home_id].visibility is Visibility.HIDDEN:
+            builder.run(Shuffle(zone_id=home_id))
+
+
 def _change_seats(builder: _Builder, activity_id: str, seats: tuple[str, ...]) -> None:
     """Add the steps that change who sits at one table, making zones for new people."""
     activity = builder.trial.activities[activity_id]
@@ -605,6 +647,7 @@ def _change_seats(builder: _Builder, activity_id: str, seats: tuple[str, ...]) -
     builder.scope = scope
     added: list[str] = []
     if activity.status == "running":
+        _return_cards(builder, scope, set(activity.seats) - set(seats))
         staying = tuple(seat for seat in seats if seat in activity.seats)
         used = _used_seat_indexes(builder, scope, staying)
         for seat_id in (seat for seat in seats if seat not in activity.seats):

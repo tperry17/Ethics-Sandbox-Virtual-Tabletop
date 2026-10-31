@@ -352,7 +352,14 @@ async def test_players_at_a_paired_table_pick_its_choice_and_see_only_that() -> 
         await _act(room, mine, decide)
         assert mine.socket.of_type("ack")
         (view,) = _classes(mine)
-        assert view["your_decision"] == "Attack"
+        assert view["your_proposal"] == "Attack"
+        assert view["your_decision"] is None  # waiting for the facilitator
+        (seen,) = _classes(host)
+        assert seen["pairs"][0]["first_proposed"] == "Attack"
+        assert seen["pairs"][0]["first_decision"] is None
+        await _act(room, host, decide)
+        (view,) = _classes(mine)
+        assert view["your_decision"] == "Attack" and view["your_proposal"] is None
         # Their partner's table sees nothing of it, and nobody else may set it.
         (other,) = _classes(theirs)
         assert other["your_decision"] is None and other["pairs"] == []

@@ -155,6 +155,9 @@ export interface ClassPairView {
   second: string;
   first_decision: string | null;
   second_decision: string | null;
+  /** What someone at each table proposed, waiting for the facilitator. */
+  first_proposed?: string | null;
+  second_proposed?: string | null;
   /** What follows from the two decisions, once both are in. */
   outcome: string | null;
 }
@@ -176,6 +179,8 @@ export interface ClassView {
   /** For someone at a paired table: their table, and what it has chosen. */
   your_table?: string;
   your_decision?: string | null;
+  /** What this person's table proposed, until the facilitator confirms it. */
+  your_proposal?: string | null;
   pairs?: ClassPairView[];
   prompt_choices?: Array<{ id: string; text: string }>;
 }

@@ -81,6 +81,7 @@ def to_snapshot(table: Table) -> Snapshot:
                 "prompt_serial": c.prompt_serial,
                 "pairs": [list(pair) for pair in c.pairs],
                 "decisions": dict(c.decisions),
+                "proposed": dict(c.proposed),
             }
             for class_id, c in table.classes.items()
         },
@@ -153,6 +154,7 @@ def from_snapshot(data: Snapshot) -> Table:
                 prompt_serial=fields.get("prompt_serial", 0),
                 pairs=tuple((a, b) for a, b in fields.get("pairs", [])),
                 decisions=dict(fields.get("decisions", {})),
+                proposed=dict(fields.get("proposed", {})),
             )
             for class_id, fields in data.get("classes", {}).items()
         },

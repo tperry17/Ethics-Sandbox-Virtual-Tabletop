@@ -224,6 +224,7 @@ class EndActivity:
             group.tables = tuple(t for t in group.tables if t != activity.id)
             group.pairs = tuple(p for p in group.pairs if activity.id not in p)
             group.decisions.pop(activity.id, None)
+            group.proposed.pop(activity.id, None)
         patches: list[Patch] = []
         for zone_id in activity.zones:
             for piece in table.pieces_in_zone(zone_id):

@@ -270,13 +270,45 @@ def test_a_person_cannot_be_at_two_tables_and_only_the_facilitator_moves() -> No
     assert isinstance(run_op(table, "seat-2", sneaky), Reject)
 
 
-def test_people_at_a_paired_table_record_its_decision() -> None:
+def test_a_tables_choice_is_proposed_there_and_confirmed_by_the_facilitator() -> None:
     table = _room()
     class_id, first, second = _begun_class(table)
     decide = SetClassDecision(class_id, first, "Attack")
     assert isinstance(run_op(table, "seat-2", decide), Reject)  # not paired yet
     assert isinstance(run_op(table, "seat-1", PairTables(class_id, first, second)), Ok)
     assert isinstance(run_op(table, "seat-2", decide), Ok)
+    group = table.classes[class_id]
+    assert group.proposed == {first: "Attack"}
+    assert group.decisions == {}  # nothing counts until it is confirmed
     other_table = SetClassDecision(class_id, second, "Defenses")
     assert isinstance(run_op(table, "seat-2", other_table), Reject)
-    assert table.classes[class_id].decisions == {first: "Attack"}
+    confirm = SetClassDecision(class_id, first, "Attack")
+    assert isinstance(run_op(table, "seat-1", confirm), Ok)
+    assert group.decisions == {first: "Attack"}
+    assert group.proposed == {}
+
+
+def test_a_person_moved_off_a_begun_table_puts_their_cards_back_in_the_deck() -> None:
+    from sandbox.games.engine import build_macro, build_seat_move
+
+    table = _room()
+    class_id, first, second = _begun_class(table)
+    dealt = build_macro(pairs(), table, "seat-1", "deal", first)
+    assert not isinstance(dealt, Reject), dealt
+    assert isinstance(run_op(table, "seat-1", dealt), Ok)
+    hand = f"{first}:hand-seat-2"
+    deck = f"{first}:deck"
+    held = {p.component_id for p in table.pieces_in_zone(hand)}
+    in_deck = len(table.pieces_in_zone(deck))
+    total = len(table.pieces)
+    assert held
+
+    moved = build_seat_move(pairs(), table, "seat-1", "seat-2", None)
+    assert not isinstance(moved, Reject), moved
+    assert isinstance(run_op(table, "seat-1", moved), Ok)
+    assert hand not in table.zones
+    assert len(table.pieces) == total  # no card left the table
+    back = table.pieces_in_zone(deck)
+    assert len(back) == in_deck + len(held)
+    assert held <= {p.component_id for p in back}
+    assert not any(p.face_up for p in back)
