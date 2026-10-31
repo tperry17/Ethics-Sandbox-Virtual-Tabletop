@@ -18,3 +18,14 @@ def _load_site_copy() -> dict[str, str]:
 
 
 SITE_COPY: dict[str, str] = _load_site_copy()
+
+
+CONSENT_CSV = "site/consent.csv"
+
+
+def _load_consent() -> dict[str, str]:
+    """The join screen's notice, keyed by part; ``CONSENT.md`` says the same words."""
+    return {row["key"]: row["text"] for row in read_rows(CONSENT_CSV)}
+
+
+CONSENT: dict[str, str] = _load_consent()

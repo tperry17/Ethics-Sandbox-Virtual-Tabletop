@@ -17,7 +17,7 @@ import dataclasses
 import json
 import secrets
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -74,6 +74,55 @@ class UnknownExerciseError(RoomError):
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+# -- retention ----------------------------------------------------------------
+
+DORMANT_AFTER = timedelta(hours=12)
+PURGE_AFTER = timedelta(days=30)
+
+
+def _aware(moment: datetime) -> datetime:
+    """``moment`` with a timezone; SQLite hands back naive UTC datetimes."""
+    return moment if moment.tzinfo is not None else moment.replace(tzinfo=UTC)
+
+
+def is_dormant(room: Room, now: datetime | None = None) -> bool:
+    """True once nobody has touched the room for twelve hours.
+
+    Dormancy is read from ``last_active_at``, not stored: the next person to
+    join or move a piece makes the room active again, with nothing to undo.
+    """
+    return _aware(room.last_active_at) + DORMANT_AFTER <= (now or _now())
+
+
+def purge_date(room: Room) -> datetime:
+    """When the room's record will be deleted if nobody comes back."""
+    return _aware(room.last_active_at) + PURGE_AFTER
+
+
+def delete_room_record(session: Session, room: Room) -> None:
+    """Delete the room outright: participants, table, events and reflections.
+
+    This is the one place the append-only event log is ever deleted from, and
+    it deletes the whole record, never part of it.
+    """
+    session.delete(room)
+    session.flush()
+
+
+def purge_expired(session: Session, now: datetime | None = None) -> list[str]:
+    """Delete every room idle for thirty days; return the codes deleted."""
+    cutoff = (now or _now()) - PURGE_AFTER
+    expired = [
+        room
+        for room in session.execute(select(Room)).scalars()
+        if _aware(room.last_active_at) <= cutoff
+    ]
+    codes = [room.code for room in expired]
+    for room in expired:
+        delete_room_record(session, room)
+    return codes
 
 
 # -- lookups ------------------------------------------------------------------
@@ -528,8 +577,14 @@ __all__ = [
     "apply_op",
     "claim_seat",
     "close_room",
+    "DORMANT_AFTER",
+    "PURGE_AFTER",
     "create_room",
+    "delete_room_record",
     "game_for",
+    "is_dormant",
+    "purge_date",
+    "purge_expired",
     "generate_room_code",
     "get_participant",
     "get_room",

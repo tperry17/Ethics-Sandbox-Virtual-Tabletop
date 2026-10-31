@@ -52,6 +52,30 @@
         </p>
       {% endcall %}
 
+      {% if is_facilitator %}
+      <section class="prose" aria-labelledby="record-heading">
+        <h2 id="record-heading">The record of this room</h2>
+        <p>
+          {% if dormant %}This room is dormant: nobody has been active for 12 hours.
+          {% else %}This room goes dormant after 12 hours without activity.{% endif %}
+          Its record is deleted on {{ purge_date.strftime("%-d %B %Y") }} unless someone
+          is active before then; after 30 days idle, it is deleted.
+        </p>
+        <p>
+          Download:
+          <a href="/t/{{ room.code }}/record.json">JSON</a>,
+          <a href="/t/{{ room.code }}/record.zip">CSV files</a>,
+          <a href="/t/{{ room.code }}/record.json?anonymise=true">anonymised JSON</a>,
+          <a href="/t/{{ room.code }}/record.zip?anonymise=true">anonymised CSV files</a>.
+          Add <code>include_text=true</code> to the address to include written text.
+        </p>
+        <form method="post" action="/t/{{ room.code }}/record/delete"
+              onsubmit="return confirm('Delete this room and everything recorded in it? This cannot be undone.');">
+          {{ ui.button("Delete this room's record", variant="quiet", size="sm", type="submit") }}
+        </form>
+      </section>
+      {% endif %}
+
       <main class="table-shell__surface">
         {# The table client takes this element over completely: everything
            inside it is replaced on the first frame. #}

@@ -29,6 +29,27 @@ def _validate_games() -> int:
     return 1
 
 
+def _data_dictionary(check: bool) -> int:
+    from pathlib import Path
+
+    from sandbox.web.record import data_dictionary_markdown
+
+    path = Path(__file__).resolve().parents[1] / "docs" / "DATA-DICTIONARY.md"
+    text = data_dictionary_markdown()
+    if check:
+        if path.read_text() == text:
+            return 0
+        print(
+            "docs/DATA-DICTIONARY.md is out of date; "
+            "run `uv run sandbox data-dictionary`.",
+            file=sys.stderr,
+        )
+        return 1
+    path.write_text(text)
+    print(f"wrote {path}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="sandbox")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -36,9 +57,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         "validate-games",
         help="Check every game definition against the schema, and play it.",
     )
+    dictionary = commands.add_parser(
+        "data-dictionary",
+        help="Write docs/DATA-DICTIONARY.md from the operation classes.",
+    )
+    dictionary.add_argument(
+        "--check", action="store_true", help="Fail if the file is out of date."
+    )
     arguments = parser.parse_args(argv)
     if arguments.command == "validate-games":
         return _validate_games()
+    if arguments.command == "data-dictionary":
+        return _data_dictionary(arguments.check)
     return 2
 
 

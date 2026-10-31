@@ -42,7 +42,7 @@ shows "Claimed" in this table on `main`.
 | 10 | Value Cards Trading | Done | | PR #16 |
 | 11 | Democracy Simulation | Done | | PR #19 |
 | 12 | Running a session (rewritten, lean) | Done | | PR #20 |
-| 13 | Reflection, debrief and the playtest record | Claimed | `claude/step-13-reflection-and-debrief` | |
+| 13 | Reflection, debrief and the playtest record | In progress (PR #23) | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
 | 17 | Open rooms and activities | Done | | PR #18 |
@@ -103,8 +103,9 @@ Checked against the code on `main`; none of these has been fixed yet.
   exist; the site has `/` and `/exercises/{slug}` only. No page sets OG
   meta tags. The exercise page's "preview image" is an HTML mock-up built
   from `content/site/exercise_preview_*.csv`, not an image of a real table.
-- **Prompt 5.** Rooms do not go dormant after 12 idle hours and are not
-  purged after 30 days, and the UI does not announce either.
+- **Prompt 5.** Closed by Prompt 13 (PR #23): rooms are dormant after 12
+  idle hours and purged after 30 days, and the join notice and the
+  facilitator's view say so.
 - **Prompt 2.** `/styleguide` still describes the design as a "scholarly
   edition", which CLAUDE.md now rules out. Being removed in a separate PR.
 - **CI.** `.github/workflows/ci.yml` runs Ruff (lint and format), mypy,
@@ -1280,8 +1281,15 @@ they are needed:
 
 ## 13. Reflection, debrief and the playtest record
 
-**Status: Not started.** Rewritten on 2026-10-30 for the two exercises as
-they actually are.
+**Status: In progress (PR #23).** Rewritten on 2026-10-30 for the two
+exercises as they actually are.
+
+Built so far: part 4 (consent notice on the join screen, `CONSENT.md`, the
+facilitator's delete, dormancy and the 30-day purge) and the export half of
+part 3 (JSON and CSV, anonymised, optional written text,
+`docs/DATA-DICTIONARY.md`). Still to build: observation notes and reflection
+boxes (part 1), both debrief pages with charts (part 2), replay and timing
+from events (rest of part 3), and the tests that need them.
 
 The point of this step is to give the debrief, which both source documents
 say is where the learning happens, something accurate to work from. The
