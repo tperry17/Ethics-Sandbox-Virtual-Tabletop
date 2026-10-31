@@ -86,8 +86,11 @@ class Card:
 
 @dataclass(frozen=True)
 class Prompt:
+    """A facilitation question; ``group`` is an optional heading it sits under."""
+
     id: str
     text: str
+    group: str | None = None
 
 
 @dataclass(frozen=True)
@@ -266,7 +269,14 @@ def _load_prompts(definition: GameDefinition, root: Path) -> tuple[Prompt, ...]:
         raise GameDefinitionError(
             f"content/{definition.prompts.source} needs 'id' and 'text' columns."
         )
-    return tuple(Prompt(id=row["id"].strip(), text=row["text"].strip()) for row in rows)
+    return tuple(
+        Prompt(
+            id=row["id"].strip(),
+            text=row["text"].strip(),
+            group=(row.get("outcome") or "").strip() or None,
+        )
+        for row in rows
+    )
 
 
 def _load_buttons(definition: GameDefinition, root: Path) -> dict[str, Button]:

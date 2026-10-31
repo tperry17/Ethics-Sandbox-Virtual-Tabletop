@@ -68,6 +68,8 @@ def test_a_card_image_is_served(client: TestClient) -> None:
         "/content/decks/value-cards/cards.csv",
         "/content/exercises/democracy-simulation/roles.csv",
         "/content/exercises/democracy-simulation/elite_sheets.csv",
+        "/content/exercises/democracy-simulation/role_cards.csv",
+        "/content/exercises/democracy-simulation/sheet_cards.csv",
         "/content/../pyproject.toml",
         "/content/%2e%2e/pyproject.toml",
         "/content/exercises/pairs/images/README.md",
@@ -101,13 +103,13 @@ def test_a_game_slug_sent_to_start_is_ignored_the_room_is_still_open(
     assert "<title>Open table ·" in table_page.text
 
 
-def test_an_exercise_without_a_definition_keeps_its_drawn_preview(
+def test_the_democracy_simulation_page_draws_its_table_from_its_definition(
     client: TestClient,
 ) -> None:
     page = client.get("/exercises/democracy-simulation").text
 
-    assert "table-picture" not in page
-    assert "zone-grid" in page
+    assert "table-picture" in page
+    assert client.get("/games/democracy-simulation/preview").status_code == 200
 
 
 def test_the_value_cards_deck_page_shows_every_printed_card(
@@ -121,4 +123,17 @@ def test_the_value_cards_deck_page_shows_every_printed_card(
 
 
 def test_an_exercise_without_a_deck_has_no_deck_page(client: TestClient) -> None:
-    assert client.get("/exercises/democracy-simulation/deck").status_code == 404
+    assert client.get("/exercises/hooked/deck").status_code == 404
+
+
+def test_the_public_deck_page_never_prints_a_private_deck(
+    client: TestClient,
+) -> None:
+    page = client.get("/exercises/democracy-simulation/deck").text
+
+    # The invitations are given out before the session; the role cards and
+    # the elite sheets are private for the whole of it.
+    assert page.count('class="deck-card ') == 4
+    assert "Town meeting!" in page
+    assert "Memorandum prepared for" not in page
+    assert "You live by the river" not in page

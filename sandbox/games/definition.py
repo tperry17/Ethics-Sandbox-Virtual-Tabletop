@@ -169,7 +169,8 @@ class ZoneSpec(_Strict):
 
     A per-seat zone's id on the table is ``<id>-<seat id>`` (``hand-seat-2``),
     its owner is that seat, and each further seat's copy is moved by
-    ``step`` from the one before.
+    ``step`` from the one before. With ``when``, the zone exists only if
+    each named option was given that choice.
     """
 
     id: Identifier
@@ -182,6 +183,7 @@ class ZoneSpec(_Strict):
     owner_moves_only: bool = False
     per_seat: bool = False
     step: tuple[float, float] = (0.0, 0.0)
+    when: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _owned_visibility_needs_a_seat(self) -> ZoneSpec:
@@ -218,8 +220,8 @@ class SetupStep(_Strict):
 class SpawnDeckStep(_Strict):
     """One piece per card of ``deck`` into ``zone``, in a shuffled order.
 
-    ``where`` keeps only the rows whose columns equal these values; a value
-    may name an option as ``{option-id}``.
+    ``where`` keeps only the rows whose columns equal these values, ignoring
+    case; a value may name an option as ``{option-id}``.
     """
 
     op: Literal["spawn_deck"]
@@ -403,6 +405,14 @@ class GameDefinition(_Strict):
             repeated = duplicates(ids)
             if repeated:
                 raise ValueError(f"{what} ids used more than once: {repeated}")
+        for zone in self.zones:
+            for option_id, choice_id in zone.when.items():
+                option = next((o for o in self.options if o.id == option_id), None)
+                if option is None or choice_id not in {c.id for c in option.choices}:
+                    raise ValueError(
+                        f"zone {zone.id!r} is only for {option_id}={choice_id}, "
+                        "which is not an option the definition offers"
+                    )
         missing = [
             macro_id
             for macro_id in STANDARD_MACROS

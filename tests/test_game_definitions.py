@@ -237,8 +237,13 @@ def test_pairs_is_not_part_of_the_product() -> None:
     assert "pairs" not in load_games()
 
 
-def test_validate_games_notes_catalog_exercises_without_a_definition() -> None:
-    report = validate_games()
+def test_validate_games_notes_catalog_exercises_without_a_definition(
+    tmp_path: Path,
+) -> None:
+    empty = tmp_path / "games"
+    empty.mkdir()
+    shutil.copytree(FIXTURE_GAMES / "hooked", empty / "hooked")
+    report = validate_games(empty, FIXTURE_CONTENT)
 
     assert any("democracy-simulation" in note for note in report.notes)
 

@@ -260,9 +260,13 @@ class _Builder:
 
     # -- seats and zones ----------------------------------------------------
 
+    def _wanted(self, spec: ZoneSpec) -> bool:
+        """Whether the options chosen include the zone (see ``ZoneSpec.when``)."""
+        return all(self.options.get(k) == v for k, v in spec.when.items())
+
     def shared_zones(self) -> None:
         for spec in self._game().definition.zones:
-            if not spec.per_seat:
+            if not spec.per_seat and self._wanted(spec):
                 self.run(
                     _add_zone(
                         spec,
@@ -279,7 +283,7 @@ class _Builder:
         for index, seat_id in enumerate(self.scope.seats):
             label = self.trial.seats[seat_id].label
             for spec in self._game().definition.zones:
-                if spec.per_seat:
+                if spec.per_seat and self._wanted(spec):
                     self.run(
                         _add_zone(
                             spec,
@@ -306,7 +310,7 @@ class _Builder:
         )
         if self.game is not None:
             for spec in self.game.definition.zones:
-                if spec.per_seat:
+                if spec.per_seat and self._wanted(spec):
                     self.run(
                         _add_zone(
                             spec,
@@ -369,7 +373,10 @@ class _Builder:
         cards = [
             card
             for card in self._game().decks[step.deck]
-            if all(card.fields.get(c) == v for c, v in wanted.items())
+            if all(
+                card.fields.get(c, "").casefold() == v.casefold()
+                for c, v in wanted.items()
+            )
         ]
         if not cards:
             raise _Refused(f"No cards in {step.deck!r} match {wanted}.")

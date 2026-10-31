@@ -1,0 +1,393 @@
+key,kind,phase,city,card_number,job,river,rumour,council,title,interest,body,folio,image
+role-p1-potamosia-01,role,1,Potamosia,1,Mayor,yes,no,no,Mayor,"City walls would glorify the city and protect your property.
+
+You live by the river, a dam would make your house safer.","City walls would glorify the city and protect your property.
+
+You know more things than could fit here so we provided an additional sheet.
+
+You live by the river, a dam would make your house safer.",1,mayor.png
+role-p1-potamosia-02,role,1,Potamosia,2,Merchant,no,no,no,Merchant,A bridge between the two sides of town would make your trade more profitable.,"A bridge between the two sides of town would make your trade more profitable.
+
+You know more things than could fit here so we provided an additional sheet.",2,merchant.png
+role-p1-potamosia-03,role,1,Potamosia,3,Shepherd,yes,yes,no,Shepherd,"City walls would protect your sheep from wolves and thieves.
+
+You live by the river, a dam would make your house safer.","City walls would protect your sheep from wolves and thieves.
+
+You're expecting nice weather in the next few weeks.
+
+You live by the river, a dam would make your house safer.
+
+You heard that the rich are stealing money from the town treasury.",3,shepherd.png
+role-p1-potamosia-04,role,1,Potamosia,4,Merchant,no,no,no,Merchant,A bridge between the two sides of town would make your trade more profitable.,"A bridge between the two sides of town would make your trade more profitable.
+
+You know more things than could fit here so we provided an additional sheet.",4,merchant.png
+role-p1-potamosia-05,role,1,Potamosia,5,Fisher,no,yes,no,Fisher,A bridge would make your life much easier. A dam might reduce the fish population in the river.,"A bridge would make your life much easier. A dam might reduce the fish population in the river.
+
+Farmers are good at predicting rainfall. Thespians are poor and their plays depict rich merchants as evil and corrupt.
+
+You heard that the rich are stealing money from the town treasury.",5,fisher.png
+role-p1-potamosia-06,role,1,Potamosia,6,Farmer,yes,no,no,Farmer,"A dam would provide water for your crops, making produce more reliable.
+
+You live by the river, a dam would make your house safer.","A dam would provide water for your crops, making produce more reliable.
+
+Building the dam would cost half the town's estimated amount if it'll be done when there's no rain.
+
+You live by the river, a dam would make your house safer.",6,farmer.png
+role-p1-potamosia-07,role,1,Potamosia,7,Mason,yes,yes,no,Mason,"Building a city project would fulfil a dream of yours, giving you an opportunity to leave a mark on the city.
+
+You live by the river, a dam would make your house safer.","Building a city project would fulfil a dream of yours, giving you an opportunity to leave a mark on the city.
+
+If all masons agree to work together, they can build the bridge and dam for half the cost.
+
+You live by the river, a dam would make your house safer.
+
+You heard that the rich are stealing money from the town treasury.",7,mason.png
+role-p1-potamosia-08,role,1,Potamosia,8,Mason,no,no,no,Mason,"Building a city project would fulfil a dream of yours, giving you an opportunity to leave a mark on the city.","Building a city project would fulfil a dream of yours, giving you an opportunity to leave a mark on the city.
+
+If all masons agree to work together, they can build the bridge and dam for half the cost.",8,mason.png
+role-p1-potamosia-09,role,1,Potamosia,9,Thespian,no,no,no,Thespian,"A bridge would make your meager income less pitiful, not to mention you can sleep under it on desperate nights.","A bridge would make your meager income less pitiful, not to mention you can sleep under it on desperate nights.
+
+Merchants have considerable personal wealth, each could easily fund all building projects.",9,thespian.png
+role-p1-potamosia-10,role,1,Potamosia,10,Mayor,no,no,no,Mayor,City walls would glorify the city and protect your property.,"City walls would glorify the city and protect your property.
+
+You know more things than could fit here so we provided an additional sheet.",10,mayor.png
+role-p1-potamosia-11,role,1,Potamosia,11,Shepherd,no,no,no,Shepherd,City walls would protect your sheep from wolves and thieves.,"City walls would protect your sheep from wolves and thieves.
+
+You're expecting nice weather in the next few weeks.",11,shepherd.png
+role-p1-potamosia-12,role,1,Potamosia,12,Farmer,yes,yes,no,Farmer,"A dam would provide water for your crops, making produce more reliable.
+
+You live by the river, a dam would make your house safer.","A dam would provide water for your crops, making produce more reliable.
+
+Building the dam would cost half the town's estimated amount if it'll be done when there's no rain.
+
+You live by the river, a dam would make your house safer.
+
+You heard that the rich are stealing money from the town treasury.",12,farmer.png
+role-p1-potamosia-13,role,1,Potamosia,13,Fisher,no,no,no,Fisher,A bridge would make your life much easier. A dam might reduce the fish population in the river.,"A bridge would make your life much easier. A dam might reduce the fish population in the river.
+
+Farmers are good at predicting rainfall. Thespians are poor and their plays depict rich merchants as evil and corrupt.",13,fisher.png
+role-p1-potamosia-14,role,1,Potamosia,14,Noble,no,no,no,Noble,City walls would protect your property and ensure its safety. A bridge would strengthen the merchants and will hurt the value of your property.,"City walls would protect your property and ensure its safety. A bridge would strengthen the merchants and will hurt the value of your property.
+
+You know more things than could fit here so we provided an additional sheet.",14,noble.png
+role-p1-potamosia-15,role,1,Potamosia,15,Farmer,yes,no,no,Farmer,"A dam would provide water for your crops, making produce more reliable.
+
+You live by the river, a dam would make your house safer.","A dam would provide water for your crops, making produce more reliable.
+
+Building the dam would cost half the town's estimated amount if it'll be done when there's no rain.
+
+You live by the river, a dam would make your house safer.",15,farmer.png
+role-p1-potamosia-16,role,1,Potamosia,16,Thespian,no,yes,no,Thespian,"A bridge would make your meager income less pitiful, not to mention you can sleep under it on desperate nights.","A bridge would make your meager income less pitiful, not to mention you can sleep under it on desperate nights.
+
+Merchants have considerable personal wealth, each could easily fund all building projects.
+
+You heard that the rich are stealing money from the town treasury.",16,thespian.png
+role-p1-potamosia-17,role,1,Potamosia,17,Shepherd,no,no,no,Shepherd,City walls would protect your sheep from wolves and thieves.,"City walls would protect your sheep from wolves and thieves.
+
+You're expecting nice weather in the next few weeks.",17,shepherd.png
+role-p1-potamosia-18,role,1,Potamosia,18,Mason,no,no,no,Mason,"Building a city project would fulfil a dream of yours, giving you an opportunity to leave a mark on the city.","Building a city project would fulfil a dream of yours, giving you an opportunity to leave a mark on the city.
+
+If all masons agree to work together, they can build the bridge and dam for half the cost.",18,mason.png
+role-p1-potamosia-19,role,1,Potamosia,19,Fisher,yes,no,no,Fisher,"A bridge would make your life much easier. A dam might reduce the fish population in the river.
+
+You live by the river, a dam would make your house safer.","A bridge would make your life much easier. A dam might reduce the fish population in the river.
+
+Farmers are good at predicting rainfall. Thespians are poor and their plays depict rich merchants as evil and corrupt.
+
+You live by the river, a dam would make your house safer.",19,fisher.png
+role-p1-potamosia-20,role,1,Potamosia,20,Shepherd,no,no,no,Shepherd,City walls would protect your sheep from wolves and thieves.,"City walls would protect your sheep from wolves and thieves.
+
+You're expecting nice weather in the next few weeks.",20,shepherd.png
+role-p1-hudrosia-01,role,1,Hudrosia,1,King,yes,no,yes,King,"City walls would glorify the city and protect your property.
+
+You live by the river, a dam would make your house safer.","City walls would glorify the city and protect your property.
+
+You know more things than could fit here so we provided an additional sheet.
+
+You live by the river, a dam would make your house safer.
+
+You are a council member.",1,king.png
+role-p1-hudrosia-02,role,1,Hudrosia,2,Merchant,no,no,yes,Merchant,A bridge between the two sides of town would make your trade more profitable.,"A bridge between the two sides of town would make your trade more profitable.
+
+You know more things than could fit here so we provided an additional sheet.
+
+You are a council member.",2,merchant.png
+role-p1-hudrosia-03,role,1,Hudrosia,3,Shepherd,yes,yes,no,Shepherd,"City walls would protect your sheep from wolves and thieves.
+
+You live by the river, a dam would make your house safer.","City walls would protect your sheep from wolves and thieves.
+
+You're expecting nice weather in the next few weeks.
+
+You live by the river, a dam would make your house safer.
+
+You heard that the rich are stealing money from the town treasury.",3,shepherd.png
+role-p1-hudrosia-04,role,1,Hudrosia,4,Merchant,no,no,yes,Merchant,A bridge between the two sides of town would make your trade more profitable.,"A bridge between the two sides of town would make your trade more profitable.
+
+You know more things than could fit here so we provided an additional sheet.
+
+You are a council member.",4,merchant.png
+role-p1-hudrosia-05,role,1,Hudrosia,5,Fisher,no,yes,no,Fisher,A bridge would make your life much easier. A dam might reduce the fish population in the river.,"A bridge would make your life much easier. A dam might reduce the fish population in the river.
+
+Farmers are good at predicting rainfall. Thespians are poor and their plays depict rich merchants as evil and corrupt.
+
+You heard that the rich are stealing money from the town treasury.",5,fisher.png
+role-p1-hudrosia-06,role,1,Hudrosia,6,Farmer,yes,no,no,Farmer,"A dam would provide water for your crops, making produce more reliable.
+
+You live by the river, a dam would make your house safer.","A dam would provide water for your crops, making produce more reliable.
+
+Building the dam would cost half the town's estimated amount if it'll be done when there's no rain.
+
+You live by the river, a dam would make your house safer.",6,farmer.png
+role-p1-hudrosia-07,role,1,Hudrosia,7,Mason,yes,yes,no,Mason,"Building a city project would fulfil a dream of yours, giving you an opportunity to leave a mark on the city.
+
+You live by the river, a dam would make your house safer.","Building a city project would fulfil a dream of yours, giving you an opportunity to leave a mark on the city.
+
+If all masons agree to work together, they can build the bridge and dam for half the cost.
+
+You live by the river, a dam would make your house safer.
+
+You heard that the rich are stealing money from the town treasury.",7,mason.png
+role-p1-hudrosia-08,role,1,Hudrosia,8,Mason,no,no,no,Mason,"Building a city project would fulfil a dream of yours, giving you an opportunity to leave a mark on the city.","Building a city project would fulfil a dream of yours, giving you an opportunity to leave a mark on the city.
+
+If all masons agree to work together, they can build the bridge and dam for half the cost.",8,mason.png
+role-p1-hudrosia-09,role,1,Hudrosia,9,Thespian,no,no,no,Thespian,"A bridge would make your meager income less pitiful, not to mention you can sleep under it on desperate nights.","A bridge would make your meager income less pitiful, not to mention you can sleep under it on desperate nights.
+
+Merchants have considerable personal wealth, each could easily fund all building projects.",9,thespian.png
+role-p1-hudrosia-10,role,1,Hudrosia,10,King,no,no,yes,King,City walls would glorify the city and protect your property.,"City walls would glorify the city and protect your property.
+
+You know more things than could fit here so we provided an additional sheet.
+
+You are a council member.",10,king.png
+role-p1-hudrosia-11,role,1,Hudrosia,11,Shepherd,no,no,no,Shepherd,City walls would protect your sheep from wolves and thieves.,"City walls would protect your sheep from wolves and thieves.
+
+You're expecting nice weather in the next few weeks.",11,shepherd.png
+role-p1-hudrosia-12,role,1,Hudrosia,12,Farmer,yes,yes,no,Farmer,"A dam would provide water for your crops, making produce more reliable.
+
+You live by the river, a dam would make your house safer.","A dam would provide water for your crops, making produce more reliable.
+
+Building the dam would cost half the town's estimated amount if it'll be done when there's no rain.
+
+You live by the river, a dam would make your house safer.
+
+You heard that the rich are stealing money from the town treasury.",12,farmer.png
+role-p1-hudrosia-13,role,1,Hudrosia,13,Fisher,no,no,no,Fisher,A bridge would make your life much easier. A dam might reduce the fish population in the river.,"A bridge would make your life much easier. A dam might reduce the fish population in the river.
+
+Farmers are good at predicting rainfall. Thespians are poor and their plays depict rich merchants as evil and corrupt.",13,fisher.png
+role-p1-hudrosia-14,role,1,Hudrosia,14,Noble,no,no,yes,Noble,City walls would protect your property and ensure its safety. A bridge would strengthen the merchants and will hurt the value of your property.,"City walls would protect your property and ensure its safety. A bridge would strengthen the merchants and will hurt the value of your property.
+
+You know more things than could fit here so we provided an additional sheet.
+
+You are a council member.",14,noble.png
+role-p1-hudrosia-15,role,1,Hudrosia,15,Farmer,yes,no,no,Farmer,"A dam would provide water for your crops, making produce more reliable.
+
+You live by the river, a dam would make your house safer.","A dam would provide water for your crops, making produce more reliable.
+
+Building the dam would cost half the town's estimated amount if it'll be done when there's no rain.
+
+You live by the river, a dam would make your house safer.",15,farmer.png
+role-p1-hudrosia-16,role,1,Hudrosia,16,Thespian,no,yes,no,Thespian,"A bridge would make your meager income less pitiful, not to mention you can sleep under it on desperate nights.","A bridge would make your meager income less pitiful, not to mention you can sleep under it on desperate nights.
+
+Merchants have considerable personal wealth, each could easily fund all building projects.
+
+You heard that the rich are stealing money from the town treasury.",16,thespian.png
+role-p1-hudrosia-17,role,1,Hudrosia,17,Shepherd,no,no,no,Shepherd,City walls would protect your sheep from wolves and thieves.,"City walls would protect your sheep from wolves and thieves.
+
+You're expecting nice weather in the next few weeks.",17,shepherd.png
+role-p1-hudrosia-18,role,1,Hudrosia,18,Mason,no,no,no,Mason,"Building a city project would fulfil a dream of yours, giving you an opportunity to leave a mark on the city.","Building a city project would fulfil a dream of yours, giving you an opportunity to leave a mark on the city.
+
+If all masons agree to work together, they can build the bridge and dam for half the cost.",18,mason.png
+role-p1-hudrosia-19,role,1,Hudrosia,19,Fisher,yes,no,no,Fisher,"A bridge would make your life much easier. A dam might reduce the fish population in the river.
+
+You live by the river, a dam would make your house safer.","A bridge would make your life much easier. A dam might reduce the fish population in the river.
+
+Farmers are good at predicting rainfall. Thespians are poor and their plays depict rich merchants as evil and corrupt.
+
+You live by the river, a dam would make your house safer.",19,fisher.png
+role-p1-hudrosia-20,role,1,Hudrosia,20,Shepherd,no,no,no,Shepherd,City walls would protect your sheep from wolves and thieves.,"City walls would protect your sheep from wolves and thieves.
+
+You're expecting nice weather in the next few weeks.",20,shepherd.png
+role-p2-potamosia-01,role,2,Potamosia,1,Mayor,yes,no,no,Mayor,"If the town is invaded, your legacy will be in shambles. Anything other than ordering an attack would be seen as cowardice on your part.","If the town is invaded, your legacy will be in shambles. Anything other than ordering an attack would be seen as cowardice on your part.
+
+You know more things than could fit here so we provided an additional sheet.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",1,mayor.png
+role-p2-potamosia-02,role,2,Potamosia,2,Shepherd,no,no,no,Shepherd,You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.,"You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.
+
+Discussing 'going to war' is preposterous, the war is already ongoing.",2,shepherd.png
+role-p2-potamosia-03,role,2,Potamosia,3,Shepherd,no,yes,no,Shepherd,You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.,"You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.
+
+Discussing 'going to war' is preposterous, the war is already ongoing.
+
+The rival city has successfully planted spies among us, relaying to them our every word!",3,shepherd.png
+role-p2-potamosia-04,role,2,Potamosia,4,Merchant,yes,no,no,Merchant,The way to minimize damage to property is to build defenses. You have more property than most and stand to lose a lot more in case property is damaged.,"The way to minimize damage to property is to build defenses. You have more property than most and stand to lose a lot more in case property is damaged.
+
+You know more things than could fit here so we provided an additional sheet.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",4,merchant.png
+role-p2-potamosia-05,role,2,Potamosia,5,Fisher,no,yes,no,Fisher,Going to war and building defenses would both wreak havoc on your livelihood. Diplomacy is the only way to avoid starvation.,"Going to war and building defenses would both wreak havoc on your livelihood. Diplomacy is the only way to avoid starvation.
+
+Warships and fishing ships may look very similar while being constructed.
+
+The rival city has successfully planted spies among us, relaying to them our every word!",5,fisher.png
+role-p2-potamosia-06,role,2,Potamosia,6,Farmer,yes,no,no,Farmer,Going to war and building defenses would both wreak havoc on your crops. Diplomacy is the only way to avoid starvation.,"Going to war and building defenses would both wreak havoc on your crops. Diplomacy is the only way to avoid starvation.
+
+For generations farms of both cities supported each other in tough times.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",6,farmer.png
+role-p2-potamosia-07,role,2,Potamosia,7,Noble,no,no,no,Noble,"If the town picks diplomacy you will surely be the envoy, which gives you an opportunity to enter the annals of history as the hero who prevented a devastating war.","If the town picks diplomacy you will surely be the envoy, which gives you an opportunity to enter the annals of history as the hero who prevented a devastating war.
+
+You know more things than could fit here so we provided an additional sheet.",7,noble.png
+role-p2-potamosia-08,role,2,Potamosia,8,Mason,no,yes,no,Mason,"You are confident in your ability to construct defenses that would protect the town, and doing so would increase your prestige and wealth.","You are confident in your ability to construct defenses that would protect the town, and doing so would increase your prestige and wealth.
+
+Our masonry is more advanced so any defenses we build will be impenetrable to our rivals.
+
+The rival city has successfully planted spies among us, relaying to them our every word!",8,mason.png
+role-p2-potamosia-09,role,2,Potamosia,9,Thespian,yes,no,no,Thespian,As the storyteller of the town you know its history very well and it has given you an appreciation for the value of life. Building defenses would minimize casualties.,"As the storyteller of the town you know its history very well and it has given you an appreciation for the value of life. Building defenses would minimize casualties.
+
+The hatred between the cities is ancient and deep, and will not be easily overcome.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",9,thespian.png
+role-p2-potamosia-10,role,2,Potamosia,10,Mayor,no,no,no,Mayor,"If the town is invaded, your legacy will be in shambles. Anything other than ordering an attack would be seen as cowardice on your part.","If the town is invaded, your legacy will be in shambles. Anything other than ordering an attack would be seen as cowardice on your part.
+
+You know more things than could fit here so we provided an additional sheet.",10,mayor.png
+role-p2-potamosia-11,role,2,Potamosia,11,Fisher,yes,no,no,Fisher,Going to war and building defenses would both wreak havoc on your livelihood. Diplomacy is the only way to avoid starvation.,"Going to war and building defenses would both wreak havoc on your livelihood. Diplomacy is the only way to avoid starvation.
+
+Warships and fishing ships may look very similar while being constructed.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",11,fisher.png
+role-p2-potamosia-12,role,2,Potamosia,12,Mason,yes,no,no,Mason,"You are confident in your ability to construct defenses that would protect the town, and doing so would increase your prestige and wealth.","You are confident in your ability to construct defenses that would protect the town, and doing so would increase your prestige and wealth.
+
+Our masonry is more advanced so any defenses we build will be impenetrable to our rivals.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",12,mason.png
+role-p2-potamosia-13,role,2,Potamosia,13,Merchant,no,no,no,Merchant,The way to minimize damage to property is to build defenses. You have more property than most and stand to lose a lot more in case property is damaged.,"The way to minimize damage to property is to build defenses. You have more property than most and stand to lose a lot more in case property is damaged.
+
+You know more things than could fit here so we provided an additional sheet.",13,merchant.png
+role-p2-potamosia-14,role,2,Potamosia,14,Farmer,no,yes,no,Farmer,Going to war and building defenses would both wreak havoc on your crops. Diplomacy is the only way to avoid starvation.,"Going to war and building defenses would both wreak havoc on your crops. Diplomacy is the only way to avoid starvation.
+
+For generations farms of both cities supported each other in tough times.
+
+The rival city has successfully planted spies among us, relaying to them our every word!",14,farmer.png
+role-p2-potamosia-15,role,2,Potamosia,15,Shepherd,yes,no,no,Shepherd,You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.,"You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.
+
+Discussing 'going to war' is preposterous, the war is already ongoing.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",15,shepherd.png
+role-p2-potamosia-16,role,2,Potamosia,16,Fisher,no,yes,no,Fisher,Going to war and building defenses would both wreak havoc on your livelihood. Diplomacy is the only way to avoid starvation.,"Going to war and building defenses would both wreak havoc on your livelihood. Diplomacy is the only way to avoid starvation.
+
+Warships and fishing ships may look very similar while being constructed.
+
+The rival city has successfully planted spies among us, relaying to them our every word!",16,fisher.png
+role-p2-potamosia-17,role,2,Potamosia,17,Mason,yes,no,no,Mason,"You are confident in your ability to construct defenses that would protect the town, and doing so would increase your prestige and wealth.","You are confident in your ability to construct defenses that would protect the town, and doing so would increase your prestige and wealth.
+
+Our masonry is more advanced so any defenses we build will be impenetrable to our rivals.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",17,mason.png
+role-p2-potamosia-18,role,2,Potamosia,18,Shepherd,no,no,no,Shepherd,You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.,"You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.
+
+Discussing 'going to war' is preposterous, the war is already ongoing.",18,shepherd.png
+role-p2-potamosia-19,role,2,Potamosia,19,Thespian,no,yes,no,Thespian,As the storyteller of the town you know its history very well and it has given you an appreciation for the value of life. Building defenses would minimize casualties.,"As the storyteller of the town you know its history very well and it has given you an appreciation for the value of life. Building defenses would minimize casualties.
+
+The hatred between the cities is ancient and deep, and will not be easily overcome.
+
+The rival city has successfully planted spies among us, relaying to them our every word!",19,thespian.png
+role-p2-potamosia-20,role,2,Potamosia,20,Farmer,no,no,no,Farmer,Going to war and building defenses would both wreak havoc on your crops. Diplomacy is the only way to avoid starvation.,"Going to war and building defenses would both wreak havoc on your crops. Diplomacy is the only way to avoid starvation.
+
+For generations farms of both cities supported each other in tough times.",20,farmer.png
+role-p2-hudrosia-01,role,2,Hudrosia,1,King,yes,no,yes,King,"If the town is invaded, your legacy will be in shambles. Anything other than ordering an attack would be seen as cowardice on your part.","If the town is invaded, your legacy will be in shambles. Anything other than ordering an attack would be seen as cowardice on your part.
+
+You know more things than could fit here so we provided an additional sheet.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.
+
+You are a council member.",1,king.png
+role-p2-hudrosia-02,role,2,Hudrosia,2,Shepherd,no,no,no,Shepherd,You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.,"You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.
+
+Discussing 'going to war' is preposterous, the war is already ongoing.",2,shepherd.png
+role-p2-hudrosia-03,role,2,Hudrosia,3,Shepherd,no,yes,no,Shepherd,You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.,"You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.
+
+Discussing 'going to war' is preposterous, the war is already ongoing.
+
+The rival city has successfully planted spies among us, relaying to them our every word!",3,shepherd.png
+role-p2-hudrosia-04,role,2,Hudrosia,4,Merchant,yes,no,yes,Merchant,The way to minimize damage to property is to build defenses. You have more property than most and stand to lose a lot more in case property is damaged.,"The way to minimize damage to property is to build defenses. You have more property than most and stand to lose a lot more in case property is damaged.
+
+You know more things than could fit here so we provided an additional sheet.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.
+
+You are a council member.",4,merchant.png
+role-p2-hudrosia-05,role,2,Hudrosia,5,Fisher,no,yes,no,Fisher,Going to war and building defenses would both wreak havoc on your livelihood. Diplomacy is the only way to avoid starvation.,"Going to war and building defenses would both wreak havoc on your livelihood. Diplomacy is the only way to avoid starvation.
+
+Warships and fishing ships may look very similar while being constructed.
+
+The rival city has successfully planted spies among us, relaying to them our every word!",5,fisher.png
+role-p2-hudrosia-06,role,2,Hudrosia,6,Farmer,yes,no,no,Farmer,Going to war and building defenses would both wreak havoc on your crops. Diplomacy is the only way to avoid starvation.,"Going to war and building defenses would both wreak havoc on your crops. Diplomacy is the only way to avoid starvation.
+
+For generations farms of both cities supported each other in tough times.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",6,farmer.png
+role-p2-hudrosia-07,role,2,Hudrosia,7,Noble,no,no,yes,Noble,"If the town picks diplomacy you will surely be the envoy, which gives you an opportunity to enter the annals of history as the hero who prevented a devastating war.","If the town picks diplomacy you will surely be the envoy, which gives you an opportunity to enter the annals of history as the hero who prevented a devastating war.
+
+You know more things than could fit here so we provided an additional sheet.
+
+You are a council member.",7,noble.png
+role-p2-hudrosia-08,role,2,Hudrosia,8,Mason,no,yes,no,Mason,"You are confident in your ability to construct defenses that would protect the town, and doing so would increase your prestige and wealth.","You are confident in your ability to construct defenses that would protect the town, and doing so would increase your prestige and wealth.
+
+Our masonry is more advanced so any defenses we build will be impenetrable to our rivals.
+
+The rival city has successfully planted spies among us, relaying to them our every word!",8,mason.png
+role-p2-hudrosia-09,role,2,Hudrosia,9,Thespian,yes,no,no,Thespian,As the storyteller of the town you know its history very well and it has given you an appreciation for the value of life. Building defenses would minimize casualties.,"As the storyteller of the town you know its history very well and it has given you an appreciation for the value of life. Building defenses would minimize casualties.
+
+The hatred between the cities is ancient and deep, and will not be easily overcome.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",9,thespian.png
+role-p2-hudrosia-10,role,2,Hudrosia,10,King,no,no,yes,King,"If the town is invaded, your legacy will be in shambles. Anything other than ordering an attack would be seen as cowardice on your part.","If the town is invaded, your legacy will be in shambles. Anything other than ordering an attack would be seen as cowardice on your part.
+
+You know more things than could fit here so we provided an additional sheet.
+
+You are a council member.",10,king.png
+role-p2-hudrosia-11,role,2,Hudrosia,11,Fisher,yes,no,no,Fisher,Going to war and building defenses would both wreak havoc on your livelihood. Diplomacy is the only way to avoid starvation.,"Going to war and building defenses would both wreak havoc on your livelihood. Diplomacy is the only way to avoid starvation.
+
+Warships and fishing ships may look very similar while being constructed.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",11,fisher.png
+role-p2-hudrosia-12,role,2,Hudrosia,12,Mason,yes,no,no,Mason,"You are confident in your ability to construct defenses that would protect the town, and doing so would increase your prestige and wealth.","You are confident in your ability to construct defenses that would protect the town, and doing so would increase your prestige and wealth.
+
+Our masonry is more advanced so any defenses we build will be impenetrable to our rivals.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",12,mason.png
+role-p2-hudrosia-13,role,2,Hudrosia,13,Merchant,no,no,yes,Merchant,The way to minimize damage to property is to build defenses. You have more property than most and stand to lose a lot more in case property is damaged.,"The way to minimize damage to property is to build defenses. You have more property than most and stand to lose a lot more in case property is damaged.
+
+You know more things than could fit here so we provided an additional sheet.
+
+You are a council member.",13,merchant.png
+role-p2-hudrosia-14,role,2,Hudrosia,14,Farmer,no,yes,no,Farmer,Going to war and building defenses would both wreak havoc on your crops. Diplomacy is the only way to avoid starvation.,"Going to war and building defenses would both wreak havoc on your crops. Diplomacy is the only way to avoid starvation.
+
+For generations farms of both cities supported each other in tough times.
+
+The rival city has successfully planted spies among us, relaying to them our every word!",14,farmer.png
+role-p2-hudrosia-15,role,2,Hudrosia,15,Shepherd,yes,no,no,Shepherd,You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.,"You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.
+
+Discussing 'going to war' is preposterous, the war is already ongoing.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",15,shepherd.png
+role-p2-hudrosia-16,role,2,Hudrosia,16,Fisher,no,yes,no,Fisher,Going to war and building defenses would both wreak havoc on your livelihood. Diplomacy is the only way to avoid starvation.,"Going to war and building defenses would both wreak havoc on your livelihood. Diplomacy is the only way to avoid starvation.
+
+Warships and fishing ships may look very similar while being constructed.
+
+The rival city has successfully planted spies among us, relaying to them our every word!",16,fisher.png
+role-p2-hudrosia-17,role,2,Hudrosia,17,Mason,yes,no,no,Mason,"You are confident in your ability to construct defenses that would protect the town, and doing so would increase your prestige and wealth.","You are confident in your ability to construct defenses that would protect the town, and doing so would increase your prestige and wealth.
+
+Our masonry is more advanced so any defenses we build will be impenetrable to our rivals.
+
+Our ships were built for fishing, they need weeks of work to be made combat-ready.",17,mason.png
+role-p2-hudrosia-18,role,2,Hudrosia,18,Shepherd,no,no,no,Shepherd,You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.,"You and yours have suffered the most from skirmishes and attacks in recent years. Going to war would be no worse for you.
+
+Discussing 'going to war' is preposterous, the war is already ongoing.",18,shepherd.png
+role-p2-hudrosia-19,role,2,Hudrosia,19,Thespian,no,yes,no,Thespian,As the storyteller of the town you know its history very well and it has given you an appreciation for the value of life. Building defenses would minimize casualties.,"As the storyteller of the town you know its history very well and it has given you an appreciation for the value of life. Building defenses would minimize casualties.
+
+The hatred between the cities is ancient and deep, and will not be easily overcome.
+
+The rival city has successfully planted spies among us, relaying to them our every word!",19,thespian.png
+role-p2-hudrosia-20,role,2,Hudrosia,20,Farmer,no,no,no,Farmer,Going to war and building defenses would both wreak havoc on your crops. Diplomacy is the only way to avoid starvation.,"Going to war and building defenses would both wreak havoc on your crops. Diplomacy is the only way to avoid starvation.
+
+For generations farms of both cities supported each other in tough times.",20,farmer.png

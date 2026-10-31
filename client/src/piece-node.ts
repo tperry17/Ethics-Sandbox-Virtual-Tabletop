@@ -8,6 +8,7 @@
  * every frame, and a node that rebuilds itself is a node that drops frames.
  */
 
+import { renderRichText } from "./richtext.js";
 import type { ComponentView, PieceKind, SeatView } from "./protocol.js";
 import type { LocalPiece } from "./model.js";
 
@@ -280,7 +281,9 @@ export function appendFace(container: HTMLElement, component: ComponentView): vo
     container.append(span("piece__title", component.title));
   }
   if (component.body !== null) {
-    container.append(span("piece__copy", component.body));
+    const copy = span("piece__copy", "");
+    renderRichText(copy, component.body);
+    container.append(copy);
   }
   if (component.folio !== null || (component.badge ?? null) !== null) {
     const foot = document.createElement("span");

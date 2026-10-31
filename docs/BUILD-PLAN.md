@@ -40,7 +40,7 @@ shows "Claimed" in this table on `main`.
 | 8 | The table client — interaction | Done | | `d8c383d` (PR #1) |
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
 | 10 | Value Cards Trading | Done | | PR #16 |
-| 11 | Democracy Simulation | Claimed | `claude/step-11-democracy-simulation` | |
+| 11 | Democracy Simulation | In progress; the rules are built, four things wait on the author (PR #19) | `claude/step-11-democracy-simulation` | PR #19 |
 | 12 | Running a session (rewritten, lean) | Not started | `claude/step-12-facilitator-controls` | |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
@@ -940,7 +940,12 @@ Update this plan's status table. Commit.
 
 ## 11. Democracy Simulation
 
-**Status: Ready to run.** All of the material is in the author's Drive
+**Status: In progress (PR #19).** Built: the options (city and phase), the
+cards, the deal, the co-Chairs, proposals, and the count in both cities,
+with tests. Waiting on the author: text written on a piece (character names,
+the proposals' wording), the speaking queue, the choice between one vote per
+proposal and a vote among options, and what counts as "cast"; see the pull
+request's questions. All of the material is in the author's Drive
 folder,
 <https://drive.google.com/drive/folders/1zRzxok62G8tFtLYkgUMj_4d0JtB6nqOa>,
 read on 2026-10-30:

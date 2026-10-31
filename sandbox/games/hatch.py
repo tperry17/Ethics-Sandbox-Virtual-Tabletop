@@ -18,11 +18,12 @@ a sentence a person can read; the whole macro is then refused with it.
 
 from __future__ import annotations
 
+import copy
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Literal, TypeVar
 
-from sandbox.model import Operation, Table
+from sandbox.model import SYSTEM_SEAT, Operation, Table
 
 Moment = Literal["after_setup", "before_macro", "seat_change"]
 MOMENTS: tuple[Moment, ...] = ("after_setup", "before_macro", "seat_change")
@@ -77,6 +78,25 @@ MACRO_ATTRIBUTE = "__sandbox_macro__"
 HOOK_ATTRIBUTE = "__sandbox_hook__"
 
 
+def preview(table: Table, operations: Sequence[Operation]) -> Table:
+    """What ``table`` would be after ``operations``, on a copy of it.
+
+    A rule that must act on the result of a shuffle or a deal - which card
+    each seat was dealt, so that its sheet can follow - cannot know it until
+    the operation has run. The copy it is given carries the same random
+    state as the real table, so the same operations on the real table
+    produce the same result. Nothing is applied to the table itself. A step
+    the model would refuse raises ``MacroRefused`` with its reason.
+    """
+    trial = copy.deepcopy(table)
+    for operation in operations:
+        reason = operation.validate(trial, SYSTEM_SEAT)
+        if reason is not None:
+            raise MacroRefused(reason)
+        operation.apply(trial, SYSTEM_SEAT)
+    return trial
+
+
 def macro(macro_id: str) -> Callable[[_F], _F]:
     """Register the decorated function as the body of macro ``macro_id``."""
 
@@ -109,4 +129,5 @@ __all__ = [
     "Moment",
     "hook",
     "macro",
+    "preview",
 ]
