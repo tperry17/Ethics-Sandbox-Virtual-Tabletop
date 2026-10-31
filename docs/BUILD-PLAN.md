@@ -45,7 +45,7 @@ shows "Claimed" in this table on `main`.
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
-| 17 | Open rooms and activities (added 2026-10-31; first in the order) | Not started | `claude/step-17-open-rooms-and-activities` | |
+| 17 | Open rooms and activities (added 2026-10-31; first in the order) | Claimed | `claude/step-17-open-rooms-and-activities` | |
 | 16 | Launch pass | Not started; hosting is the Mac on the local network (below) | `claude/step-16-launch-pass` | |
 
 ### Claiming a step
