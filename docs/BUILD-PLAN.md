@@ -41,7 +41,7 @@ shows "Claimed" in this table on `main`.
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
 | 10 | Value Cards Trading | Done | | PR #16 |
 | 11 | Democracy Simulation | Done | | PR #19 |
-| 12 | Running a session (rewritten, lean) | Not started | `claude/step-12-facilitator-controls` | |
+| 12 | Running a session (rewritten, lean) | Claimed | `claude/step-12-facilitator-controls` | |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
