@@ -7,7 +7,25 @@ and, where noted, the table's own seeded RNG.
 """
 
 from sandbox.model.actions import MenuEntry, piece_actions
-from sandbox.model.entities import Piece, Polygon, Rect, Seat, Stroke, Table, Zone
+from sandbox.model.activities import (
+    BeginActivity,
+    EndActivity,
+    JoinActivity,
+    LeaveActivity,
+    OpenActivity,
+    SetActivityPlayers,
+)
+from sandbox.model.entities import (
+    SYSTEM_SEAT,
+    Activity,
+    Piece,
+    Polygon,
+    Rect,
+    Seat,
+    Stroke,
+    Table,
+    Zone,
+)
 from sandbox.model.layout import place_in_zone
 from sandbox.model.ops import (
     AddSeat,
@@ -50,6 +68,7 @@ from sandbox.model.ops import (
 )
 from sandbox.model.results import Ok, OpOutcome, Patch, Reject
 from sandbox.model.rng import TableRng
+from sandbox.model.roles import ReleaseFacilitator, TakeFacilitator, facilitator_seat
 from sandbox.model.types import Layout, PieceKind, Visibility, ZoneKind
 from sandbox.model.visibility import (
     ViewPiece,
@@ -64,6 +83,20 @@ from sandbox.model.visibility import (
 )
 
 __all__ = [
+    "SYSTEM_SEAT",
+    "Activity",
+    "BeginActivity",
+    "EndActivity",
+    "JoinActivity",
+    "LeaveActivity",
+    "OpenActivity",
+    "SetActivityPlayers",
+    "ReleaseFacilitator",
+    "TakeFacilitator",
+    "facilitator_seat",
+    "ReleaseFacilitator",
+    "TakeFacilitator",
+    "facilitator_seat",
     "AddSeat",
     "AddZone",
     "AssignSeat",

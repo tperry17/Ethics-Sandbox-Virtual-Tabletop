@@ -35,6 +35,7 @@ from sandbox.model import (
     Table,
     TableRng,
     Transaction,
+    facilitator_seat,
     run_op,
 )
 
@@ -232,9 +233,12 @@ def create_room(
     game_slug: str,
     facilitator_cookie_id: str,
     facilitator_name: str,
+    as_facilitator: bool = False,
     config: dict[str, object] | None = None,
 ) -> tuple[Room, Participant]:
-    """Start a new room for ``game_slug``, seating its facilitator.
+    """Start a new room for ``game_slug``, seating its creator.
+
+    The creator is an ordinary player unless ``as_facilitator`` is set.
 
     The table is built from the exercise's game definition - its zones, the
     facilitator's seat and own zones, and its setup - as one logged
@@ -262,18 +266,29 @@ def create_room(
     # room's own shuffles can still be replayed exactly from its log.
     table = Table(rng=TableRng(seed=secrets.randbits(63)))
     seat_id, transaction = build_table(
-        game_for(room), table, participant_id=facilitator.id
+        game_for(room),
+        table,
+        participant_id=facilitator.id,
+        as_facilitator=as_facilitator,
     )
     _apply_and_log(session, room, table, seat_id, transaction)
     facilitator.seat_id = seat_id
-    room.facilitator_participant_id = facilitator.id
 
     save_table_state(session, room, table)
     return room, facilitator
 
 
+class FacilitatorTakenError(RoomError):
+    """Someone already holds the facilitator seat."""
+
+
 def join_room(
-    session: Session, *, code: str, cookie_id: str, display_name: str
+    session: Session,
+    *,
+    code: str,
+    cookie_id: str,
+    display_name: str,
+    as_facilitator: bool = False,
 ) -> Participant:
     """Seat or reattach a browser at the room named by ``code``.
 
@@ -286,6 +301,12 @@ def join_room(
         raise RoomNotFoundError(f"There is no room with the code {code!r}.")
     if room.status == "closed":
         raise RoomClosedError("This room is closed.")
+    if as_facilitator:
+        # The table says who holds the role; it changes while people play.
+        holder = facilitator_seat(load_table(session, room))
+        held = get_participant(session, room.id, cookie_id)
+        if holder is not None and (held is None or held.seat_id != holder):
+            raise FacilitatorTakenError("This room already has a facilitator.")
 
     existing = get_participant(session, room.id, cookie_id)
     if existing is not None:
@@ -320,6 +341,8 @@ def join_room(
         seat.participant_id = participant.id
         participant.seat_id = seat.id
         participant.is_observer = False
+        if as_facilitator:
+            seat.is_facilitator = True
         save_table_state(session, room, table)
 
     room.last_active_at = _now()
@@ -414,6 +437,7 @@ def _op_payload(op: Operation) -> dict[str, object]:
             "name": op.name,
             "label": op.label,
             "op_id": op.op_id,
+            "system": op.system,
             "steps": [
                 {"op_type": type(step).__name__, "payload": _op_payload(step)}
                 for step in op.steps

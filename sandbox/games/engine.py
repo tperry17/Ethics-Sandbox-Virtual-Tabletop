@@ -20,6 +20,7 @@ from __future__ import annotations
 import copy
 import re
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 from sandbox.games.definition import (
     ClearInkStep,
@@ -39,8 +40,10 @@ from sandbox.games.definition import (
 from sandbox.games.hatch import GameContext, GameFunction, MacroRefused, Moment
 from sandbox.games.loader import Game
 from sandbox.model import (
+    SYSTEM_SEAT,
     AddSeat,
     AddZone,
+    BeginActivity,
     ClearInk,
     Deal,
     Draw,
@@ -89,17 +92,60 @@ def seat_zone_id(zone_id: str, seat_id: str) -> str:
     return f"{zone_id}-{seat_id}"
 
 
+@dataclass(frozen=True)
+class Scope:
+    """Where an activity lives in a room: its zones' names, players and place.
+
+    Every zone an activity makes is named ``<activity id>:<definition id>``,
+    its per-seat zones belong to the activity's players only, and its
+    rectangles are moved by ``origin`` so they sit clear of the sandbox.
+    """
+
+    activity_id: str
+    seats: tuple[str, ...]
+    origin: tuple[float, float]
+
+    @property
+    def prefix(self) -> str:
+        return f"{self.activity_id}:"
+
+
+ACTIVITY_SPACING = 2000.0
+
+
+def scope_of(table: Table, activity_id: str) -> Scope:
+    """The scope of an activity in ``table``, placed by its serial number."""
+    activity = table.activities[activity_id]
+    serial = _seat_number(activity_id)[0]
+    return Scope(
+        activity_id=activity_id,
+        seats=activity.seats,
+        origin=(ACTIVITY_SPACING * serial, 0.0),
+    )
+
+
 def _add_zone(
-    spec: ZoneSpec, *, seat_id: str | None, seat_index: int, label: str
+    spec: ZoneSpec,
+    *,
+    seat_id: str | None,
+    seat_index: int,
+    label: str,
+    scope: Scope | None = None,
 ) -> AddZone:
     x, y, width, height = spec.rect
     dx, dy = spec.step
+    prefix = "" if scope is None else scope.prefix
+    ox, oy = (0.0, 0.0) if scope is None else scope.origin
+    zone_id = prefix + spec.id
     return AddZone(
-        zone_id=spec.id if seat_id is None else seat_zone_id(spec.id, seat_id),
+        zone_id=zone_id if seat_id is None else seat_zone_id(zone_id, seat_id),
         kind=spec.kind,
         label=label,
         geometry=Rect(
-            x=x + dx * seat_index, y=y + dy * seat_index, width=width, height=height
+            x=ox + x + dx * seat_index,
+            y=oy + y + dy * seat_index,
+            width=width,
+            height=height,
         ),
         visibility=spec.visibility,
         layout=spec.layout,
@@ -111,10 +157,19 @@ def _add_zone(
 class _Builder:
     """Collects the operations of one transaction, trying each as it goes."""
 
-    def __init__(self, game: Game | None, table: Table, actor_seat: str) -> None:
+    def __init__(
+        self,
+        game: Game | None,
+        table: Table,
+        actor_seat: str,
+        scope: Scope | None = None,
+    ) -> None:
         self.game = game
+        self.scope = scope
         self.trial = copy.deepcopy(table)
-        self.actor_seat = actor_seat
+        # Who each step is tried as. An activity's buttons act for the room.
+        self.actor_seat = SYSTEM_SEAT if scope is not None else actor_seat
+        self.operator = actor_seat
         self.steps: list[Operation] = []
 
     # -- running ----------------------------------------------------------
@@ -127,7 +182,12 @@ class _Builder:
         self.steps.append(operation)
 
     def transaction(self, name: str, label: str) -> Transaction:
-        return Transaction(steps=tuple(self.steps), name=name, label=label)
+        return Transaction(
+            steps=tuple(self.steps),
+            name=name,
+            label=label,
+            system=self.scope is not None,
+        )
 
     # -- what the definition names ----------------------------------------
 
@@ -139,19 +199,37 @@ class _Builder:
         self, *, macro_id: str | None = None, seat_id: str | None = None
     ) -> GameContext:
         return GameContext(
-            actor_seat=self.actor_seat,
-            seats=seat_order(self.trial),
+            actor_seat=self.operator,
+            seats=self._seats(),
+            prefix="" if self.scope is None else self.scope.prefix,
             per_seat_zones=self._game().per_seat_zones,
             macro_id=macro_id,
             seat_id=seat_id,
         )
 
+    def _seats(self) -> tuple[str, ...]:
+        """The seats a step means by "every seat": the activity's, if scoped."""
+        if self.scope is not None:
+            return self.scope.seats
+        return seat_order(self.trial)
+
+    def zone(self, zone_id: str) -> str:
+        """The id on the table of a shared zone the definition names."""
+        return zone_id if self.scope is None else self.scope.prefix + zone_id
+
     def zones(self, zone_id: str) -> list[str]:
         """The zones on the table a definition zone id means, in seat order."""
+        named = self.zone(zone_id)
         if zone_id not in self._game().per_seat_zones:
-            return [zone_id]
-        found = (seat_zone_id(zone_id, seat) for seat in seat_order(self.trial))
+            return [named]
+        found = (seat_zone_id(named, seat) for seat in self._seats())
         return [zone for zone in found if zone in self.trial.zones]
+
+    def scope_zones(self) -> list[str]:
+        """Every zone on the table that belongs to this builder's activity."""
+        if self.scope is None:
+            return list(self.trial.zones)
+        return [z for z in self.trial.zones if z.startswith(self.scope.prefix)]
 
     def call(self, function: GameFunction, context: GameContext) -> None:
         try:
@@ -170,7 +248,32 @@ class _Builder:
     def shared_zones(self) -> None:
         for spec in self._game().definition.zones:
             if not spec.per_seat:
-                self.run(_add_zone(spec, seat_id=None, seat_index=0, label=spec.label))
+                self.run(
+                    _add_zone(
+                        spec,
+                        seat_id=None,
+                        seat_index=0,
+                        label=spec.label,
+                        scope=self.scope,
+                    )
+                )
+
+    def activity_seat_zones(self) -> None:
+        """Each of the activity's players gets their own copy of per-seat zones."""
+        assert self.scope is not None
+        for index, seat_id in enumerate(self.scope.seats):
+            label = self.trial.seats[seat_id].label
+            for spec in self._game().definition.zones:
+                if spec.per_seat:
+                    self.run(
+                        _add_zone(
+                            spec,
+                            seat_id=seat_id,
+                            seat_index=index,
+                            label=f"{spec.label} · {label}",
+                            scope=self.scope,
+                        )
+                    )
 
     def seat(self, *, participant_id: str | None, is_facilitator: bool) -> str:
         index = len(self.trial.seats)
@@ -228,12 +331,17 @@ class _Builder:
                     if piece.face_up is not step.face_up:
                         self.run(Flip(piece_id=piece.id, face_up=step.face_up))
         elif isinstance(step, ResetTableStep):
-            self.run(ResetTable())
+            if self.scope is None:
+                self.run(ResetTable())
+            else:
+                for zone in self.scope_zones():
+                    self.run(ResetZone(zone_id=zone))
         elif isinstance(step, ResetZoneStep):
             for zone in self.zones(step.zone):
                 self.run(ResetZone(zone_id=zone))
         elif isinstance(step, ClearInkStep):
-            self.run(ClearInk(everyone=True))
+            # Ink is the whole room's; an activity clears only its own player's.
+            self.run(ClearInk(everyone=self.scope is None))
 
     def _spawn_deck(self, step: SpawnDeckStep) -> None:
         deck = next(
@@ -292,19 +400,17 @@ class _Builder:
         if not destinations:
             raise _Refused("There is nobody at the table to deal to.")
         needed = step.count * len(destinations)
+        source = self.zone(step.from_zone)
         # Deal takes from the top of the pile, so these are the pieces it
         # will move. Which card each one is does not matter here.
-        dealt = [
-            piece.id for piece in self.trial.pieces_in_zone(step.from_zone)[-needed:]
-        ]
-        self.run(
-            Deal(from_zone=step.from_zone, to_zones=destinations, count_each=step.count)
-        )
+        dealt = [piece.id for piece in self.trial.pieces_in_zone(source)[-needed:]]
+        self.run(Deal(from_zone=source, to_zones=destinations, count_each=step.count))
         self._land(dealt, step.face_up)
 
     def _draw(
         self, source: str, destination: str, count: int, face_up: bool | None
     ) -> None:
+        source = self.zone(source)
         drawn = [piece.id for piece in self.trial.pieces_in_zone(source)[-count:]]
         self.run(Draw(count=count, from_zone=source, to_zone=destination))
         self._land(drawn, face_up)
@@ -330,13 +436,15 @@ class _Builder:
                 zone for source in step.from_zones for zone in self.zones(source)
             ]
         else:
-            sources = [zone for zone in self.trial.zones if zone != step.to]
+            target = self.zone(step.to)
+            sources = [zone for zone in self.scope_zones() if zone != target]
+        target = self.zone(step.to)
         moved: list[str] = []
         for zone in sources:
             for piece in self.trial.pieces_in_zone(zone):
                 if step.kinds and piece.kind not in step.kinds:
                     continue
-                self.run(MoveToZone(piece_id=piece.id, zone_id=step.to))
+                self.run(MoveToZone(piece_id=piece.id, zone_id=target))
                 moved.append(piece.id)
         self._turn(moved, step.face_up)
 
@@ -345,20 +453,29 @@ class _Builder:
 
 
 def build_table(
-    game: Game | None, table: Table, *, participant_id: str | None
+    game: Game | None,
+    table: Table,
+    *,
+    participant_id: str | None,
+    as_facilitator: bool = False,
 ) -> tuple[str, Transaction]:
-    """Everything a new room's table needs, with its facilitator seated.
+    """Everything a new room's table needs, with its creator seated.
+
+    Nobody is the facilitator unless ``as_facilitator`` says the creator
+    chose to be.
 
     Shared zones first, so their place in the zone list - which is the order
     the table draws them in - does not depend on how many people join; then
-    the facilitator's seat and its own zones; then the definition's setup.
-    Returns the facilitator's seat id and the transaction to apply as them.
+    the creator's seat and its own zones; then the definition's setup.
+    Returns the creator's seat id and the transaction to apply as them.
     """
     builder = _Builder(game, table, actor_seat="seat-1")
     try:
         if game is not None:
             builder.shared_zones()
-        seat_id = builder.seat(participant_id=participant_id, is_facilitator=True)
+        seat_id = builder.seat(
+            participant_id=participant_id, is_facilitator=as_facilitator
+        )
         if game is not None:
             builder.step(SetupStep(op="setup"))
     except _Refused as refusal:
@@ -379,17 +496,75 @@ def build_seat(
     return seat_id, builder.transaction(name=f"seat:{seat_id}", label="Take a seat")
 
 
-def build_macro(
-    game: Game, table: Table, actor_seat: str, macro_id: str
+def may_use_facilitator_button(
+    table: Table, seat_id: str, activity_id: str | None
+) -> bool:
+    """Whether ``seat_id`` may press a button the definition gives the facilitator.
+
+    The facilitator may, always. A button inside an activity may also be
+    pressed by its players while nobody in the room holds the role, since no
+    activity requires a facilitator.
+    """
+    if table.is_facilitator(seat_id):
+        return True
+    if activity_id is None or any(s.is_facilitator for s in table.seats.values()):
+        return False
+    activity = table.activities.get(activity_id)
+    return activity is not None and seat_id in activity.seats
+
+
+def build_activity_start(
+    game: Game, table: Table, actor_seat: str, activity_id: str
 ) -> Transaction | Reject:
-    """What pressing ``macro_id`` does now, or why it cannot be pressed."""
+    """Lay out an activity's zones for its players and mark it running."""
+    activity = table.activities.get(activity_id)
+    if activity is None:
+        return Reject("That activity is not running any more.")
+    scope = scope_of(table, activity_id)
+    builder = _Builder(game, table, actor_seat, scope)
+    try:
+        before = set(builder.trial.zones)
+        builder.shared_zones()
+        builder.activity_seat_zones()
+        made = tuple(z for z in builder.trial.zones if z not in before)
+        builder.step(SetupStep(op="setup"))
+        builder.run(BeginActivity(activity_id=activity_id, zones=made))
+    except _Refused as refusal:
+        return Reject(refusal.reason)
+    return builder.transaction(
+        name=f"activity:{activity_id}", label=f"Begin {activity.title}"
+    )
+
+
+def build_macro(
+    game: Game,
+    table: Table,
+    actor_seat: str,
+    macro_id: str,
+    activity_id: str | None = None,
+) -> Transaction | Reject:
+    """What pressing ``macro_id`` does now, or why it cannot be pressed.
+
+    With ``activity_id`` it is an activity's button: its steps name that
+    activity's zones and players, not the room's.
+    """
     spec = game.definition.macro(macro_id)
     if spec is None:
         return Reject(f"This exercise has no button called {macro_id!r}.")
-    if spec.who == "facilitator" and not table.is_facilitator(actor_seat):
+    if spec.who == "facilitator" and not may_use_facilitator_button(
+        table, actor_seat, activity_id
+    ):
         label = game.buttons[macro_id].label
         return Reject(f"Only the facilitator can use “{label}”.")
-    builder = _Builder(game, table, actor_seat)
+    scope = None
+    if activity_id is not None:
+        activity = table.activities.get(activity_id)
+        if activity is None or activity.status != "running":
+            return Reject("That activity is not running.")
+        if actor_seat not in activity.seats and not table.is_facilitator(actor_seat):
+            return Reject("That button is for the activity's players.")
+        scope = scope_of(table, activity_id)
+    builder = _Builder(game, table, actor_seat, scope)
     try:
         builder.hooks("before_macro", builder.context(macro_id=macro_id))
         if spec.steps is not None:
@@ -416,7 +591,11 @@ def announcement(game: Game, macro_id: str, name: str) -> str:
 
 
 __all__ = [
+    "may_use_facilitator_button",
+    "Scope",
     "SetupFailedError",
+    "build_activity_start",
+    "scope_of",
     "announcement",
     "build_macro",
     "build_seat",

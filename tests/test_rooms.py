@@ -6,7 +6,16 @@ import pytest
 from _db_support import db_session
 
 from sandbox.db.models import Event
-from sandbox.model import Grab, Move, Ok, Piece, PieceKind, Reject, Rotate
+from sandbox.model import (
+    Grab,
+    Move,
+    Ok,
+    Piece,
+    PieceKind,
+    Reject,
+    Rotate,
+    facilitator_seat,
+)
 from sandbox.web import rooms
 
 
@@ -37,7 +46,53 @@ def test_create_room_rejects_an_unknown_exercise() -> None:
             game_slug="not-a-real-exercise",
             facilitator_cookie_id="cookie-1",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
+
+
+def test_a_new_room_has_no_facilitator_unless_its_creator_chooses_to_be() -> None:
+    with db_session() as session:
+        room, creator = rooms.create_room(
+            session,
+            game_slug="value-cards-trading",
+            facilitator_cookie_id="cookie-1",
+            facilitator_name="Ada",
+        )
+        session.commit()
+        table = rooms.load_table(session, room)
+        assert creator.seat_id is not None
+        assert table.seats[creator.seat_id].is_facilitator is False
+        assert facilitator_seat(table) is None
+
+
+def test_someone_may_join_as_the_facilitator_but_only_one_at_a_time() -> None:
+    with db_session() as session:
+        room, _creator = rooms.create_room(
+            session,
+            game_slug="value-cards-trading",
+            facilitator_cookie_id="cookie-1",
+            facilitator_name="Ada",
+        )
+        session.commit()
+        chosen = rooms.join_room(
+            session,
+            code=room.code,
+            cookie_id="cookie-2",
+            display_name="Ben",
+            as_facilitator=True,
+        )
+        session.commit()
+        table = rooms.load_table(session, room)
+        assert chosen.seat_id is not None
+        assert facilitator_seat(table) == chosen.seat_id
+        with pytest.raises(rooms.FacilitatorTakenError):
+            rooms.join_room(
+                session,
+                code=room.code,
+                cookie_id="cookie-3",
+                display_name="Cy",
+                as_facilitator=True,
+            )
 
 
 def test_create_room_seats_its_facilitator() -> None:
@@ -47,11 +102,11 @@ def test_create_room_seats_its_facilitator() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="cookie-1",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
         session.commit()
 
         assert room.status == "open"
-        assert room.facilitator_participant_id == facilitator.id
         assert facilitator.seat_id is not None
         assert facilitator.is_observer is False
 
@@ -68,6 +123,7 @@ def test_join_room_seats_a_new_participant_and_reattaches_a_returning_one() -> N
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
         session.commit()
 
@@ -93,6 +149,7 @@ def test_join_room_dedupes_display_names() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
         session.commit()
 
@@ -114,6 +171,7 @@ def test_join_room_seats_up_to_the_cap_then_makes_observers() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
             config={"max_seats": 2},
         )
         session.commit()
@@ -144,6 +202,7 @@ def test_join_room_raises_for_a_closed_room() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
         rooms.close_room(session, room)
         session.commit()
@@ -161,6 +220,7 @@ def test_claim_seat_moves_a_participant_and_frees_their_old_seat() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
             config={"max_seats": 3},
         )
         participant = rooms.join_room(
@@ -192,6 +252,7 @@ def test_claim_seat_rejects_an_already_taken_seat() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
         participant = rooms.join_room(
             session, code=room.code, cookie_id="cookie-2", display_name="Grace"
@@ -209,6 +270,7 @@ def test_make_observer_then_release_frees_and_marks_the_participant() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
         participant = rooms.join_room(
             session, code=room.code, cookie_id="cookie-2", display_name="Grace"
@@ -232,6 +294,7 @@ def test_rename_dedupes_against_the_room() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
         participant = rooms.join_room(
             session, code=room.code, cookie_id="cookie-2", display_name="Grace"
@@ -251,6 +314,7 @@ def test_remove_participant_frees_their_seat_and_deletes_the_row() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
         participant = rooms.join_room(
             session, code=room.code, cookie_id="cookie-2", display_name="Grace"
@@ -274,6 +338,7 @@ def test_pause_and_resume_room() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
 
         rooms.pause_room(session, room)
@@ -290,6 +355,7 @@ def test_apply_op_persists_state_logs_an_event_and_is_idempotent() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
         session.commit()
         seat_id = facilitator.seat_id
@@ -330,6 +396,7 @@ def test_apply_op_rejects_without_writing_anything() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
         session.commit()
 
@@ -347,6 +414,7 @@ def test_apply_op_refuses_activity_on_a_closed_room() -> None:
             game_slug="value-cards-trading",
             facilitator_cookie_id="facilitator-cookie",
             facilitator_name="Ada",
+            as_facilitator=True,
         )
         rooms.close_room(session, room)
         session.commit()
@@ -356,3 +424,30 @@ def test_apply_op_refuses_activity_on_a_closed_room() -> None:
         )
 
         assert isinstance(applied.outcome, Reject)
+
+
+def test_an_open_room_seats_twenty_and_the_next_person_observes() -> None:
+    with db_session() as session:
+        room, _creator = rooms.create_room(
+            session,
+            game_slug="sandbox",
+            facilitator_cookie_id="cookie-0",
+            facilitator_name="Ada",
+        )
+        session.commit()
+        joined = [
+            rooms.join_room(
+                session,
+                code=room.code,
+                cookie_id=f"cookie-{number}",
+                display_name=f"Person {number}",
+            )
+            for number in range(1, 20)
+        ]
+        session.commit()
+        assert all(person.seat_id is not None for person in joined)
+        assert len(rooms.load_table(session, room).seats) == 20
+        extra = rooms.join_room(
+            session, code=room.code, cookie_id="cookie-20", display_name="Extra"
+        )
+        assert extra.seat_id is None and extra.is_observer

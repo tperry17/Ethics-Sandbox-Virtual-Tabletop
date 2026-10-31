@@ -43,8 +43,13 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from sandbox.db.engine import SessionLocal, session_scope
 from sandbox.db.models import Participant, Room
-from sandbox.games import GAMES, Game
-from sandbox.games.engine import announcement, build_macro
+from sandbox.games import GAMES, OPEN_ROOM_SLUG, Game
+from sandbox.games.engine import (
+    announcement,
+    build_activity_start,
+    build_macro,
+    may_use_facilitator_button,
+)
 from sandbox.model import (
     AddSeat,
     AddZone,
@@ -53,6 +58,7 @@ from sandbox.model import (
     Deal,
     Despawn,
     Draw,
+    EndActivity,
     EndShow,
     EraseInk,
     Flip,
@@ -61,29 +67,36 @@ from sandbox.model import (
     InkAppend,
     InkBegin,
     InkEnd,
+    JoinActivity,
+    LeaveActivity,
     Lock,
     Move,
     MoveToZone,
     Ok,
+    OpenActivity,
     Operation,
     OpOutcome,
     Patch,
     Peek,
     Point,
     Rect,
+    Reject,
     Release,
+    ReleaseFacilitator,
     ReorderZ,
     ResetTable,
     ResetZone,
     Roll,
     Rotate,
     Seat,
+    SetActivityPlayers,
     SetProp,
     ShowTo,
     Shuffle,
     Spawn,
     StackOnto,
     Table,
+    TakeFacilitator,
     Transaction,
     Ungroup,
     Unlock,
@@ -245,6 +258,18 @@ class ZoneView(BaseModel):
     owner_seat: str | None
 
 
+class ActivityView(BaseModel):
+    """An activity in the room. Mirrors ``ViewActivity``."""
+
+    id: str
+    kind: str
+    title: str
+    min_players: int
+    max_players: int
+    seats: list[str]
+    status: str
+
+
 class ComponentView(BaseModel):
     """What one component looks like, for a viewer entitled to see its face.
 
@@ -282,6 +307,17 @@ class MacroView(BaseModel):
     hint: str | None = None
     facilitator_only: bool = False
     confirm: str | None = None
+    activity_id: str | None = None
+
+
+class ActivityChoiceView(BaseModel):
+    """An activity this room can start: what it is called and how many it takes."""
+
+    slug: str
+    title: str
+    min_players: int
+    max_players: int
+    duration_minutes: int
 
 
 class StrokeView(BaseModel):
@@ -312,6 +348,7 @@ class TableView(BaseModel):
     seats: list[SeatView]
     strokes: list[StrokeView]
     version: int
+    activities: list[ActivityView] = Field(default_factory=list)
 
 
 class YouView(BaseModel):
@@ -354,6 +391,7 @@ class SnapshotMessage(BaseModel):
     you: YouView
     components: list[ComponentView] = Field(default_factory=list)
     macros: list[MacroView] = Field(default_factory=list)
+    activity_choices: list[ActivityChoiceView] = Field(default_factory=list)
 
 
 class PatchesMessage(BaseModel):
@@ -460,6 +498,8 @@ _OPERATION_TYPES: tuple[type, ...] = (
     ShowTo,
     EndShow,
     Peek,
+    TakeFacilitator,
+    ReleaseFacilitator,
 )
 
 
@@ -498,6 +538,27 @@ MACRO_OPERATIONS = frozenset(
 # The intent a toolbar button sends. It is not a model operation: the room
 # asks the exercise's definition what pressing that button does now.
 MACRO_INTENT = "macro"
+
+# The intent that opens, joins, begins and ends an activity in the room.
+ACTIVITY_INTENT = "activity"
+
+
+def activity_choices() -> list[ActivityChoiceView]:
+    """The activities any room can start: every game but the open room itself.
+
+    Whether a game is in the public catalog (``listed``) is a separate matter.
+    """
+    return [
+        ActivityChoiceView(
+            slug=game.slug,
+            title=game.title,
+            min_players=game.definition.meta.players.min,
+            max_players=game.definition.meta.players.max,
+            duration_minutes=game.definition.meta.duration_minutes,
+        )
+        for game in GAMES.values()
+        if game.slug != OPEN_ROOM_SLUG
+    ]
 
 
 def component_views(game: Game | None) -> dict[str, ComponentView]:
@@ -808,7 +869,10 @@ class RoomRuntime:
         # exercise without one has neither, and the client draws generic
         # backs and an empty toolbar.
         self.game = game
-        self.components: dict[str, ComponentView] = component_views(game)
+        # Every game's faces, since an activity started later deals its own.
+        self.components: dict[str, ComponentView] = {}
+        for each in (*GAMES.values(), *(() if game is None else (game,))):
+            self.components.update(component_views(each))
         self.macros: tuple[MacroView, ...] = macro_views(game)
         self._hub = hub
         self._names = names
@@ -1076,6 +1140,9 @@ class RoomRuntime:
         if message.op_type == MACRO_INTENT:
             self._on_macro(connection, seat_id, message)
             return
+        if message.op_type == ACTIVITY_INTENT:
+            self._on_activity(connection, seat_id, message)
+            return
         try:
             operation = decode_intent(message.op_type, message.payload)
         except IntentError as error:
@@ -1117,6 +1184,110 @@ class RoomRuntime:
         # Sent after the patches, so by the time the client hears "accepted"
         # it already holds the table that resulted.
         connection.send(AckMessage(client_id=message.client_id))
+        if isinstance(operation, TakeFacilitator | ReleaseFacilitator):
+            # The toolbar differs for the facilitator, so everyone is sent
+            # their table again.
+            for other in list(self._connections.values()):
+                if other.ready:
+                    self._send_snapshot(other)
+
+    def _on_activity(
+        self, connection: Connection, seat_id: str, message: IntentMessage
+    ) -> None:
+        """Open, join, leave, begin, choose players for, or end an activity.
+
+        Each is one model operation, or for beginning one transaction built
+        from the activity's definition. When the last place is taken the
+        activity begins by itself; the facilitator or a player may begin it
+        sooner once the minimum have signed up.
+        """
+        payload = message.payload
+        action = payload.get("action")
+        activity_id = payload.get("activity_id")
+        operation: Operation
+        if action == "open":
+            game = GAMES.get(str(payload.get("slug")))
+            if game is None or game.slug == OPEN_ROOM_SLUG:
+                self._reject(
+                    connection, message.client_id, "There is no such activity."
+                )
+                return
+            meta = game.definition.meta
+            operation = OpenActivity(
+                kind=game.slug,
+                title=game.title,
+                min_players=meta.players.min,
+                max_players=meta.players.max,
+            )
+        elif action in ("join", "leave", "end", "begin", "choose") and isinstance(
+            activity_id, str
+        ):
+            if action == "join":
+                operation = JoinActivity(activity_id)
+            elif action == "leave":
+                operation = LeaveActivity(activity_id)
+            elif action == "end":
+                operation = EndActivity(activity_id)
+            elif action == "choose":
+                seats = payload.get("seats")
+                if not isinstance(seats, list) or not all(
+                    isinstance(item, str) for item in seats
+                ):
+                    self._reject(connection, message.client_id, "Choose some players.")
+                    return
+                operation = SetActivityPlayers(activity_id, tuple(seats))
+            else:
+                begun = self._begin(seat_id, activity_id)
+                if isinstance(begun, Reject):
+                    self._reject(connection, message.client_id, begun.reason)
+                    return
+                connection.send(AckMessage(client_id=message.client_id))
+                self._resend_everyone()
+                return
+        else:
+            self._reject(connection, message.client_id, "That was not understood.")
+            return
+
+        self._land_drags(list(self._pending_moves))
+        reason = operation.validate(self.table, seat_id)
+        if reason is not None:
+            self._reject(connection, message.client_id, reason)
+            return
+        before = set(self.table.activities)
+        outcome = self._apply(seat_id, operation, log=True)
+        if not isinstance(outcome, Ok):
+            self._reject(connection, message.client_id, outcome.reason)
+            return
+        connection.send(AckMessage(client_id=message.client_id))
+        # A full sign-up begins at once.
+        full = [
+            a
+            for a in self.table.activities.values()
+            if a.status == "signup" and len(a.seats) >= a.max_players
+        ]
+        for activity in full:
+            if activity.id in before or isinstance(operation, OpenActivity):
+                self._begin(seat_id, activity.id)
+        self._resend_everyone()
+
+    def _begin(self, seat_id: str, activity_id: str) -> OpOutcome:
+        """Lay out an activity's zones and mark it running, as ``seat_id``."""
+        activity = self.table.activities.get(activity_id)
+        game = None if activity is None else GAMES.get(activity.kind)
+        if activity is None or game is None:
+            return Reject("That activity is not running any more.")
+        if seat_id not in activity.seats and not self.table.is_facilitator(seat_id):
+            return Reject("Only a player or the facilitator can begin it.")
+        built = build_activity_start(game, self.table, seat_id, activity_id)
+        if not isinstance(built, Transaction):
+            return built
+        return self._apply(seat_id, built, log=True)
+
+    def _resend_everyone(self) -> None:
+        """Each person's toolbar depends on the activities, so send them again."""
+        for other in list(self._connections.values()):
+            if other.ready:
+                self._send_snapshot(other)
 
     def _on_macro(
         self, connection: Connection, seat_id: str, message: IntentMessage
@@ -1129,13 +1300,20 @@ class RoomRuntime:
         """
         macro_id = message.payload.get("macro_id")
         op_id = message.payload.get("op_id")
-        if self.game is None or not isinstance(macro_id, str):
+        activity_id = message.payload.get("activity_id")
+        game = self.game
+        if isinstance(activity_id, str):
+            activity = self.table.activities.get(activity_id)
+            game = None if activity is None else GAMES.get(activity.kind)
+        else:
+            activity_id = None
+        if game is None or not isinstance(macro_id, str):
             self._reject(connection, message.client_id, "There is no such button.")
             return
         if isinstance(op_id, str) and op_id in self.table.applied_op_ids:
             connection.send(AckMessage(client_id=message.client_id))
             return
-        built = build_macro(self.game, self.table, seat_id, macro_id)
+        built = build_macro(game, self.table, seat_id, macro_id, activity_id)
         if not isinstance(built, Transaction):
             self._reject(connection, message.client_id, built.reason)
             return
@@ -1148,7 +1326,7 @@ class RoomRuntime:
             self._reject(connection, message.client_id, outcome.reason)
             return
         connection.send(AckMessage(client_id=message.client_id))
-        text = announcement(self.game, macro_id, connection.display_name)
+        text = announcement(game, macro_id, connection.display_name)
         if text:
             self._notice(text)
 
@@ -1383,6 +1561,18 @@ class RoomRuntime:
                 for stroke in view.strokes
             ],
             version=view.version,
+            activities=[
+                ActivityView(
+                    id=a.id,
+                    kind=a.kind,
+                    title=a.title,
+                    min_players=a.min_players,
+                    max_players=a.max_players,
+                    seats=list(a.seats),
+                    status=a.status,
+                )
+                for a in view.activities
+            ],
         )
 
     def _components_for(self, view: ViewTable) -> list[ComponentView]:
@@ -1405,14 +1595,36 @@ class RoomRuntime:
             if component_id in wanted
         ]
 
+    def _refresh_role(self, connection: Connection) -> None:
+        """The table says who is the facilitator, and that changes as people play."""
+        seat = connection.seat_id
+        connection.is_facilitator = seat is not None and self.table.is_facilitator(seat)
+
     def _macros_for(self, connection: Connection) -> list[MacroView]:
-        return [
+        self._refresh_role(connection)
+        views = [
             macro
             for macro in self.macros
             if connection.is_facilitator or not macro.facilitator_only
         ]
+        seat = connection.seat_id
+        for activity in self.table.activities.values():
+            game = GAMES.get(activity.kind)
+            mine = seat is not None and seat in activity.seats
+            if game is None or activity.status != "running":
+                continue
+            if not (mine or connection.is_facilitator):
+                continue
+            allowed = seat is not None and may_use_facilitator_button(
+                self.table, seat, activity.id
+            )
+            for macro in macro_views(game):
+                if allowed or not macro.facilitator_only:
+                    views.append(macro.model_copy(update={"activity_id": activity.id}))
+        return views
 
     def _send_snapshot(self, connection: Connection) -> None:
+        self._refresh_role(connection)
         seats = self._seat_views()
         view = project(self.table, connection.seat_id)
         components = self._components_for(view)
@@ -1430,6 +1642,7 @@ class RoomRuntime:
             ),
             components=components,
             macros=self._macros_for(connection),
+            activity_choices=activity_choices(),
         )
         connection.last_seq_sent = self.seq
         connection.send(message)
@@ -1668,7 +1881,7 @@ class LiveHub:
             participant_id=participant.id,
             display_name=participant.display_name,
             seat_id=participant.seat_id,
-            is_facilitator=room.facilitator_participant_id == participant.id,
+            is_facilitator=False,  # read from the table once the room task has it
             is_observer=participant.is_observer,
             stored_seat=stored_seat,
         )

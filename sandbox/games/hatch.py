@@ -40,7 +40,8 @@ class MacroRefused(Exception):  # noqa: N818 - it is an answer, not a failure
 class GameContext:
     """What a macro or hook is told about the moment it runs in.
 
-    ``seats`` is every seat at the table in seat order, and ``zone`` turns a
+    ``seats`` is every seat at the table in seat order (an activity's own
+    players, for an activity), and ``zone`` turns a
     zone's definition id into the zone on this table: the zone itself, or
     for a per-seat zone, the copy belonging to ``seat``.
     """
@@ -50,13 +51,14 @@ class GameContext:
     per_seat_zones: frozenset[str]
     macro_id: str | None = None
     seat_id: str | None = None
+    prefix: str = ""
 
     def zone(self, zone_id: str, seat: str | None = None) -> str:
         if zone_id in self.per_seat_zones:
             if seat is None:
                 raise ValueError(f"{zone_id!r} is a per-seat zone; name the seat")
-            return f"{zone_id}-{seat}"
-        return zone_id
+            return f"{self.prefix}{zone_id}-{seat}"
+        return f"{self.prefix}{zone_id}"
 
     def seat_zones(self, zone_id: str) -> tuple[str, ...]:
         """Every seat's copy of a per-seat zone, in seat order."""

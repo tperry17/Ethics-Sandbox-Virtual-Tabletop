@@ -1,15 +1,15 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
 /**
- * Macro buttons in a live room built from a game definition. Two Doors is
- * the reference game: two seats, a private hand each, and a Deal button.
+ * Activities started in an open room. Pairs is the reference game: two
+ * players, a private hand each, and a Deal button.
  */
 
-async function startTwoDoors(browser: Browser): Promise<{ page: Page; code: string }> {
+async function openRoom(browser: Browser, name: string): Promise<{ page: Page; code: string }> {
   const page = await (await browser.newContext()).newPage();
-  await page.goto("/start?game=two-doors");
-  await page.getByLabel("Your name").fill("Ines");
-  await page.getByRole("button", { name: "Start a table" }).click();
+  await page.goto("/start");
+  await page.getByLabel("Your name").fill(name);
+  await page.getByRole("button", { name: "Open a room" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
   const code = page.url().split("/t/")[1]!;
   return { page, code };
@@ -24,45 +24,110 @@ async function join(browser: Browser, code: string, name: string): Promise<Page>
   return page;
 }
 
-test("the facilitator deals, and each person sees only their own card", async ({ browser }) => {
-  const { page: host, code } = await startTwoDoors(browser);
+/** A room where Ines and Tomas are playing Pairs. */
+async function startPairs(
+  browser: Browser,
+): Promise<{ host: Page; guest: Page; code: string }> {
+  const { page: host, code } = await openRoom(browser, "Ines");
   const guest = await join(browser, code, "Tomas");
+  await host.getByLabel("Activity to start").selectOption("pairs");
+  await host.getByRole("button", { name: "Start this activity" }).click();
+  await guest.getByRole("button", { name: "Join" }).click();
+  await expect(host.getByText(/Pairs: running/)).toBeVisible();
+  await expect(guest.getByText(/Pairs: running/)).toBeVisible();
+  return { host, guest, code };
+}
 
-  const deal = host.getByRole("button", { name: "Deal one each" });
+test("a player deals, and each person sees only their own cards", async ({ browser }) => {
+  const { host, guest } = await startPairs(browser);
+
+  const deal = host.getByRole("button", { name: "Deal three each" });
   await expect(deal).toBeVisible();
   await deal.click();
 
-  const hostCard = host.locator(".hand-tray__fan .piece .piece__title");
-  const guestCard = guest.locator(".hand-tray__fan .piece .piece__title");
-  await expect(hostCard).toHaveCount(1);
-  await expect(guestCard).toHaveCount(1);
-  const hostTitle = (await hostCard.textContent()) ?? "";
-  const guestTitle = (await guestCard.textContent()) ?? "";
-  expect(hostTitle).not.toBe("");
-  expect(hostTitle).not.toBe(guestTitle);
+  const hostCards = host.locator(".hand-tray__fan .piece .piece__title");
+  const guestCards = guest.locator(".hand-tray__fan .piece .piece__title");
+  await expect(hostCards).toHaveCount(3);
+  await expect(guestCards).toHaveCount(3);
+  const hostTitles = await hostCards.allTextContents();
+  const guestTitles = await guestCards.allTextContents();
+  for (const title of hostTitles) expect(guestTitles).not.toContain(title);
   // The other hand is on the table as backs, with no text to read.
-  await expect(guest.locator(".tabletop__pieces-layer .piece__title", { hasText: hostTitle })).toHaveCount(0);
+  for (const title of hostTitles) {
+    await expect(
+      guest.locator(".tabletop__pieces-layer .piece__title", { hasText: title }),
+    ).toHaveCount(0);
+  }
 
-  await expect(guest.getByText("Ines dealt one card to each seat.")).toBeVisible();
+  await expect(guest.getByText("Ines dealt three cards to each seat.")).toBeVisible();
 });
 
 test("a destructive button asks first, and does nothing if declined", async ({ browser }) => {
-  const { page: host } = await startTwoDoors(browser);
-  await host.getByRole("button", { name: "Deal one each" }).click();
-  await expect(host.locator(".hand-tray__fan .piece")).toHaveCount(1);
+  const { host } = await startPairs(browser);
+  await host.getByRole("button", { name: "Deal three each" }).click();
+  await expect(host.locator(".hand-tray__fan .piece")).toHaveCount(3);
 
   host.once("dialog", (dialog) => void dialog.dismiss());
   await host.getByRole("button", { name: "Reset" }).click();
-  await expect(host.locator(".hand-tray__fan .piece")).toHaveCount(1);
+  await expect(host.locator(".hand-tray__fan .piece")).toHaveCount(3);
 
   host.once("dialog", (dialog) => void dialog.accept());
   await host.getByRole("button", { name: "Reset" }).click();
   await expect(host.locator(".hand-tray__fan .piece")).toHaveCount(0);
 });
 
-test("a participant does not get the facilitator's buttons", async ({ browser }) => {
-  const { code } = await startTwoDoors(browser);
+test("with a facilitator in the room, a player gets only the buttons for anyone", async ({
+  browser,
+}) => {
+  const { host, guest } = await startPairs(browser);
+  await expect(guest.getByRole("button", { name: "Deal three each" })).toBeVisible();
+
+  await host.getByRole("button", { name: "Become facilitator" }).click();
+
+  await expect(guest.getByRole("button", { name: "Deal three each" })).toHaveCount(0);
+  await expect(guest.getByRole("button", { name: "Catch pairs" })).toBeVisible();
+  await expect(host.getByRole("button", { name: "Deal three each" })).toBeVisible();
+});
+
+test("nobody is the facilitator until someone takes the seat, and only one at a time", async ({
+  browser,
+}) => {
+  const { page, code } = await openRoom(browser, "Ines");
   const guest = await join(browser, code, "Tomas");
 
-  await expect(guest.locator("[data-macro-id]")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Become facilitator" })).toBeVisible();
+  await page.getByRole("button", { name: "Become facilitator" }).click();
+  await expect(page.getByRole("button", { name: "Hand back facilitator" })).toBeVisible();
+  await expect(guest.getByRole("button", { name: "Become facilitator" })).toBeHidden();
+
+  await page.getByRole("button", { name: "Hand back facilitator" }).click();
+  await expect(guest.getByRole("button", { name: "Become facilitator" })).toBeVisible();
+});
+
+test("an open room starts an activity for those who sign up, and its buttons are theirs", async ({
+  browser,
+}) => {
+  const { page: host, code } = await openRoom(browser, "Ines");
+  const guest = await join(browser, code, "Tomas");
+  const bystander = await join(browser, code, "Wren");
+
+  await host.getByLabel("Activity to start").selectOption("pairs");
+  await host.getByRole("button", { name: "Start this activity" }).click();
+  await expect(host.getByText(/Pairs: signing up, 1 of 2/)).toBeVisible();
+
+  await guest.getByRole("button", { name: "Join" }).click();
+  await expect(host.getByText(/Pairs: running/)).toBeVisible();
+  await expect(guest.getByText(/Pairs: running/)).toBeVisible();
+  // A player can use the facilitator's buttons while nobody facilitates; the bystander cannot.
+  await expect(
+    host.locator("button[data-activity-id]", { hasText: "Deal three each" }),
+  ).toBeVisible();
+  await expect(
+    guest.locator("button[data-activity-id]", { hasText: "Deal three each" }),
+  ).toBeVisible();
+  await expect(bystander.locator("button[data-activity-id]")).toHaveCount(0);
+
+  await host.getByRole("button", { name: "End" }).click();
+  await expect(host.getByText(/Pairs: running/)).toBeHidden();
+  await expect(guest.locator("button[data-activity-id]")).toHaveCount(0);
 });

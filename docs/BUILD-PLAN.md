@@ -45,7 +45,7 @@ shows "Claimed" in this table on `main`.
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
-| 17 | Open rooms and activities (added 2026-10-31; first in the order) | Claimed | `claude/step-17-open-rooms-and-activities` | |
+| 17 | Open rooms and activities | Done | | PR #18 |
 | 16 | Launch pass | Not started; hosting is the Mac on the local network (below) | `claude/step-16-launch-pass` | |
 
 ### Claiming a step
@@ -115,8 +115,10 @@ Checked against the code on `main`; none of these has been fixed yet.
 
 Where these conflict with a prompt below, these win.
 
-- **Two Doors.** Prompt 9's reference game is a test fixture
-  (`tests/games/two_doors/`), not part of the product, at the author's
+- **Two Doors, now Pairs.** Prompt 9's reference game was a test fixture,
+  Two Doors, and on 2026-10-31 the author had it replaced by Pairs
+  (`tests/games/pairs/`: deal three cards each, and whoever holds two of a
+  rank has caught a pair). It is not part of the product, at the author's
   decision. Button wording is a per-game CSV, not YAML.
 - **Voice.** Prompts 1 and 2 describe the look and voice as a "scholarly
   edition". CLAUDE.md now says to avoid that framing and keep the register
@@ -861,8 +863,8 @@ four of its requirements contradict them. Each is replaced below:
 - **Group size.** It assumed 4–12 people. The activity is for three.
 
 ```text
-Read CLAUDE.md, sandbox/games/, and the Two Doors fixture
-(tests/games/two_doors/ with its CSVs). Then build the Value Cards Trading
+Read CLAUDE.md, sandbox/games/, and the Pairs fixture
+(tests/games/pairs/ with its CSVs). Then build the Value Cards Trading
 exercise as a game definition. The rules, the deck and the debrief
 questions are in docs/BUILD-PLAN.md under Prompt 10. Implement exactly
 those rules. If anything there is ambiguous, contradictory or incomplete,
@@ -1558,7 +1560,11 @@ Read CLAUDE.md. Prepare the Ethics Sandbox for its first real session.
 
 ## 17. Open rooms and activities
 
-**Status: Not started. Runs first.** Added on 2026-10-31 at the author's
+**Status: Done (PR #18).** Built: the optional facilitator
+seat, the open 20-person sandbox room (`sandbox/games/open_room/`), and
+activities (sign-up, scoped zones and buttons, several at once, ending).
+Ending an activity removes its zones and pieces rather than returning them
+to the kit. Added on 2026-10-31 at the author's
 direction, after Prompt 10's server side was built for a room that is one
 exercise. Read CLAUDE.md's "Rooms and activities" first.
 

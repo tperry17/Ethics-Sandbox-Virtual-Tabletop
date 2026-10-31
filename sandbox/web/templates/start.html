@@ -17,9 +17,11 @@
 
       <header class="site__header">
         <p class="eyebrow">Start a table</p>
-        <h1>Choose an exercise and give it a room</h1>
+        <h1>Open a room</h1>
         <div class="prose site__lede">
-          <p>You will be the facilitator. Everyone else joins with the room
+          <p>A room is an open table for up to 20 people. Start an activity from it
+          when the group is ready. You join as a player, or as the facilitator
+          if you choose. Everyone else joins with the room
           code this creates - no account, no sign-in, just a link.</p>
         </div>
       </header>
@@ -31,36 +33,16 @@
       {% endif %}
 
       <form class="site__section" method="post" action="/start">
-        {{ ui.section_rule("Exercise") }}
-        <fieldset class="exercise-grid exercise-grid--choice">
-          <legend class="visually-hidden">Choose an exercise</legend>
-          {% for game in games %}
-          <label class="ui-card ui-card--choice">
-            <input type="radio" name="game_slug" value="{{ game.slug }}" required{% if game.slug == chosen %} checked{% endif %}>
-            <span class="ui-card__header">
-              <span class="eyebrow">{{ game.definition.meta.players.min }}–{{ game.definition.meta.players.max }} people · about {{ game.definition.meta.duration_minutes }} minutes</span>
-              <span class="ui-card__title">{{ game.title }}</span>
-            </span>
-            <span class="ui-card__body prose">Not in the public catalog.</span>
-          </label>
-          {% endfor %}
-          {% for exercise in exercises %}
-          <label class="ui-card ui-card--choice">
-            <input type="radio" name="game_slug" value="{{ exercise.slug }}" required{% if exercise.slug == chosen %} checked{% endif %}>
-            <span class="ui-card__header">
-              <span class="eyebrow">{{ exercise.group_size }} · {{ exercise.running_time }}</span>
-              <span class="ui-card__title">{{ exercise.title }}</span>
-            </span>
-            <span class="ui-card__body prose">{{ exercise.short_description }}</span>
-          </label>
-          {% endfor %}
-        </fieldset>
-
-        {{ ui.section_rule("Facilitator") }}
+        {{ ui.section_rule("You") }}
         {{ ui.field("display_name", "Your name", placeholder="Shown to the table", hint="Only used for this room.") }}
+        <label class="field__check">
+          <input type="checkbox" name="as_facilitator" value="true">
+          Join as facilitator <span class="field__hint">(optional; one person at a time)</span>
+        </label>
+
 
         <div class="toolbar" role="group" aria-label="Start actions">
-          {{ ui.button("Start a table", variant="primary", size="lg", type="submit") }}
+          {{ ui.button("Open a room", variant="primary", size="lg", type="submit") }}
         </div>
       </form>
     </main>

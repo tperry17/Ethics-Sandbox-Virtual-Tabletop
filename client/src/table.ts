@@ -14,6 +14,7 @@
  * the piece is seen to go back.
  */
 
+import { renderActivities } from "./activities.js";
 import { Announcer } from "./announcer.js";
 import { InkLayer } from "./ink.js";
 import { IntentTracker } from "./intents.js";
@@ -647,7 +648,7 @@ export class TableRenderer {
     const toolbar = this.options.toolbar;
     if (toolbar === null) return;
     toolbar.replaceChildren();
-    if (this.model.macros.length === 0) {
+    if (this.model.macros.length === 0 && this.model.activityChoices.length === 0) {
       const empty = element("p", "toolbar__empty prose");
       empty.textContent =
         "Macro buttons for this exercise appear here once it defines them.";
@@ -656,6 +657,10 @@ export class TableRenderer {
     for (const macro of this.model.macros) {
       toolbar.append(this.macroButton(macro));
     }
+    const activities = renderActivities(this.model, (payload) =>
+      this.intents.send("activity", payload),
+    );
+    if (activities !== null) toolbar.append(activities);
     toolbar.append(this.toolGroup);
   }
 
@@ -664,6 +669,7 @@ export class TableRenderer {
     node.type = "button";
     node.className = "button button--sm";
     node.dataset.macroId = macro.id;
+    if (macro.activity_id) node.dataset.activityId = macro.activity_id;
     node.textContent = macro.label;
     if (macro.hint !== null) node.title = macro.hint;
     node.addEventListener("click", () => this.pressMacro(macro));
@@ -677,7 +683,10 @@ export class TableRenderer {
    */
   pressMacro(macro: MacroView): void {
     if (macro.confirm !== null && !window.confirm(macro.confirm)) return;
-    this.intents.send("macro", { macro_id: macro.id });
+    this.intents.send("macro", {
+      macro_id: macro.id,
+      ...(macro.activity_id ? { activity_id: macro.activity_id } : {}),
+    });
   }
 
   private setStatus(status: LinkStatus): void {
