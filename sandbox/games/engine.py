@@ -110,7 +110,7 @@ class Scope:
         return f"{self.activity_id}:"
 
 
-ACTIVITY_SPACING = 1400.0
+ACTIVITY_SPACING = 2000.0
 
 
 def scope_of(table: Table, activity_id: str) -> Scope:
@@ -120,7 +120,7 @@ def scope_of(table: Table, activity_id: str) -> Scope:
     return Scope(
         activity_id=activity_id,
         seats=activity.seats,
-        origin=(0.0, ACTIVITY_SPACING * serial),
+        origin=(ACTIVITY_SPACING * serial, 0.0),
     )
 
 

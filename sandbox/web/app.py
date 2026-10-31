@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from sandbox.content_loading import CONTENT_ROOT
 from sandbox.db import init_db, session_scope
-from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, Game
+from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, OPEN_ROOM_SLUG, Game
 from sandbox.games.loader import IMAGE_SUFFIXES
 from sandbox.web.content import SITE_COPY
 from sandbox.web.identity import (
@@ -170,7 +170,7 @@ async def start_form(request: Request, game: str = "") -> HTMLResponse:
         request=request,
         name="start.html",
         context={
-            "exercises": EXERCISES,
+            "open_room": OPEN_ROOM_SLUG,
             "games": _start_choices(game),
             "chosen": game,
             "error": None,
@@ -181,7 +181,7 @@ async def start_form(request: Request, game: str = "") -> HTMLResponse:
 @app.post("/start", response_class=HTMLResponse)
 def start_room(
     request: Request,
-    game_slug: str = Form(...),
+    game_slug: str = Form(OPEN_ROOM_SLUG),
     display_name: str = Form(...),
     as_facilitator: bool = Form(False),
     session: Session = Depends(get_session),
@@ -198,7 +198,7 @@ def start_room(
             name="start.html",
             status_code=400,
             context={
-                "exercises": EXERCISES,
+                "open_room": OPEN_ROOM_SLUG,
                 "games": _start_choices(game_slug),
                 "chosen": game_slug,
                 "error": "Enter a name to join with.",
@@ -221,10 +221,10 @@ def start_room(
             name="start.html",
             status_code=400,
             context={
-                "exercises": EXERCISES,
+                "open_room": OPEN_ROOM_SLUG,
                 "games": [],
                 "chosen": "",
-                "error": "Choose one of the exercises below.",
+                "error": "There is no such game.",
             },
         )
         set_participant_cookie(response, request, cookie_id)

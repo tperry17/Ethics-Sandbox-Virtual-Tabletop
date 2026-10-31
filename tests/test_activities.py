@@ -16,6 +16,7 @@ from sandbox.model import (
     LeaveActivity,
     Ok,
     OpenActivity,
+    Rect,
     Reject,
     SetActivityPlayers,
     Table,
@@ -96,8 +97,11 @@ def test_an_activity_is_placed_clear_of_the_sandbox() -> None:
     table = _room()
     activity_id = _begun(table)
     own = table.zones[f"{activity_id}:doors"].geometry
+    assert isinstance(own, Rect)
     others = [z.geometry for zid, z in table.zones.items() if ":" not in zid]
-    assert all(own.y > g.y + g.height for g in others if hasattr(g, "height"))  # type: ignore[union-attr]
+    assert all(own.x > g.x + g.width for g in others if isinstance(g, Rect)), (
+        "an activity's zones start to the right of every sandbox zone"
+    )
 
 
 def test_an_activity_button_acts_only_on_its_own_zones() -> None:

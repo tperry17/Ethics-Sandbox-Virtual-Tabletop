@@ -41,7 +41,18 @@ def test_start_form_renders(client: TestClient) -> None:
     response = client.get("/start")
 
     assert response.status_code == 200
-    assert "Value Cards Trading" in response.text
+    assert "Open a room" in response.text
+    assert 'name="game_slug" value="sandbox"' in response.text
+
+
+def test_starting_with_no_game_opens_the_sandbox_with_no_facilitator(
+    client: TestClient,
+) -> None:
+    response = client.post("/start", data={"display_name": "Ada"})
+
+    assert response.status_code == 303
+    page = client.get(response.headers["location"]).text
+    assert "Facilitator</span>" not in page
 
 
 def test_starting_a_room_redirects_to_the_table_and_sets_a_cookie(
