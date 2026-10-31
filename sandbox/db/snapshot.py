@@ -62,6 +62,7 @@ def to_snapshot(table: Table) -> Snapshot:
                 "seats": list(a.seats),
                 "status": a.status,
                 "zones": list(a.zones),
+                "options": dict(a.options),
             }
             for activity_id, a in table.activities.items()
         },
@@ -114,6 +115,7 @@ def from_snapshot(data: Snapshot) -> Table:
                 seats=tuple(fields["seats"]),
                 status=fields["status"],
                 zones=tuple(fields["zones"]),
+                options=dict(fields.get("options", {})),
             )
             for activity_id, fields in data.get("activities", {}).items()
         },

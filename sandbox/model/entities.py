@@ -165,6 +165,8 @@ class Activity:
     seats: tuple[str, ...]
     status: str = "signup"
     zones: tuple[str, ...] = ()
+    options: dict[str, str] = field(default_factory=dict)
+    """The choices made when it was opened (which city, which phase)."""
 
 
 @dataclass

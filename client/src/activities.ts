@@ -42,9 +42,46 @@ export function renderActivities(model: TableModel, send: SendActivity): HTMLEle
       option.textContent = `${choice.title} (${choice.min_players === choice.max_players ? choice.min_players : `${choice.min_players}–${choice.max_players}`} people)`;
       select.append(option);
     }
+    // Each activity's own choices (which city, which phase) show only while
+    // it is the one selected; the server judges whatever is sent.
+    const choiceBoxes = new Map<string, HTMLElement>();
+    const picks = new Map<string, HTMLSelectElement>();
+    for (const choice of model.activityChoices) {
+      const box = document.createElement("span");
+      box.className = "toolbar__options";
+      for (const option of choice.options ?? []) {
+        const label = document.createElement("label");
+        label.textContent = `${option.label} `;
+        const pick = document.createElement("select");
+        pick.dataset.option = option.id;
+        for (const entry of option.choices) {
+          const item = document.createElement("option");
+          item.value = entry.id;
+          item.textContent = entry.label;
+          pick.append(item);
+        }
+        picks.set(`${choice.slug}/${option.id}`, pick);
+        label.append(pick);
+        box.append(label);
+      }
+      choiceBoxes.set(choice.slug, box);
+    }
+    const showOptions = (): void => {
+      for (const [slug, box] of choiceBoxes) box.hidden = slug !== select.value;
+    };
+    select.addEventListener("change", showOptions);
+    showOptions();
     root.append(
       select,
-      button("Start this activity", () => send({ action: "open", slug: select.value })),
+      ...choiceBoxes.values(),
+      button("Start this activity", () => {
+        const options: Record<string, string> = {};
+        for (const [key, pick] of picks) {
+          const [slug, id] = key.split("/");
+          if (slug === select.value && id !== undefined) options[id] = pick.value;
+        }
+        send({ action: "open", slug: select.value, options });
+      }),
     );
   }
 

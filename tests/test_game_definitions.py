@@ -228,7 +228,7 @@ def test_every_fixture_game_is_valid() -> None:
     report = validate_games(FIXTURE_GAMES, FIXTURE_CONTENT, catalog_notes=False)
 
     assert report.errors == []
-    assert sorted(report.checked) == ["hooked", "pairs"]
+    assert sorted(report.checked) == ["choosy", "hooked", "pairs"]
 
 
 def test_pairs_is_not_part_of_the_product() -> None:

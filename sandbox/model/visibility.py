@@ -83,6 +83,7 @@ class ViewActivity:
     max_players: int
     seats: tuple[str, ...]
     status: str
+    options: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -250,6 +251,7 @@ def project(table: Table, viewer_seat: str | None) -> ViewTable:
                 max_players=a.max_players,
                 seats=a.seats,
                 status=a.status,
+                options=tuple(a.options.items()),
             )
             for a in table.activities.values()
         ),

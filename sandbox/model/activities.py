@@ -28,6 +28,7 @@ def _patch(activity: Activity) -> Patch:
             "seats": list(activity.seats),
             "status": activity.status,
             "zones": list(activity.zones),
+            "options": dict(activity.options),
         },
     )
 
@@ -50,6 +51,7 @@ class OpenActivity:
     title: str
     min_players: int
     max_players: int
+    options: tuple[tuple[str, str], ...] = ()
     op_id: str = field(default_factory=new_op_id)
 
     def validate(self, table: Table, actor_seat: str) -> str | None:
@@ -68,6 +70,7 @@ class OpenActivity:
             min_players=self.min_players,
             max_players=self.max_players,
             seats=(actor_seat,),
+            options=dict(self.options),
         )
         table.activities[activity.id] = activity
         return [_patch(activity)]

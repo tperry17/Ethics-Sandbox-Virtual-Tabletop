@@ -124,6 +124,14 @@ class Game:
     def per_seat_zones(self) -> frozenset[str]:
         return frozenset(zone.id for zone in self.definition.zones if zone.per_seat)
 
+    def cards(self) -> dict[str, dict[str, str]]:
+        """Every column of every deck row, keyed by component id."""
+        return {
+            card.component_id: card.fields
+            for cards in self.decks.values()
+            for card in cards
+        }
+
     def faces(self) -> dict[str, Face]:
         """Every component's face, keyed by component id."""
         faces: dict[str, Face] = {}
@@ -308,6 +316,7 @@ def _check_references(definition: GameDefinition) -> None:
     zones = {zone.id: zone for zone in definition.zones}
     decks = {deck.id for deck in definition.components.decks}
     pieces = {piece.id for piece in definition.components.pieces}
+    option_ids = {option.id for option in definition.options}
 
     def zone(name: str, where: str, *, shared: bool = False) -> None:
         spec = zones.get(name)
@@ -329,6 +338,13 @@ def _check_references(definition: GameDefinition) -> None:
                     raise GameDefinitionError(
                         f"{where} spawns an unknown deck {step.deck!r}."
                     )
+                for value in step.where.values():
+                    for name in announce_fields(value):
+                        if name not in option_ids:
+                            raise GameDefinitionError(
+                                f"{where} filters by {{{name}}}, which is not "
+                                "one of the definition's options."
+                            )
                 zone(step.zone, where)
             elif isinstance(step, SpawnStep):
                 if step.component not in pieces:
@@ -351,6 +367,25 @@ def _check_references(definition: GameDefinition) -> None:
     for macro in definition.macros:
         if macro.steps is not None:
             check(macro.steps, f"Macro {macro.id!r}", in_setup=False)
+
+
+def _check_filters(
+    definition: GameDefinition, decks: dict[str, tuple[Card, ...]]
+) -> None:
+    """Every column a ``where`` filters on must be one its deck has."""
+    steps = [*definition.setup]
+    for macro in definition.macros:
+        steps.extend(macro.steps or ())
+    for step in steps:
+        if not isinstance(step, SpawnDeckStep):
+            continue
+        columns = set(decks[step.deck][0].fields) if decks[step.deck] else set()
+        for column in step.where:
+            if column not in columns:
+                raise GameDefinitionError(
+                    f"A spawn_deck of {step.deck!r} filters on a column "
+                    f"{column!r} that the deck's CSV does not have."
+                )
 
 
 def _import_rules(directory: Path, rules: Path) -> ModuleType:
@@ -436,6 +471,7 @@ def load_game(directory: Path, content_root: Path = CONTENT_ROOT) -> Game:
             deck.id: _load_deck(definition, index, content_root)
             for index, deck in enumerate(definition.components.decks)
         }
+        _check_filters(definition, decks)
         prompts = _load_prompts(definition, content_root)
         buttons = _load_buttons(definition, content_root)
         macro_functions, hooks = _load_rules(directory, definition)

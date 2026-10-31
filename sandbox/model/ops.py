@@ -1079,6 +1079,8 @@ class ShowTo:
             table, piece, zone, actor_seat, count_reveals=False
         ):
             return "You can only show a piece whose face you can see."
+        if piece.props.get("revealable") is False:
+            return "This card is never shown to anyone."
         if piece.revealed_by is not None and piece.revealed_by != actor_seat:
             return "Someone else is already showing that piece."
         for seat_id in self.seat_ids:

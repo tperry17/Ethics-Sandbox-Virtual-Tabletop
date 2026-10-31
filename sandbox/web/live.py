@@ -283,6 +283,7 @@ class ActivityView(BaseModel):
     max_players: int
     seats: list[str]
     status: str
+    options: dict[str, str] = Field(default_factory=dict)
 
 
 class ComponentView(BaseModel):
@@ -327,6 +328,19 @@ class MacroView(BaseModel):
     activity_id: str | None = None
 
 
+class ActivityOptionChoiceView(BaseModel):
+    id: str
+    label: str
+
+
+class ActivityOptionView(BaseModel):
+    """A choice made when an activity is started, such as which city."""
+
+    id: str
+    label: str
+    choices: list[ActivityOptionChoiceView]
+
+
 class ActivityChoiceView(BaseModel):
     """An activity this room can start: what it is called and how many it takes."""
 
@@ -335,6 +349,7 @@ class ActivityChoiceView(BaseModel):
     min_players: int
     max_players: int
     duration_minutes: int
+    options: list[ActivityOptionView] = Field(default_factory=list)
 
 
 class StrokeView(BaseModel):
@@ -566,6 +581,22 @@ MACRO_INTENT = "macro"
 ACTIVITY_INTENT = "activity"
 
 
+def chosen_options(game: Game, sent: object) -> dict[str, str] | str:
+    """The options a person chose for ``game``, or a sentence saying what is wrong.
+
+    An option left out takes its first choice; one the definition does not
+    offer, or a value it does not list, is refused.
+    """
+    given = sent if isinstance(sent, dict) else {}
+    chosen = game.definition.default_options()
+    for option_id, value in given.items():
+        option = next((o for o in game.definition.options if o.id == option_id), None)
+        if option is None or value not in {c.id for c in option.choices}:
+            return "That choice is not one this activity offers."
+        chosen[option_id] = value
+    return chosen
+
+
 def activity_choices() -> list[ActivityChoiceView]:
     """The activities any room can start: every game but the open room itself.
 
@@ -578,6 +609,17 @@ def activity_choices() -> list[ActivityChoiceView]:
             min_players=game.definition.meta.players.min,
             max_players=game.definition.meta.players.max,
             duration_minutes=game.definition.meta.duration_minutes,
+            options=[
+                ActivityOptionView(
+                    id=option.id,
+                    label=option.label,
+                    choices=[
+                        ActivityOptionChoiceView(id=c.id, label=c.label)
+                        for c in option.choices
+                    ],
+                )
+                for option in game.definition.options
+            ],
         )
         for game in GAMES.values()
         if game.slug != OPEN_ROOM_SLUG
@@ -1239,11 +1281,16 @@ class RoomRuntime:
                 )
                 return
             meta = game.definition.meta
+            chosen = chosen_options(game, payload.get("options"))
+            if isinstance(chosen, str):
+                self._reject(connection, message.client_id, chosen)
+                return
             operation = OpenActivity(
                 kind=game.slug,
                 title=game.title,
                 min_players=meta.players.min,
                 max_players=meta.players.max,
+                options=tuple(chosen.items()),
             )
         elif action in ("join", "leave", "end", "begin", "choose") and isinstance(
             activity_id, str
@@ -1608,6 +1655,7 @@ class RoomRuntime:
                     max_players=a.max_players,
                     seats=list(a.seats),
                     status=a.status,
+                    options=dict(a.options),
                 )
                 for a in view.activities
             ],

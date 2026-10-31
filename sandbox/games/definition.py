@@ -81,6 +81,9 @@ class DeckSpec(_Strict):
     as a frame colour, and ``badge`` one whose value names an icon file
     (``<value>.png``) in ``images/icons/``. Every column of a row stays
     available on the loaded card, for pages that need more than the face.
+    ``revealable: false`` makes the deck's cards ones nobody may show to
+    anyone, even a person who can read them: the model refuses the reveal,
+    and the menu does not offer it.
     """
 
     id: Identifier
@@ -93,6 +96,7 @@ class DeckSpec(_Strict):
     image: str | None = "image"
     group: str | None = None
     badge: str | None = None
+    revealable: bool = True
     width: float | None = Field(default=None, gt=0)
     height: float | None = Field(default=None, gt=0)
 
@@ -134,6 +138,30 @@ class Seats(_Strict):
 
     labels: tuple[str, ...] = ()
     assignment: Literal["chosen", "assigned"] = "chosen"
+
+
+class OptionChoice(_Strict):
+    id: Identifier
+    label: str = Field(min_length=1)
+
+
+class OptionSpec(_Strict):
+    """A named choice made when the activity is started, such as which city.
+
+    Steps may use the chosen value as ``{id}`` in a ``where``, and a rule
+    reads it from ``GameContext.options``. The first choice is the default.
+    """
+
+    id: Identifier
+    label: str = Field(min_length=1)
+    choices: tuple[OptionChoice, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def _distinct(self) -> OptionSpec:
+        ids = [choice.id for choice in self.choices]
+        if len(set(ids)) != len(ids):
+            raise ValueError(f"option {self.id!r} has a choice listed twice")
+        return self
 
 
 class ZoneSpec(_Strict):
@@ -188,11 +216,16 @@ class SetupStep(_Strict):
 
 
 class SpawnDeckStep(_Strict):
-    """One piece per card of ``deck`` into ``zone``, in a shuffled order."""
+    """One piece per card of ``deck`` into ``zone``, in a shuffled order.
+
+    ``where`` keeps only the rows whose columns equal these values; a value
+    may name an option as ``{option-id}``.
+    """
 
     op: Literal["spawn_deck"]
     deck: Identifier
     zone: Identifier
+    where: dict[str, str] = Field(default_factory=dict)
 
 
 class SpawnStep(_Strict):
@@ -346,6 +379,7 @@ class GameDefinition(_Strict):
     meta: Meta
     components: Components = Components()
     seats: Seats = Seats()
+    options: tuple[OptionSpec, ...] = ()
     zones: tuple[ZoneSpec, ...]
     setup: tuple[Step, ...] = ()
     macros: tuple[MacroSpec, ...]
@@ -364,6 +398,7 @@ class GameDefinition(_Strict):
             ("component", component_ids),
             ("zone", [zone.id for zone in self.zones]),
             ("macro", [macro.id for macro in self.macros]),
+            ("option", [option.id for option in self.options]),
         ):
             repeated = duplicates(ids)
             if repeated:
@@ -376,6 +411,10 @@ class GameDefinition(_Strict):
         if missing:
             raise ValueError(f"every exercise needs these macros as well: {missing}")
         return self
+
+    def default_options(self) -> dict[str, str]:
+        """Each option at its first choice."""
+        return {option.id: option.choices[0].id for option in self.options}
 
     def zone_spec(self, zone_id: str) -> ZoneSpec | None:
         return next((zone for zone in self.zones if zone.id == zone_id), None)
@@ -397,6 +436,8 @@ __all__ = [
     "GameDefinition",
     "MacroSpec",
     "Meta",
+    "OptionChoice",
+    "OptionSpec",
     "PieceSpec",
     "PlayerRange",
     "Prompts",

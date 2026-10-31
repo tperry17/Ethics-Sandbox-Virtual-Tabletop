@@ -18,8 +18,8 @@ a sentence a person can read; the whole macro is then refused with it.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from typing import Literal, TypeVar
 
 from sandbox.model import Operation, Table
@@ -43,7 +43,10 @@ class GameContext:
     ``seats`` is every seat at the table in seat order (an activity's own
     players, for an activity), and ``zone`` turns a
     zone's definition id into the zone on this table: the zone itself, or
-    for a per-seat zone, the copy belonging to ``seat``.
+    for a per-seat zone, the copy belonging to ``seat``. ``options`` are the
+    choices made when the activity was started (empty when it has none), and
+    ``cards`` every column of every deck row, keyed by component id, so a
+    rule can ask what a card is without the table ever saying.
     """
 
     actor_seat: str
@@ -52,6 +55,8 @@ class GameContext:
     macro_id: str | None = None
     seat_id: str | None = None
     prefix: str = ""
+    options: Mapping[str, str] = field(default_factory=dict)
+    cards: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
 
     def zone(self, zone_id: str, seat: str | None = None) -> str:
         if zone_id in self.per_seat_zones:
