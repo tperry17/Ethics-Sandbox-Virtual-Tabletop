@@ -39,7 +39,7 @@ shows "Claimed" in this table on `main`.
 | 7 | The table client — rendering | Done | | `9c86f37` |
 | 8 | The table client — interaction | Done | | `d8c383d` (PR #1) |
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
-| 10 | Value Cards Trading | Claimed; in progress (PR #16, paused for the author's go-ahead on the client work): the activity, swaps, deck page done; the table client's offer controls to do | `claude/step-10-value-cards-trading` | PR #16 |
+| 10 | Value Cards Trading | Done | | PR #16 |
 | 11 | Democracy Simulation | Ready to run | `claude/step-11-democracy-simulation` | |
 | 12 | Running a session (rewritten, lean) | Not started | `claude/step-12-facilitator-controls` | |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
@@ -745,11 +745,12 @@ Reveal). Keep it in the repo as the worked example, fully tested. Commit.
 
 ## 10. Value Cards Trading
 
-**Status: In progress (PR #16).** Done: the swap and owner-moves-only model,
-Value Cards Trading as an activity (3 players, started from an open room),
-`record_hands`, the debrief prompts, the catalog row and the printable deck
-page. Still to do: the table client's offer controls and pair checklist, the
-card face's frame and icon, and the hands-as-dealt record. The rules and the
+**Status: Done (PR #16).** Built: the swap and owner-moves-only model, Value
+Cards Trading as an activity (3 players, started from an open room),
+`record_hands`, the debrief prompts, the catalog row, the card faces (group
+frame, Schwartz icon, picture), the table client's offer controls and pair
+checklist, and the printable deck page. Not built: a snapshot of each hand
+as dealt (the deal is in the log and replays to it). The rules and the
 deck below were copied on
 2026-10-30 from the Center's Civil Discourse Wiki on Notion. The pages
 render only with JavaScript: a plain fetch returns an empty page, so open

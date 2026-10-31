@@ -73,3 +73,102 @@ export function renderActivities(model: TableModel, send: SendActivity): HTMLEle
   }
   return root.childElementCount === 0 ? null : root;
 }
+
+export type SendOp = (opType: string, payload: Record<string, unknown>) => void;
+
+function seatName(model: TableModel, seatId: string): string {
+  const seat = model.seats.get(seatId);
+  return seat?.display_name ?? seat?.label ?? seatId;
+}
+
+function cardName(model: TableModel, pieceId: string): string {
+  const piece = model.pieces.get(pieceId);
+  const component = piece?.component_id ? model.components.get(piece.component_id) : undefined;
+  return component?.title ?? "a card";
+}
+
+function list(model: TableModel, ids: string[]): string {
+  return ids.map((id) => cardName(model, id)).join(", ");
+}
+
+/**
+ * Swap offers, the pairs who have swapped, and the control to make an offer
+ * from the cards selected on the table. It gathers what the person chose;
+ * the server decides whether it is a legal offer.
+ */
+export function renderTrades(
+  model: TableModel,
+  selected: () => ReadonlySet<string>,
+  send: SendOp,
+): HTMLElement | null {
+  const mine = model.seatId;
+  if (mine === null) return null;
+  const players = new Set<string>();
+  for (const activity of model.activities.values()) {
+    if (activity.status === "running" && activity.seats.includes(mine)) {
+      for (const seat of activity.seats) players.add(seat);
+    }
+  }
+  if (players.size === 0 && model.offers.size === 0) return null;
+
+  const root = document.createElement("div");
+  root.className = "toolbar__trades";
+  root.setAttribute("role", "group");
+  root.setAttribute("aria-label", "Trades");
+
+  const hint = document.createElement("span");
+  hint.className = "toolbar__hint";
+  hint.setAttribute("role", "status");
+  const offer = button("Offer a trade", () => {
+    const owner = (id: string): string | null => {
+      const zone = model.zones.get(model.pieces.get(id)?.zone_id ?? "");
+      return zone?.owner_seat ?? null;
+    };
+    const chosen = [...selected()];
+    const give = chosen.filter((id) => owner(id) === mine);
+    const want = chosen.filter((id) => {
+      const seat = owner(id);
+      return seat !== null && seat !== mine;
+    });
+    const partners = new Set(want.map((id) => owner(id)));
+    if (give.length === 0 || want.length === 0 || partners.size !== 1) {
+      hint.textContent =
+        "Select cards in your hand and the cards you want from one other hand, then offer.";
+      return;
+    }
+    hint.textContent = "";
+    send("offer_swap", { to_seat: [...partners][0], give, want });
+  });
+  root.append(offer, hint);
+
+  const seats = [...players];
+  for (let first = 0; first < seats.length; first += 1) {
+    for (let second = first + 1; second < seats.length; second += 1) {
+      const key = [seats[first]!, seats[second]!].sort().join("|");
+      const line = document.createElement("span");
+      line.className = "toolbar__traded";
+      line.textContent = `${seatName(model, seats[first]!)} and ${seatName(model, seats[second]!)}: ${
+        model.swapped.has(key) ? "have traded" : "not yet"
+      }`;
+      root.append(line);
+    }
+  }
+
+  for (const open of model.offers.values()) {
+    const row = document.createElement("div");
+    row.className = "toolbar__offer";
+    row.dataset.offerId = open.id;
+    row.textContent = `${seatName(model, open.from_seat)} offers ${list(model, open.give)} to ${seatName(model, open.to_seat)} for ${list(model, open.want)}.`;
+    if (open.to_seat === mine) {
+      row.append(
+        button("Accept", () => send("accept_swap", { offer_id: open.id })),
+        button("Decline", () => send("decline_swap", { offer_id: open.id })),
+      );
+    }
+    if (open.from_seat === mine) {
+      row.append(button("Withdraw", () => send("withdraw_swap", { offer_id: open.id })));
+    }
+    root.append(row);
+  }
+  return root;
+}

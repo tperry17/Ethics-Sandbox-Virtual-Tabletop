@@ -13,6 +13,7 @@
 import type {
   ActivityChoiceView,
   ActivityView,
+  OfferView,
   ComponentView,
   CursorView,
   MacroView,
@@ -104,6 +105,9 @@ export class TableModel {
   macros: MacroView[] = [];
   activities = new Map<string, ActivityView>();
   activityChoices: ActivityChoiceView[] = [];
+  offers = new Map<string, OfferView>();
+  /** Pairs of seats that have swapped, each as its two seat ids joined by `|`, sorted. */
+  swapped = new Set<string>();
   cursors: CursorView[] = [];
   you: YouView | null = null;
   version = 0;
@@ -147,6 +151,12 @@ export class TableModel {
     this.macros = message.macros.map((macro) => ({ ...macro }));
     this.activities = new Map(
       (message.view_table.activities ?? []).map((activity) => [activity.id, { ...activity }]),
+    );
+    this.offers = new Map(
+      (message.view_table.offers ?? []).map((offer) => [offer.id, { ...offer }]),
+    );
+    this.swapped = new Set(
+      (message.view_table.swapped ?? []).map((pair) => [...pair].sort().join("|")),
     );
     this.activityChoices = (message.activity_choices ?? []).map((choice) => ({ ...choice }));
     this.you = { ...message.you };
@@ -205,6 +215,20 @@ export class TableModel {
     }
     if (patch.kind === "seat") {
       this.applySeatPatch(patch.entity_id, patch, diff);
+      return;
+    }
+    if (patch.kind === "offer") {
+      if (patch.op === "remove") {
+        this.offers.delete(patch.entity_id);
+        const pair = patch.fields["swapped"];
+        if (Array.isArray(pair)) this.swapped.add(pair.map(String).sort().join("|"));
+      } else {
+        this.offers.set(patch.entity_id, {
+          ...(patch.fields as Partial<OfferView>),
+          id: patch.entity_id,
+        } as OfferView);
+      }
+      diff.catalog = true;
       return;
     }
     if (patch.kind === "activity") {

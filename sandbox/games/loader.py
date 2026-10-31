@@ -67,6 +67,8 @@ class Face:
     body: str | None = None
     folio: str | None = None
     image: str | None = None
+    group: str | None = None
+    badge: str | None = None
     tint_index: int | None = None
     width: float | None = None
     height: float | None = None
@@ -174,7 +176,15 @@ def _load_deck(
     rows = read_rows(deck.source, root=root)
     if not rows:
         raise GameDefinitionError(f"Deck {deck.id!r} (content/{deck.source}) is empty.")
-    named = [deck.key, deck.title, deck.body, deck.folio, deck.image]
+    named = [
+        deck.key,
+        deck.title,
+        deck.body,
+        deck.folio,
+        deck.image,
+        deck.group,
+        deck.badge,
+    ]
     for column in named:
         if column is not None and column not in rows[0]:
             raise GameDefinitionError(
@@ -208,6 +218,17 @@ def _load_deck(
                 )
             image = image_url(file.resolve(), root)
 
+        badge = None
+        icon = _cell(row, deck.badge)
+        if icon is not None:
+            file = source.parent / "images" / "icons" / f"{icon}.png"
+            if not file.is_file():
+                raise GameDefinitionError(
+                    f"content/{deck.source} line {line} names an icon {icon!r} "
+                    "that is not in its images/icons/ folder."
+                )
+            badge = image_url(file.resolve(), root)
+
         cards.append(
             Card(
                 component_id=component_id,
@@ -217,6 +238,8 @@ def _load_deck(
                     body=_cell(row, deck.body),
                     folio=_cell(row, deck.folio),
                     image=image,
+                    group=_cell(row, deck.group),
+                    badge=badge,
                     width=deck.width,
                     height=deck.height,
                 ),

@@ -160,3 +160,14 @@ def test_recording_before_the_deal_says_to_deal_first() -> None:
     activity_id = _start(table)
     refused = _press(table, activity_id, "record_hands")
     assert isinstance(refused, Reject) and "Deal first" in refused.reason
+
+
+def test_each_card_face_carries_its_group_and_its_schwartz_icon() -> None:
+    cards = GAME.decks["values"]
+    assert len(cards) == 36
+    assert {card.face.group for card in cards} == {"Deck", "Sidebar"}
+    for card in cards:
+        assert card.face.image is not None
+        assert card.face.badge is not None
+        assert card.face.badge.startswith("/content/decks/value-cards/images/icons/")
+        assert card.face.folio is not None

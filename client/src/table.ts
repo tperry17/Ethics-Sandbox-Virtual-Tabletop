@@ -14,7 +14,7 @@
  * the piece is seen to go back.
  */
 
-import { renderActivities } from "./activities.js";
+import { renderActivities, renderTrades } from "./activities.js";
 import { Announcer } from "./announcer.js";
 import { InkLayer } from "./ink.js";
 import { IntentTracker } from "./intents.js";
@@ -560,7 +560,13 @@ export class TableRenderer {
   private isInMyHand(zoneId: string): boolean {
     const zone = this.model.zones.get(zoneId);
     if (zone === undefined) return false;
-    return zone.kind === "hand" && zone.owner_seat === this.model.seatId;
+    // Only a private hand goes in the tray; an open one stays on the table
+    // where everyone, its owner included, reads it in place.
+    return (
+      zone.kind === "hand" &&
+      zone.visibility === "private_to_owner" &&
+      zone.owner_seat === this.model.seatId
+    );
   }
 
   // -- the hand tray ------------------------------------------------------------
@@ -585,8 +591,7 @@ export class TableRenderer {
     }
 
     const zone = [...this.model.zones.values()].find(
-      (candidate) =>
-        candidate.kind === "hand" && candidate.owner_seat === this.model.seatId,
+      (candidate) => this.isInMyHand(candidate.id),
     );
     const noun = ids.length === 1 ? "piece" : "pieces";
     this.trayLabel.textContent = `${zone?.label ?? "Your hand"} · ${ids.length} ${noun}`;
@@ -661,6 +666,10 @@ export class TableRenderer {
       this.intents.send("activity", payload),
     );
     if (activities !== null) toolbar.append(activities);
+    const trades = renderTrades(this.model, () => this.selection, (opType, payload) =>
+      this.intents.send(opType, payload),
+    );
+    if (trades !== null) toolbar.append(trades);
     toolbar.append(this.toolGroup);
   }
 

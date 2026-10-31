@@ -77,8 +77,10 @@ class DeckSpec(_Strict):
     card's component id, so it must be unique within the deck. ``title``,
     ``body`` and ``folio`` name the columns drawn on the card's face, and
     ``image`` the column naming an image file in the exercise's ``images/``
-    folder. Every column of a row stays available on the loaded card, for
-    pages that need more than the face.
+    folder. ``group`` names a column whose value is the card's group, drawn
+    as a frame colour, and ``badge`` one whose value names an icon file
+    (``<value>.png``) in ``images/icons/``. Every column of a row stays
+    available on the loaded card, for pages that need more than the face.
     """
 
     id: Identifier
@@ -89,6 +91,8 @@ class DeckSpec(_Strict):
     body: str | None = None
     folio: str | None = None
     image: str | None = "image"
+    group: str | None = None
+    badge: str | None = None
     width: float | None = Field(default=None, gt=0)
     height: float | None = Field(default=None, gt=0)
 

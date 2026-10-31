@@ -16,6 +16,10 @@ components:
       body: definition
       folio: number
       image: art
+      group: group
+      badge: schwartz
+      width: 150
+      height: 210
 
 seats:
   labels: [First player, Second player, Third player]
@@ -24,7 +28,7 @@ zones:
   - id: table
     kind: table
     label: The table
-    rect: [0, 0, 1700, 1200]
+    rect: [0, 0, 2200, 1200]
     visibility: public
     layout: free
   - id: deck
@@ -36,7 +40,7 @@ zones:
   - id: hand
     kind: hand
     label: Hand
-    rect: [40, 400, 1200, 220]
+    rect: [40, 400, 1600, 230]
     visibility: public            # hands are open within the trio
     owner_moves_only: true        # but only the owner arranges them
     layout: spread
@@ -45,7 +49,7 @@ zones:
   - id: top-three
     kind: slot
     label: Top three
-    rect: [1280, 400, 380, 220]
+    rect: [1680, 400, 480, 230]
     visibility: private_to_owner  # shared only by the owner's choice, with Show
     layout: spread
     capacity: 3

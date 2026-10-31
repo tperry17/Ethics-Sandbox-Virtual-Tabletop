@@ -30,8 +30,10 @@ def _offer_patch(offer: Offer) -> Patch:
     )
 
 
-def _offer_removed(offer_id: str) -> Patch:
-    return Patch(kind="offer", op="remove", entity_id=offer_id, fields={})
+def _offer_removed(offer_id: str, pair: tuple[str, str] | None = None) -> Patch:
+    """The offer is gone. ``pair`` is set when it ended in a swap."""
+    fields: dict[str, object] = {} if pair is None else {"swapped": list(pair)}
+    return Patch(kind="offer", op="remove", entity_id=offer_id, fields=fields)
 
 
 def _owner_of(table: Table, piece: Piece) -> str | None:
@@ -165,7 +167,7 @@ class AcceptSwap:
                 _clear_reveal(piece)
                 patches.append(_piece_patch(piece))
         table.swapped.add(frozenset((offer.from_seat, offer.to_seat)))
-        patches.append(_offer_removed(offer.id))
+        patches.append(_offer_removed(offer.id, (offer.from_seat, offer.to_seat)))
         return patches
 
 
