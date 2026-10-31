@@ -10,7 +10,13 @@ The Center's seal is used as the site icon (`static/icons/`) and, in white, on e
 
 The first two exercises are “Value Cards Trading” and “Democracy Simulation.” The platform must make a third exercise cheap to add.
 
-Facilitators—teachers, community organisers, and workshop leads—run groups of 4–30 participants on laptops and tablets. There is no sign-in: a room is a URL with a code, and a participant enters a display name to join the table.
+Facilitators—teachers, community organisers, and workshop leads—run groups on laptops and tablets. There is no sign-in: a room is a URL with a code, and a participant enters a display name to join the table.
+
+## Rooms and activities
+
+A room is an open sandbox, not one exercise. Up to 20 people join it and use the table however they please: the free table, the value cards, dice, tokens and other loose pieces. No activity is built into a room. An activity is a guided exercise started inside a room: someone presses "Start the <activity>", a sign-up opens for the activity's players (the facilitator may choose them instead), and the activity lays out its own zones for those seats and guides them through its steps. Everyone else keeps using the sandbox, and several activities, or several groups doing the same one, can run in a room at once. An activity's `players: {min, max}` is how many people it takes (three for Value Cards Trading), never the room's capacity.
+
+The facilitator is optional, an admin seat. Nobody is the facilitator by default, the room's creator included. Any participant may take the seat with a "Become facilitator" button, or choose it when joining; only one person holds it, and nothing in any activity requires it.
 
 The experience is real time but unhurried. Dragging must feel immediate to the person doing it; everyone else may see it 100 ms later. This is not a twitch game. Never trade correctness or clarity for latency below that threshold.
 
@@ -148,7 +154,7 @@ typography, and it has not come to that.
 
 ## Game definitions
 
-An exercise's table is data. A game is a directory under `sandbox/games/`
+An activity's table is data. A game (an activity) is a directory under `sandbox/games/`
 holding a `game.yaml`, an `__init__.py`, and optionally a `rules.py` for
 what the YAML cannot say. No exercise has one yet. The worked example is
 Two Doors, a test fixture in `tests/games/two_doors/` whose CSV files are in
@@ -159,7 +165,7 @@ server do.
 
 `game.yaml` has these sections, checked by `sandbox/games/definition.py`:
 
-- `meta` — `slug`, `title`, `players: {min, max}` (the seat cap),
+- `meta` — `slug`, `title`, `players: {min, max}` (how many people the activity takes; the room's cap is separate),
   `duration_minutes`, `facilitator` (required, recommended or optional),
   and `listed`. A listed game's site copy stays in
   `content/site/exercises.csv`, and its title there must match.
@@ -173,7 +179,7 @@ server do.
   optional `capacity`. `per_seat: true` gives every seat its own copy,
   `<id>-<seat id>`, owned by that seat and moved by `step: [dx, dy]` per
   seat. A `private_to_owner` zone must be per-seat.
-- `setup` — steps that build the starting table when a room is created.
+- `setup` — steps that build the activity's starting zones and pieces when it is started in a room.
 - `macros` — buttons: `id`, `who` (facilitator or anyone), and either
   `steps` or `python: <function>`. Every game has `setup`, `deal`,
   `reset`, `shuffle`, `collect` and `clear_ink`.
