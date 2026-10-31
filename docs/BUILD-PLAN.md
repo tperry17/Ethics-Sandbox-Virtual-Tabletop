@@ -41,7 +41,7 @@ shows "Claimed" in this table on `main`.
 | 9 | Game definitions and macro buttons | Done | | PR #9 |
 | 10 | Value Cards Trading | Done | | PR #16 |
 | 11 | Democracy Simulation | Done | | PR #19 |
-| 12 | Running a session (rewritten, lean) | Done, with gaps (below); in review as PR #20 | `claude/step-12-facilitator-controls` | |
+| 12 | Running a session (rewritten, lean) | Done | | PR #20 |
 | 13 | Reflection, debrief and the playtest record | Not started | `claude/step-13-reflection-and-debrief` | |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
@@ -1191,7 +1191,7 @@ status table. Commit.
 
 ## 12. Running a session
 
-**Status: Done, with gaps.** Restated on 2026-10-31 after the author's answers on
+**Status: Done (PR #20); what was left out is listed under "Deferred" below.** Restated on 2026-10-31 after the author's answers on
 the pull request, to fit "A room is an open sandbox" (Prompt 17). The
 2026-10-30 version, a class that owned several rooms with its own page at
 `/c/{code}`, is withdrawn. The longer list from the first version is kept
