@@ -10,7 +10,14 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from sandbox.model.entities import Geometry, Piece, Table, Zone, rolled_value
+from sandbox.model.entities import (
+    Geometry,
+    Piece,
+    Table,
+    Zone,
+    rolled_value,
+    written_text,
+)
 from sandbox.model.results import Patch
 from sandbox.model.types import Layout, PieceKind, Visibility, ZoneKind
 
@@ -38,6 +45,7 @@ class ViewPiece:
     revealed_to: tuple[str, ...] = ()
     revealed_by: str | None = None
     value: str | None = None
+    text: str | None = None
 
 
 @dataclass(frozen=True)
@@ -175,6 +183,7 @@ def _project_piece(table: Table, piece: Piece, viewer_seat: str | None) -> ViewP
         revealed_to=tuple(sorted(piece.revealed_to)),
         revealed_by=piece.revealed_by,
         value=rolled_value(piece) if entitled else None,
+        text=written_text(piece) if entitled else None,
     )
 
 
@@ -285,6 +294,8 @@ def project_patch(table: Table, patch: Patch, viewer_seat: str | None) -> Patch 
             fields["component_id"] = None
             if "value" in fields:
                 fields["value"] = None
+            if "text" in fields:
+                fields["text"] = None
         return Patch(
             kind=patch.kind, op=patch.op, entity_id=patch.entity_id, fields=fields
         )

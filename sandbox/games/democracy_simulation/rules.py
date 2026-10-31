@@ -11,9 +11,11 @@ asks ``context.cards`` what a card is and the table where it sits.
 - ``choose_moderators`` (Potamosia) picks two co-Chairs by a logged shuffle.
 - ``new_proposal`` adds a numbered proposal. Who added it, and when, is in
   the event log.
-- ``put_to_vote`` puts the oldest proposal on the floor and hands out
-  ballots; ``close_vote`` counts them. Potamosia votes by a show of hands, so
-  each vote is turned up in its voter's name tent. Hudrosia's council votes in
+- ``put_to_vote`` calls a vote on the one written proposal that has been
+  moved onto the floor; ``close_vote`` counts it against everyone who may vote
+  (a show of hands: anyone without a hand up is against). The speaking queue
+  is ``join_queue``, ``next_speaker`` and ``clear_queue``. Potamosia's hands
+  are turned up in each voter's name tent. Hudrosia's council votes in
   secret: the table sees only a tally of fresh, unmarked tokens, and who
   voted for what is in the log and in the facilitator's view.
 """
@@ -33,11 +35,13 @@ from sandbox.model import (
     PieceKind,
     Record,
     SetProp,
+    SetText,
     Shuffle,
     Spawn,
     Table,
     new_op_id,
 )
+from sandbox.model.entities import written_text
 
 POTAMOSIA = "potamosia"
 HUDROSIA = "hudrosia"
@@ -339,18 +343,26 @@ def _ballot_tokens(table: Table, context: GameContext) -> list[Piece]:
 
 @macro("put_to_vote")
 def put_to_vote(table: Table, context: GameContext) -> list[Operation]:
-    """The oldest waiting proposal goes on the floor and the voters get ballots."""
+    """Call a vote on the one written proposal on the floor, and hand out ballots.
+
+    The caller chooses the proposal by moving it onto the floor. In
+    Potamosia each citizen has one "For" token to raise; in Hudrosia each
+    council member has a "For" and an "Against" and casts one, in secret.
+    """
     _require_caller(table, context)
     if not _dealt(table, context):
         raise MacroRefused("Deal the role cards first.")
     if _of(table, context, "vote-open"):
         raise MacroRefused("A vote is open. Count it first.")
-    waiting = _in(table, context, "proposals")
     on_floor = [p for p in _in(table, context, "floor") if p.component_id == "proposal"]
-    if not on_floor and not waiting:
-        raise MacroRefused("There is no proposal to vote on. Write one first.")
+    if not on_floor:
+        raise MacroRefused("Move the proposal to be voted on onto the floor first.")
+    if len(on_floor) > 1:
+        raise MacroRefused("Only one proposal can be on the floor at a time.")
+    if not written_text(on_floor[0]):
+        raise MacroRefused("Write the proposal on its note before it is voted on.")
     operations: list[Operation] = []
-    # Last vote's tokens and result go; a tie's proposal is back in the waiting pile.
+    # The last vote's tokens and result go.
     operations += _despawn(_ballot_tokens(table, context))
     operations += _despawn(
         [
@@ -359,23 +371,25 @@ def put_to_vote(table: Table, context: GameContext) -> list[Operation]:
             if p.component_id.startswith("result-")
         ]
     )
-    if not on_floor:
-        operations.append(
-            MoveToZone(piece_id=waiting[0].id, zone_id=context.zone("floor"))
-        )
     operations.append(_spawn("vote-open", PieceKind.MARKER, context.zone("floor")))
     for seat in _voters(table, context):
         box = context.zone("ballot-box", seat)
-        operations += [
-            _spawn("yes", PieceKind.TOKEN, box),
-            _spawn("no", PieceKind.TOKEN, box),
-        ]
+        operations.append(_spawn("yes", PieceKind.TOKEN, box))
+        if _city(context) == HUDROSIA:
+            operations.append(_spawn("no", PieceKind.TOKEN, box))
     return operations
 
 
 @macro("close_vote")
 def close_vote(table: Table, context: GameContext) -> list[Operation]:
-    """Count the ballots cast; more than half of them passes the proposal."""
+    """Count the ballots against everyone who may vote.
+
+    A vote is a show of hands, so only the "for" side is ever counted: a
+    proposal passes when more than half of those present are for it, and
+    anyone without a hand up is against. Hudrosia's council votes the same
+    way over its own members, with a secret "Against" token that counts the
+    same as no token at all. A tie reports as a tie and nothing passes.
+    """
     _require_caller(table, context)
     markers = _of(table, context, "vote-open")
     if not markers:
@@ -387,10 +401,14 @@ def close_vote(table: Table, context: GameContext) -> list[Operation]:
         if slot:
             cast[seat] = slot[0].component_id
     yes = sum(1 for value in cast.values() if value == "yes")
-    no = len(cast) - yes
-    if not cast:
-        raise MacroRefused("Nobody has voted yet.")
-    outcome = "passed" if yes * 2 > len(cast) else "tie" if yes == no else "not-passed"
+    no = len(voters) - yes
+    outcome = (
+        "passed"
+        if yes * 2 > len(voters)
+        else "tie"
+        if yes * 2 == len(voters)
+        else "not-passed"
+    )
     proposal = next(
         p for p in _in(table, context, "floor") if p.component_id == "proposal"
     )
@@ -420,11 +438,13 @@ def close_vote(table: Table, context: GameContext) -> list[Operation]:
                 MoveToZone(piece_id=token.id, zone_id=context.zone("tent", seat)),
                 Flip(piece_id=token.id, face_up=True),
             ]
-    for value, total in (("yes", yes), ("no", no)):
-        for _ in range(total):
-            operations.append(
-                _spawn(value, PieceKind.TOKEN, context.zone(f"tally-{value}"))
-            )
+    # The tally shows the hands that were raised (and, in secret, the
+    # council's "Against" tokens); everyone else is simply not for it.
+    against_cast = sum(1 for value in cast.values() if value == "no")
+    for _ in range(yes):
+        operations.append(_spawn("yes", PieceKind.TOKEN, context.zone("tally-yes")))
+    for _ in range(against_cast if secret else 0):
+        operations.append(_spawn("no", PieceKind.TOKEN, context.zone("tally-no")))
     result = {
         "passed": "result-passed",
         "not-passed": "result-not-passed",
@@ -438,14 +458,69 @@ def close_vote(table: Table, context: GameContext) -> list[Operation]:
                 "city": _city(context),
                 "phase": context.options.get("phase", ""),
                 "proposal": proposal.id,
-                "yes": yes,
-                "no": no,
+                "proposal_text": written_text(proposal),
+                "present": len(voters),
+                "for": yes,
+                "not_for": no,
                 "result": outcome,
                 "secret": secret,
                 "votes": {
-                    table.seats[seat].label: value for seat, value in cast.items()
+                    table.seats[seat].label: cast.get(seat, "no") for seat in voters
                 },
             },
         )
     )
     return operations
+
+
+# -- the speaking queue -----------------------------------------------------------
+
+
+def _queue(table: Table, context: GameContext) -> list[Piece]:
+    return _in(table, context, "queue")
+
+
+@macro("join_queue")
+def join_queue(table: Table, context: GameContext) -> list[Operation]:
+    """Put your name on the speaking queue, as your name tent says it."""
+    seat = context.actor_seat
+    if seat not in context.seats:
+        raise MacroRefused("Only the city's citizens can join its queue.")
+    if any(p.props.get("seat") == seat for p in _queue(table, context)):
+        raise MacroRefused("You are already in the queue.")
+    tent = next(
+        iter(table.pieces_in_zone(context.zone("tent", seat))),
+        None,
+    )
+    name = (written_text(tent) if tent is not None else None) or table.seats[seat].label
+    note = new_op_id()
+    return [
+        Spawn(
+            component_id="speaker",
+            kind=PieceKind.NOTE,
+            zone_id=context.zone("queue"),
+            piece_ids=(note,),
+        ),
+        SetText(piece_id=note, text=name),
+        SetProp(piece_id=note, key="seat", value=seat),
+    ]
+
+
+@macro("next_speaker")
+def next_speaker(table: Table, context: GameContext) -> list[Operation]:
+    """The first in the queue has had their turn: take them off."""
+    _require_caller(table, context)
+    queue = _queue(table, context)
+    if not queue:
+        raise MacroRefused("Nobody is in the queue.")
+    return _despawn(queue[:1])
+
+
+@macro("clear_queue")
+def clear_queue(table: Table, context: GameContext) -> list[Operation]:
+    """Empty the queue."""
+    _require_caller(table, context)
+    queue = _queue(table, context)
+    if not queue:
+        raise MacroRefused("Nobody is in the queue.")
+    return _despawn(queue)

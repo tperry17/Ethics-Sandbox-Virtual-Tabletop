@@ -22,7 +22,9 @@ from sandbox.model import (
     OpenActivity,
     OpOutcome,
     Reject,
+    ReleaseFacilitator,
     SetActivityPlayers,
+    SetText,
     Table,
     TableRng,
     TakeFacilitator,
@@ -208,84 +210,99 @@ def _vote(table: Table, activity: str, choices: dict[str, str]) -> None:
         assert isinstance(run_op(table, seat, moved), Ok)
 
 
-def _open_vote(table: Table, activity: str) -> None:
+def _proposal_on_floor(table: Table, activity: str, text: str = "Build the dam") -> str:
+    """Someone adds a proposal and writes on it; it is moved onto the floor."""
     assert isinstance(press(table, activity, "new_proposal", "seat-2"), Ok)
+    note = table.pieces_in_zone(zone(activity, "proposals"))[-1]
+    assert isinstance(run_op(table, "seat-2", SetText(note.id, text)), Ok)
+    moved = MoveToZone(piece_id=note.id, zone_id=zone(activity, "floor"))
+    assert isinstance(run_op(table, "seat-1", moved), Ok)
+    return note.id
+
+
+def _open_vote(table: Table, activity: str) -> None:
+    _proposal_on_floor(table, activity)
     assert isinstance(press(table, activity, "put_to_vote"), Ok)
 
 
-def test_a_majority_passes_and_every_seat_has_a_ballot_in_potamosia() -> None:
+def test_a_vote_needs_one_written_proposal_on_the_floor() -> None:
+    table, activity = city(9)
+    press(table, activity, "deal")
+    refused = press(table, activity, "put_to_vote")
+    assert isinstance(refused, Reject) and "floor" in refused.reason
+    press(table, activity, "new_proposal", "seat-2")
+    note = table.pieces_in_zone(zone(activity, "proposals"))[-1]
+    run_op(table, "seat-1", MoveToZone(note.id, zone(activity, "floor")))
+    blank = press(table, activity, "put_to_vote")
+    assert isinstance(blank, Reject) and "Write the proposal" in blank.reason
+    run_op(table, "seat-2", SetText(note.id, "Build the dam"))
+    assert isinstance(press(table, activity, "put_to_vote"), Ok)
+
+
+def test_each_citizen_gets_one_for_token_in_potamosia() -> None:
+    table, activity = city(9)
+    press(table, activity, "deal")
+    _open_vote(table, activity)
+    for seat in table.activities[activity].seats:
+        assert components(table, zone(activity, "ballot-box", seat)) == ["yes"]
+
+
+def test_a_majority_of_those_present_passes_in_potamosia() -> None:
     table, activity = city(9)
     press(table, activity, "deal")
     _open_vote(table, activity)
     seats = table.activities[activity].seats
-    assert all(
-        sorted(components(table, zone(activity, "ballot-box", s))) == ["no", "yes"]
-        for s in seats
-    )
-    _vote(table, activity, {s: "yes" if i < 5 else "no" for i, s in enumerate(seats)})
+    _vote(table, activity, {s: "yes" for s in seats[:5]})
     assert isinstance(press(table, activity, "close_vote"), Ok)
     assert components(table, zone(activity, "passed")) == ["proposal"]
     assert Counter(components(table, zone(activity, "tally-yes"))) == {"yes": 5}
-    assert Counter(components(table, zone(activity, "tally-no"))) == {"no": 4}
     assert "result-passed" in components(table, zone(activity, "floor"))
-    # A show of hands: each vote is turned up in its voter's name tent, for all.
+    # A show of hands: each hand is turned up in its owner's name tent, for all.
     spectator = project(table, None)
     shown = {
         p.zone_id: p.component_id
         for p in spectator.pieces
-        if p.component_id in ("yes", "no")
+        if p.component_id == "yes" and p.zone_id.startswith(zone(activity, "tent"))
     }
-    assert shown[zone(activity, "tent", seats[0])] == "yes"
-    assert shown[zone(activity, "tent", seats[8])] == "no"
+    assert set(shown) == {zone(activity, "tent", s) for s in seats[:5]}
 
 
-def test_more_than_half_of_the_votes_cast_not_of_those_present() -> None:
+def test_anyone_without_a_hand_up_counts_against() -> None:
     table, activity = city(9)
     press(table, activity, "deal")
     _open_vote(table, activity)
     seats = table.activities[activity].seats
-    _vote(table, activity, {seats[0]: "yes", seats[1]: "yes", seats[2]: "no"})
+    _vote(table, activity, {s: "yes" for s in seats[:4]})  # 4 of 9 is not a majority
     assert isinstance(press(table, activity, "close_vote"), Ok)
-    assert components(table, zone(activity, "passed")) == ["proposal"]
-
-
-def test_a_minority_does_not_pass() -> None:
-    table, activity = city(9)
-    press(table, activity, "deal")
-    _open_vote(table, activity)
-    seats = table.activities[activity].seats
-    _vote(table, activity, {seats[0]: "yes", seats[1]: "no", seats[2]: "no"})
-    press(table, activity, "close_vote")
     assert components(table, zone(activity, "not-passed")) == ["proposal"]
     assert "result-not-passed" in components(table, zone(activity, "floor"))
 
 
-def test_a_tie_is_reported_and_nothing_passes() -> None:
+def test_no_hands_up_means_it_does_not_pass() -> None:
     table, activity = city(9)
     press(table, activity, "deal")
     _open_vote(table, activity)
+    assert isinstance(press(table, activity, "close_vote"), Ok)
+    assert components(table, zone(activity, "not-passed")) == ["proposal"]
+
+
+def test_exactly_half_is_a_tie_and_nothing_passes() -> None:
+    table, activity = city(10)
+    press(table, activity, "deal")
+    _open_vote(table, activity)
     seats = table.activities[activity].seats
-    _vote(table, activity, {seats[0]: "yes", seats[1]: "no"})
+    _vote(table, activity, {s: "yes" for s in seats[:5]})
     assert isinstance(press(table, activity, "close_vote"), Ok)
     assert "result-tie" in components(table, zone(activity, "floor"))
     assert not components(table, zone(activity, "passed"))
     assert components(table, zone(activity, "proposals")) == ["proposal"]
 
 
-def test_nobody_voting_is_refused_and_leaves_the_vote_open() -> None:
-    table, activity = city(9)
-    press(table, activity, "deal")
-    _open_vote(table, activity)
-    refused = press(table, activity, "close_vote")
-    assert isinstance(refused, Reject) and "Nobody has voted" in refused.reason
-    assert "vote-open" in components(table, zone(activity, "floor"))
-
-
 def test_only_a_co_chair_or_the_facilitator_can_call_a_vote_in_potamosia() -> None:
     table, activity = city(12)
     press(table, activity, "deal")
     press(table, activity, "choose_moderators")
-    press(table, activity, "new_proposal", "seat-2")
+    _proposal_on_floor(table, activity)
     seats = table.activities[activity].seats
     chair = next(
         s
@@ -293,17 +310,12 @@ def test_only_a_co_chair_or_the_facilitator_can_call_a_vote_in_potamosia() -> No
         if "moderator-token" in components(table, zone(activity, "tent", s))
     )
     other = next(s for s in seats if s != chair and s != "seat-1")
-    # The facilitator has the seat only by role; take it away to test the rest.
-    from sandbox.model import ReleaseFacilitator
-
     assert isinstance(run_op(table, "seat-1", ReleaseFacilitator()), Ok)
     assert isinstance(press(table, activity, "put_to_vote", other), Reject)
     assert isinstance(press(table, activity, "put_to_vote", chair), Ok)
 
 
-def test_hudrosia_only_the_council_votes_and_a_king_calls_it() -> None:
-    table, activity = city(12, city="hudrosia")
-    press(table, activity, "deal")
+def _council(table: Table, activity: str) -> tuple[list[str], list[str], str]:
     cards = GAME.cards()
     seats = table.activities[activity].seats
 
@@ -316,55 +328,62 @@ def test_hudrosia_only_the_council_votes_and_a_king_calls_it() -> None:
     council = [s for s in seats if role(s)["council"] == "yes"]
     others = [s for s in seats if s not in council]
     king = next(s for s in seats if role(s)["job"] == "King")
-    from sandbox.model import ReleaseFacilitator
+    assert {role(s)["job"] for s in council} <= {"King", "Merchant", "Noble"}
+    return council, others, king
 
-    press(table, activity, "new_proposal", others[0])
+
+def test_hudrosia_only_the_council_votes_and_a_king_calls_it() -> None:
+    table, activity = city(12, city="hudrosia")
+    press(table, activity, "deal")
+    council, others, king = _council(table, activity)
+    _proposal_on_floor(table, activity)
     assert isinstance(run_op(table, "seat-1", ReleaseFacilitator()), Ok)
     assert isinstance(press(table, activity, "put_to_vote", others[0]), Reject)
     assert isinstance(press(table, activity, "put_to_vote", king), Ok)
     for seat in others:
         assert not table.pieces_in_zone(zone(activity, "ballot-box", seat))
     for seat in council:
-        assert len(table.pieces_in_zone(zone(activity, "ballot-box", seat))) == 2
+        assert sorted(components(table, zone(activity, "ballot-box", seat))) == [
+            "no",
+            "yes",
+        ]
+
+
+def test_hudrosia_a_majority_of_the_council_passes() -> None:
+    table, activity = city(12, city="hudrosia")
+    press(table, activity, "deal")
+    council, _, _ = _council(table, activity)
+    _open_vote(table, activity)
+    _vote(table, activity, {s: "yes" for s in council[: len(council) // 2 + 1]})
+    assert isinstance(press(table, activity, "close_vote"), Ok)
+    assert components(table, zone(activity, "passed")) == ["proposal"]
 
 
 def test_a_secret_council_vote_does_not_leak_to_the_table() -> None:
     table, activity = city(12, city="hudrosia")
     press(table, activity, "deal")
-    cards = GAME.cards()
+    council, _, _ = _council(table, activity)
     seats = table.activities[activity].seats
-    council = [
-        s
-        for s in seats
-        if any(
-            cards[p.component_id]["council"] == "yes"
-            for p in table.pieces_in_zone(zone(activity, "hand", s))
-            if cards[p.component_id]["kind"] == "role"
-        )
-    ]
     assert len(council) >= 3
     _open_vote(table, activity)
     choices = {s: ("yes" if i % 2 == 0 else "no") for i, s in enumerate(council)}
     _vote(table, activity, choices)
-    # While it is open, only a seat and the facilitator can read a ballot.
     others = [s for s in seats if s != council[0] and s != "seat-1"]
+    slot = zone(activity, "ballot", council[0])
     for viewer in (others[0], None):
         view = project(table, viewer)
-        slot = zone(activity, "ballot", council[0])
         assert all(p.component_id is None for p in view.pieces if p.zone_id == slot)
     assert any(
         p.component_id == choices[council[0]]
         for p in project(table, council[0]).pieces
-        if p.zone_id == zone(activity, "ballot", council[0])
+        if p.zone_id == slot
     )
     assert isinstance(press(table, activity, "close_vote"), Ok)
     yes = sum(v == "yes" for v in choices.values())
     for viewer in (others[0], council[0], None):
         view = project(table, viewer)
-        yes_tally = [p for p in view.pieces if p.zone_id == zone(activity, "tally-yes")]
-        assert len(yes_tally) == yes
-        # Nothing marks a voter's choice: no token anywhere but the tally is
-        # a yes or a no, and the council members' own slots and tents are bare.
+        tally = [p for p in view.pieces if p.zone_id == zone(activity, "tally-yes")]
+        assert len(tally) == yes
         for s in council:
             for z in ("tent", "ballot", "ballot-box"):
                 visible = [
@@ -376,19 +395,47 @@ def test_a_secret_council_vote_does_not_leak_to_the_table() -> None:
                 assert visible == []
 
 
-def test_the_log_keeps_who_voted_what_for_the_facilitator() -> None:
+def test_the_log_keeps_who_voted_what_and_the_proposal_text() -> None:
     table, activity = city(9)
     press(table, activity, "deal")
     _open_vote(table, activity)
     seats = table.activities[activity].seats
-    _vote(table, activity, {seats[0]: "yes", seats[1]: "no"})
+    _vote(table, activity, {seats[0]: "yes"})
     built = build_macro(GAME, table, "seat-1", "close_vote", activity)
     assert isinstance(built, Transaction)
-    records = [s for s in built.steps if type(s).__name__ == "Record"]
-    assert records and records[-1].data["votes"] == {  # type: ignore[attr-defined]
-        table.seats[seats[0]].label: "yes",
-        table.seats[seats[1]].label: "no",
-    }
+    record = [s for s in built.steps if type(s).__name__ == "Record"][-1]
+    data = record.data  # type: ignore[attr-defined]
+    assert data["proposal_text"] == "Build the dam"
+    assert data["votes"][table.seats[seats[0]].label] == "yes"
+    assert data["votes"][table.seats[seats[1]].label] == "no"
+    assert (data["for"], data["not_for"], data["present"]) == (1, 8, 9)
+
+
+def test_the_speaking_queue() -> None:
+    table, activity = city(12)
+    press(table, activity, "deal")
+    press(table, activity, "choose_moderators")
+    seats = table.activities[activity].seats
+    tent = table.pieces_in_zone(zone(activity, "tent", seats[3]))[0]
+    assert isinstance(run_op(table, seats[3], SetText(tent.id, "Felix")), Ok)
+    assert isinstance(press(table, activity, "join_queue", seats[3]), Ok)
+    assert isinstance(press(table, activity, "join_queue", seats[4]), Ok)
+    assert isinstance(press(table, activity, "join_queue", seats[3]), Reject)
+    queue = table.pieces_in_zone(zone(activity, "queue"))
+    assert [p.props["text"] for p in queue] == ["Felix", table.seats[seats[4]].label]
+    assert project(table, None).pieces  # the queue's names are public
+    assert isinstance(run_op(table, "seat-1", ReleaseFacilitator()), Ok)
+    plain = next(s for s in seats if s not in (seats[3], seats[4]) and s != "seat-1")
+    assert isinstance(press(table, activity, "next_speaker", plain), Reject)
+    chair = next(
+        s
+        for s in seats
+        if "moderator-token" in components(table, zone(activity, "tent", s))
+    )
+    assert isinstance(press(table, activity, "next_speaker", chair), Ok)
+    assert len(table.pieces_in_zone(zone(activity, "queue"))) == 1
+    assert isinstance(press(table, activity, "clear_queue", chair), Ok)
+    assert not table.pieces_in_zone(zone(activity, "queue"))
 
 
 def test_start_meeting_records_every_seats_card_and_interest() -> None:

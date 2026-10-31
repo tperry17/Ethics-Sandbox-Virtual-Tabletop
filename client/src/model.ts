@@ -269,6 +269,7 @@ export class TableModel {
           revealed_to: [],
           revealed_by: null,
           value: null,
+          text: null,
         };
 
     if ("kind" in fields) piece.kind = (readString(fields, "kind") ??
@@ -289,6 +290,7 @@ export class TableModel {
     if ("revealed_to" in fields) piece.revealed_to = readStrings(fields["revealed_to"]);
     if ("revealed_by" in fields) piece.revealed_by = readString(fields, "revealed_by");
     if ("value" in fields) piece.value = readString(fields, "value");
+    if ("text" in fields) piece.text = readString(fields, "text");
 
     if (existing !== undefined && existing.zone_id !== piece.zone_id) {
       diff.zoneChanges.push({ id, from: existing.zone_id, to: piece.zone_id });

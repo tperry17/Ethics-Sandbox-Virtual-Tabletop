@@ -93,7 +93,7 @@ from sandbox.model import (
     Rotate,
     Seat,
     SetActivityPlayers,
-    SetProp,
+    SetText,
     ShowTo,
     Shuffle,
     Spawn,
@@ -216,6 +216,7 @@ class PieceView(BaseModel):
     revealed_to: list[str] = Field(default_factory=list)
     revealed_by: str | None = None
     value: str | None = None
+    text: str | None = None
 
 
 class RectView(BaseModel):
@@ -514,7 +515,7 @@ _OPERATION_TYPES: tuple[type, ...] = (
     Draw,
     Deal,
     Roll,
-    SetProp,
+    SetText,
     Lock,
     Unlock,
     Group,
@@ -1607,6 +1608,7 @@ class RoomRuntime:
                     revealed_to=list(piece.revealed_to),
                     revealed_by=piece.revealed_by,
                     value=piece.value,
+                    text=piece.text,
                 )
                 for piece in view.pieces
             ],

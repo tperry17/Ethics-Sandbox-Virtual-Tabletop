@@ -212,6 +212,7 @@ export class PieceNode {
             component?.group ?? "",
             component?.badge ?? "",
             piece.value ?? "",
+            piece.text ?? "",
             label,
           ].join("\u0000");
     if (signature === this.faceSignature) return;
@@ -227,6 +228,9 @@ export class PieceNode {
       component?.title ?? label ?? `A ${piece.kind}`,
     );
     if (component !== undefined) appendFace(this.body, component);
+    if (piece.text !== undefined && piece.text !== null) {
+      this.body.append(span("piece__text", piece.text));
+    }
     if (component?.group) this.element.dataset.group = component.group.toLowerCase();
     else delete this.element.dataset.group;
     // A component the client has not been sent gets a blank face rather

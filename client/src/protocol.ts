@@ -74,6 +74,8 @@ export interface PieceView {
   revealed_by: string | null;
   /** A rolled die's face, sent only to a viewer who may see the die's face. */
   value?: string | null;
+  /** What has been written on a note, sent only to a viewer who may see its face. */
+  text?: string | null;
 }
 
 export interface ZoneView {

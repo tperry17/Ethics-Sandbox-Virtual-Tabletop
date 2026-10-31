@@ -42,8 +42,9 @@ components:
     - {id: tent-fisher, kind: note, title: Fisher, width: 160, height: 90}
     - {id: moderator-token, kind: token, title: Moderator (co-Chair)}
     - {id: proposal, kind: note, title: Proposal, width: 200, height: 130}
-    - {id: "yes", kind: token, title: "Yes", tint_index: 1}
-    - {id: "no", kind: token, title: "No", tint_index: 4}
+    - {id: speaker, kind: note, title: Speaking next, width: 160, height: 80}
+    - {id: "yes", kind: token, title: "For", tint_index: 1}
+    - {id: "no", kind: token, title: "Against", tint_index: 4}
     - {id: vote-open, kind: marker, title: Vote open}
     - {id: result-passed, kind: marker, title: Passed}
     - {id: result-not-passed, kind: marker, title: Not passed}
@@ -64,8 +65,9 @@ zones:
   - {id: floor, kind: tray, label: On the floor, rect: [1500, 360, 420, 300], visibility: public, layout: grid}
   - {id: passed, kind: tray, label: Passed, rect: [1500, 680, 420, 200], visibility: public, layout: grid}
   - {id: not-passed, kind: tray, label: Not passed, rect: [1500, 900, 420, 200], visibility: public, layout: grid}
-  - {id: tally-yes, kind: tray, label: "Yes", rect: [1960, 360, 200, 300], visibility: public, layout: grid}
-  - {id: tally-no, kind: tray, label: "No", rect: [2180, 360, 200, 300], visibility: public, layout: grid}
+  - {id: tally-yes, kind: tray, label: "For", rect: [1960, 360, 200, 300], visibility: public, layout: grid}
+  - {id: tally-no, kind: tray, label: "Against", rect: [2180, 360, 200, 300], visibility: public, layout: grid}
+  - {id: queue, kind: tray, label: Speaking queue, rect: [1500, 2120, 880, 200], visibility: public, layout: spread}
   - {id: council, kind: table, label: The council, rect: [1500, 1120, 880, 400], visibility: public, layout: grid, when: {city: hudrosia}}
   - {id: hand, kind: hand, label: Role card, rect: [40, 400, 720, 230], visibility: private_to_owner, layout: spread, per_seat: true, step: [0, 250]}
   - {id: tent, kind: slot, label: Name tent, rect: [800, 400, 200, 230], visibility: public, layout: grid, per_seat: true, step: [0, 250]}
@@ -95,6 +97,15 @@ macros:
   - id: close_vote
     who: anyone
     python: close_vote
+  - id: join_queue
+    who: anyone
+    python: join_queue
+  - id: next_speaker
+    who: anyone
+    python: next_speaker
+  - id: clear_queue
+    who: anyone
+    python: clear_queue
   - id: new_proposal
     who: anyone
     python: new_proposal

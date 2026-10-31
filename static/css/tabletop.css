@@ -53,6 +53,7 @@
 
 .piece--card .piece__title { font-size: var(--text-md); font-weight: 600; line-height: var(--leading-tight); text-wrap: balance; }
 .piece--card .piece__copy { font-size: var(--text-sm); }
+.piece__text { display: block; font-size: var(--text-sm); overflow-wrap: anywhere; }
 .piece__copy .piece__paragraph,
 .piece__copy .piece__heading { display: block; }
 .piece__copy .piece__paragraph + .piece__paragraph { margin-top: var(--space-2); }
