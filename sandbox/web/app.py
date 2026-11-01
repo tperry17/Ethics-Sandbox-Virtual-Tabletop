@@ -3,7 +3,7 @@
 import asyncio
 import contextlib
 import json
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -28,6 +28,8 @@ from sandbox.db import Room, init_db, session_scope
 from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, OPEN_ROOM_SLUG
 from sandbox.games.loader import IMAGE_SUFFIXES
 from sandbox.web.content import HELP_RECORDS, SITE_COPY
+from sandbox.web.debrief import router as debrief_router
+from sandbox.web.deps import get_session as get_session
 from sandbox.web.identity import (
     new_participant_id,
     read_participant_cookie,
@@ -83,19 +85,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Ethics Sandbox", lifespan=lifespan)
+app.include_router(debrief_router)
 app.mount("/static", StaticFiles(directory=PROJECT_ROOT / "static"), name="static")
 templates = Jinja2Templates(directory=PROJECT_ROOT / "sandbox" / "web" / "templates")
-
-
-def get_session() -> Iterator[Session]:
-    """One request-scoped database session, committed or rolled back for you.
-
-    Routes that take one are plain ``def``, not ``async def``: FastAPI runs
-    them on a worker thread, so a query waiting on SQLite's write lock waits
-    there, not on the event loop that the lock's holder needs to finish.
-    """
-    with session_scope() as session:
-        yield session
 
 
 def _identify(request: Request) -> str:

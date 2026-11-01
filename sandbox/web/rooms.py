@@ -487,6 +487,7 @@ def _op_payload(op: Operation) -> dict[str, object]:
             "label": op.label,
             "op_id": op.op_id,
             "system": op.system,
+            "activity_id": op.activity_id,
             "steps": [
                 {"op_type": type(step).__name__, "payload": _op_payload(step)}
                 for step in op.steps

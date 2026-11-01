@@ -52,6 +52,13 @@
         </p>
       {% endcall %}
 
+      <p class="prose table-shell__links">
+        <a href="/t/{{ room.code }}/reflect" target="_blank" rel="noopener">Write a reflection</a>
+        · <a href="/t/{{ room.code }}/debrief" target="_blank" rel="noopener">Debriefs</a>
+        {% if is_facilitator %}· <a href="/t/{{ room.code }}/replay" target="_blank" rel="noopener">Replay</a>{% endif %}
+        · <a href="/help" target="_blank" rel="noopener">Help</a>
+      </p>
+
       {% if is_facilitator %}
       <section class="prose" aria-labelledby="record-heading">
         <h2 id="record-heading">The record of this room</h2>

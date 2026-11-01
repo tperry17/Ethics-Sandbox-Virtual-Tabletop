@@ -42,7 +42,7 @@ shows "Claimed" in this table on `main`.
 | 10 | Value Cards Trading | Done | | PR #16 |
 | 11 | Democracy Simulation | Done | | PR #19 |
 | 12 | Running a session (rewritten, lean) | Done | | PR #20 |
-| 13 | Reflection, debrief and the playtest record | In progress (PR #23) | `claude/step-13-reflection-and-debrief` | |
+| 13 | Reflection, debrief and the playtest record | Done | | PR #23 |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
 | 17 | Open rooms and activities | Done | | PR #18 |
@@ -1281,7 +1281,7 @@ they are needed:
 
 ## 13. Reflection, debrief and the playtest record
 
-**Status: In progress (PR #23).** Rewritten on 2026-10-30 for the two
+**Status: Done (PR #23).** Rewritten on 2026-10-30 for the two
 exercises as they actually are.
 
 Decided by the author on 2026-11-01 (these replace the prompt text below
@@ -1301,13 +1301,35 @@ where they differ):
 - Each exercise's **learning outcomes** are shown on its page and are the
   cards on its debrief table (`content/site/exercise_learning_outcomes.csv`).
 
-Built so far: the two debrief activities (outcomes face up, questions
-drawn one at a time, notes); learning outcomes on the exercise pages;
-rooms dormant after 12 idle hours and purged after 30 days, with the
-facilitator's delete; and the export (JSON or CSV, optional names and
-written text, `docs/DATA-DICTIONARY.md`). Still to build: observation notes
-tagged by outcome and reflection boxes (part 1); the debrief drawn from the
-event log (trades, votes, interest against vote); replay and timing.
+Built (PR #23):
+
+- The two debrief **activities**, and each exercise's learning outcomes on
+  its page.
+- **Debrief pages**, keyed by activity or class (a room holds many):
+  `/t/{code}/debrief`, `/t/{code}/debrief/{activity_id}` and
+  `/t/{code}/class/{class_id}/debrief`. Each exercise's reading of the log is
+  in its game package (`debrief.py`) and registers in
+  `sandbox/games/debrief.py`; `sandbox/web/debrief.py` only draws it. The
+  facilitator sees a page at any time and opens it to the room with one
+  button; an ended activity or class can still be read, from the table as it
+  stood. Charts are plain bars on one scale, tokens only; people are never
+  ranked.
+- **Observation notes** (facilitator only, tagged with an outcome, kept in
+  the log as a `Record` named `observation`) and **reflections** at
+  `/t/{code}/reflect` (private unless shared; shared ones show on the debrief
+  without names).
+- **Replay** at `/t/{code}/replay`: the table rebuilt from the log
+  (`sandbox/web/replay.py`), read-only, with a slider; public view by
+  default, every face for the facilitator on request. A test checks the
+  rebuilt table equals the live one.
+- **Timing** from event times on each debrief: the parts of the exercise and
+  stretches with nothing logged.
+- The export, retention, the facilitator's delete, and the Help page.
+
+Not done, and why: the Democracy Simulation's change from council to assembly
+is not in the log (no button for it), so the timeline cannot show it. The
+plan's `/t/{code}/debrief` and `/c/{code}/debrief` became the activity and
+class routes above.
 
 The point of this step is to give the debrief, which both source documents
 say is where the learning happens, something accurate to work from. The

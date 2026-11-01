@@ -37,6 +37,10 @@ FREE_TEXT_FIELDS: dict[str, tuple[str, ...]] = {
     "PushClassPrompt": ("text",),
 }
 
+# Keys inside a ``Record``'s data that hold what a person wrote (an observation
+# note, the text of a proposal that was voted on).
+RECORD_TEXT_KEYS = frozenset({"text", "proposal_text"})
+
 # Payload fields that name a participant (not a seat). Anonymised, they
 # become the participant's pseudonym.
 PARTICIPANT_FIELDS = frozenset({"participant_id"})
@@ -69,6 +73,17 @@ def _scrub(
     A transaction's steps are scrubbed by their own operation names.
     """
     hidden = () if include_text else FREE_TEXT_FIELDS.get(op_type, ())
+    if (
+        op_type == "Record"
+        and not include_text
+        and isinstance(payload.get("data"), dict)
+    ):
+        payload = {
+            **payload,
+            "data": {
+                k: v for k, v in payload["data"].items() if k not in RECORD_TEXT_KEYS
+            },
+        }
     out: dict[str, Any] = {}
     for key, value in payload.items():
         if key in hidden:
@@ -281,26 +296,31 @@ def record_zip(record: Mapping[str, Any]) -> bytes:
 # -- the data dictionary --------------------------------------------------------
 
 
-def _operation_classes() -> dict[str, type]:
-    """Every operation type that can appear as an event's ``op_type``."""
+def operation_classes() -> dict[str, type]:
+    """Every operation type that can appear as an event's ``op_type``.
+
+    An operation is a dataclass in the model with both ``validate`` and
+    ``apply``; every module that defines some is scanned, so a new one is
+    logged, decoded for replay and described here without being listed.
+    """
     import sandbox.model.activities as activities
     import sandbox.model.classes as classes
-    from sandbox.model import AddSeat, AddZone, AssignSeat, Transaction
-    from sandbox.web.live import OPERATIONS
+    import sandbox.model.ops as ops
+    import sandbox.model.roles as roles
+    import sandbox.model.trading as trading
 
-    found: dict[str, type] = {cls.__name__: cls for cls in OPERATIONS.values()}
-    for module in (activities, classes):
+    found: dict[str, type] = {}
+    for module in (ops, trading, roles, activities, classes):
         for name in dir(module):
             value = getattr(module, name)
             if (
                 isinstance(value, type)
                 and dataclasses.is_dataclass(value)
                 and value.__module__ == module.__name__
-                and name not in ("Activity", "ClassGroup")
+                and hasattr(value, "validate")
+                and hasattr(value, "apply")
             ):
                 found[name] = value
-    for cls in (AddSeat, AddZone, AssignSeat, Transaction):
-        found[cls.__name__] = cls
     return dict(sorted(found.items()))
 
 
@@ -368,7 +388,7 @@ def data_dictionary_markdown() -> str:
         " `op_id`, which makes a repeated request apply once.",
         "",
     ]
-    for name, cls in _operation_classes().items():
+    for name, cls in operation_classes().items():
         doc = (cls.__doc__ or "").strip().split("\n\n")[0]
         doc = " ".join(doc.split())
         lines.append(f"### {name}")

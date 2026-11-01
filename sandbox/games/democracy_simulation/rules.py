@@ -284,6 +284,7 @@ def start_meeting(table: Table, context: GameContext) -> list[Operation]:
             "job": fields["job"],
             "interest": fields["interest"],
             "river": fields["river"] == "yes",
+            "rumour": fields["rumour"] == "yes",
             "council": fields["council"] == "yes",
         }
     return [

@@ -1381,6 +1381,8 @@ class Transaction:
     label: str = ""
     op_id: str = field(default_factory=new_op_id)
     system: bool = False
+    activity_id: str = ""
+    """The activity a button was pressed in, or "" outside one; for the log."""
 
     def validate(self, table: Table, actor_seat: str) -> str | None:
         trial = copy.deepcopy(table)

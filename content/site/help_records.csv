@@ -1,8 +1,10 @@
 heading,text
 What is recorded,"A room keeps a record of what happens at its table: every move of a card or piece, every vote, the text people type into the table, and the display names people join with. It never records audio or video. The call you are on is separate, and the software cannot hear it."
-Who can see it,"Only the room's facilitator can open or export the record. A written answer that its writer kept private is never included in anything the facilitator exports."
+Who can see it,Only the room's facilitator can open or export the record. A written answer that its writer kept private is never included in anything the facilitator exports.
 Exporting,"The facilitator's view of the room has an export. Tick whether to include the notes and other text people wrote, and whether to replace names with Participant A, B, C. Then choose JSON or a zip of CSV files, one per kind of event. The fields are described in docs/DATA-DICTIONARY.md."
-How long it is kept,"A room goes dormant after 12 hours without activity. Its record is deleted 30 days after the last activity."
+How long it is kept,A room goes dormant after 12 hours without activity. Its record is deleted 30 days after the last activity.
 Deleting it,"The facilitator can delete a room and everything recorded in it at any time, from the same place as the export. Deleting cannot be undone."
 Debriefs,"A debrief is an activity started from the sandbox, with one for each exercise. It shows the exercise's learning outcomes and debrief questions, and can draw on what was recorded at the exercise it follows."
+"Notes, reflections and the debrief",The facilitator can write observation notes on a debrief page and tag each with a learning outcome; only the facilitator sees them. Anyone can open Write a reflection from the table and answer one of the activity's questions; an answer is private unless its writer ticks the box to share it with the table. A debrief page is read from what was logged at the table and does not rank anyone. The facilitator sees it at any time and opens it to everyone with one button.
+Replay,"The facilitator can replay a room's table from its log, with a slider to move through it. It is read-only, and by default shows only what anyone at the table could see; the facilitator may choose to show every face."
 Questions and requests,"For any question about the Ethics Sandbox, or to ask for a record to be deleted, write to tperry@fas.harvard.edu and give the room code."

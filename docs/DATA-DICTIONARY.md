@@ -126,6 +126,12 @@ Erase every stroke a seat has drawn, or, for the facilitator, everyone's.
 | --- | --- |
 | `everyone` | `bool` |
 
+### CloseOffers
+
+Withdraw every open offer at once, for a macro that ends trading.
+
+No fields.
+
 ### Deal
 
 Deal from one zone to several, one piece at a time, round by round.
@@ -354,6 +360,15 @@ Show a prompt on every screen of every table. An empty text takes it away.
 | `class_id` | `str` |
 | `text` | `str` |
 
+### Record
+
+Put a note in the permanent log and change nothing on the table.
+
+| Field | Type |
+| --- | --- |
+| `label` | `str` |
+| `data` | `dict[str, object]` |
+
 ### Release
 
 Put a held piece back down.
@@ -426,6 +441,16 @@ Record what a table decided, in the activity's own words. Empty clears it.
 | `class_id` | `str` |
 | `table_id` | `str` |
 | `decision` | `str` |
+
+### SetProp
+
+Set one arbitrary property on a piece (a note's text, a die's value).
+
+| Field | Type |
+| --- | --- |
+| `piece_id` | `str` |
+| `key` | `str` |
+| `value` | `object` |
 
 ### SetText
 
@@ -513,6 +538,7 @@ Several operations applied as one: every one of them, or none at all.
 | `name` | `str` |
 | `label` | `str` |
 | `system` | `bool` |
+| `activity_id` | `str` |
 
 ### Ungroup
 
