@@ -1294,6 +1294,10 @@ where they differ):
   unchanged.
 - The facilitator exports some of the session's notes and text with
   **checkboxes**, not links.
+- The debrief activity **draws on what was logged** at the exercise it
+  follows; the facilitator picks which table's or class's record to open
+  it with. Rooms still go dormant after 12 idle hours and are purged after
+  30 days, and the facilitator can still delete a room's record.
 - Each exercise's **learning outcomes** are shown on its page and are the
   cards on its debrief table (`content/site/exercise_learning_outcomes.csv`).
 
