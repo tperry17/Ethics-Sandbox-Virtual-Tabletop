@@ -87,10 +87,10 @@
   /* Identity colours follow a colour-vision-safe blue/orange/teal/purple range. */
   --seat-1: #56b4e9;
   --seat-2: #e69f00;
-  --seat-3: #009e73;
+  --seat-3: #2fc99c;
   --seat-4: #cc79a7;
   --seat-5: #f0e442;
-  --seat-6: #0072b2;
+  --seat-6: #f08080;
   --seat-ink: #172d4a;
 
   /* Supporting colour tokens */
@@ -164,10 +164,10 @@
     --semantic-caution: #dfb765;
     --seat-1: #56b4e9;
     --seat-2: #e69f00;
-    --seat-3: #009e73;
+    --seat-3: #2fc99c;
     --seat-4: #cc79a7;
     --seat-5: #f0e442;
-    --seat-6: #0072b2;
+    --seat-6: #f08080;
     --seat-ink: #0f1928;
     --overlay: #060b12e0;
     --shadow-color: #03070d66;
@@ -204,10 +204,10 @@
   --semantic-caution: #dfb765;
   --seat-1: #56b4e9;
   --seat-2: #e69f00;
-  --seat-3: #009e73;
+  --seat-3: #2fc99c;
   --seat-4: #cc79a7;
   --seat-5: #f0e442;
-  --seat-6: #0072b2;
+  --seat-6: #f08080;
   --seat-ink: #0f1928;
   --overlay: #060b12e0;
   --shadow-color: #03070d66;
