@@ -287,6 +287,15 @@ def test_a_debrief_can_be_started_as_an_activity_in_any_room() -> None:
     assert {"value-cards-debrief", "democracy-debrief"} <= slugs
 
 
+def test_the_help_page_explains_records_and_the_landing_page_links_to_it() -> None:
+    client = TestClient(app)
+
+    assert 'href="/help"' in client.get("/").text
+    page = client.get("/help").text
+    for phrase in ("never records audio or video", "12 hours", "30 days", "JSON"):
+        assert phrase in page
+
+
 def test_the_data_dictionary_is_current_and_covers_every_logged_type() -> None:
     written = (ROOT / "docs" / "DATA-DICTIONARY.md").read_text()
 

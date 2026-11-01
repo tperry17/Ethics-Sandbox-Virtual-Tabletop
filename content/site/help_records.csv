@@ -1,0 +1,7 @@
+heading,text
+What is recorded,"A room keeps a record of what happens at its table: every move of a card or piece, every vote, the text people type into the table, and the display names people join with. It never records audio or video. The call you are on is separate, and the software cannot hear it."
+Who can see it,"Only the room's facilitator can open or export the record. A written answer that its writer kept private is never included in anything the facilitator exports."
+Exporting,"The facilitator's view of the room has an export. Tick whether to include the notes and other text people wrote, and whether to replace names with Participant A, B, C. Then choose JSON or a zip of CSV files, one per kind of event. The fields are described in docs/DATA-DICTIONARY.md."
+How long it is kept,"A room goes dormant after 12 hours without activity. Its record is deleted 30 days after the last activity."
+Deleting it,"The facilitator can delete a room and everything recorded in it at any time, from the same place as the export. Deleting cannot be undone."
+Debriefs,"A debrief is an activity started from the sandbox, with one for each exercise. It shows the exercise's learning outcomes and debrief questions, and can draw on what was recorded at the exercise it follows."

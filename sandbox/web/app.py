@@ -27,7 +27,7 @@ from sandbox.content_loading import CONTENT_ROOT
 from sandbox.db import Room, init_db, session_scope
 from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, OPEN_ROOM_SLUG
 from sandbox.games.loader import IMAGE_SUFFIXES
-from sandbox.web.content import SITE_COPY
+from sandbox.web.content import HELP_RECORDS, SITE_COPY
 from sandbox.web.identity import (
     new_participant_id,
     read_participant_cookie,
@@ -127,6 +127,14 @@ async def home(request: Request) -> HTMLResponse:
             "site_copy": SITE_COPY,
             "exercises": EXERCISES,
         },
+    )
+
+
+@app.get("/help", response_class=HTMLResponse)
+async def help_page(request: Request) -> HTMLResponse:
+    """Render the Help page: how rooms, records, export and deletion work."""
+    return templates.TemplateResponse(
+        request=request, name="help.html", context={"records": HELP_RECORDS}
     )
 
 
