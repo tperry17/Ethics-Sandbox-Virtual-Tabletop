@@ -320,9 +320,18 @@ export class TableRenderer {
       return;
     }
     if (message.type === "patches") {
+      const swappedBefore = new Set(this.model.swapped);
       this.absorb(
         this.model.applyPatches(message.patches, message.seq, message.components ?? []),
       );
+      for (const pair of this.model.swapped) {
+        if (swappedBefore.has(pair)) continue;
+        const [a, b] = pair.split("|");
+        if (a !== undefined && b !== undefined) {
+          // Said at the next render, in place of the cards' own moves.
+          this.tradeAnnouncement = `${this.nameOf(a)} and ${this.nameOf(b)} have traded cards.`;
+        }
+      }
       return;
     }
     if (message.type === "ack") {
@@ -820,6 +829,7 @@ export class TableRenderer {
   }
 
   private offlineTold = false;
+  private tradeAnnouncement: string | null = null;
 
   notice(text: string, level: "info" | "warning"): void {
     // One refused gesture can draw the same refusal for several pieces at
@@ -1058,7 +1068,19 @@ export class TableRenderer {
   }
 
   private announceZoneChanges(diff: Diff): void {
-    const changes = diff.zoneChanges;
+    if (this.tradeAnnouncement !== null) {
+      this.announcer.announce(this.tradeAnnouncement);
+      this.tradeAnnouncement = null;
+      return;
+    }
+    if (diff.zoneChanges.length === 0) return;
+    // A piece set down on the open table is an ordinary move, and ordinary
+    // moves are not announced. A few pieces going into a hand, a deck or a
+    // named zone are; so is a deal or a collect, which moves many at once.
+    const changes =
+      diff.zoneChanges.length > ANNOUNCE_EACH_UP_TO
+        ? diff.zoneChanges
+        : diff.zoneChanges.filter((change) => this.model.zones.get(change.to)?.kind !== "table");
     if (changes.length === 0) return;
     if (changes.length > ANNOUNCE_EACH_UP_TO) {
       this.announcer.announce(`${changes.length} pieces moved.`);

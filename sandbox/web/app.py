@@ -108,6 +108,11 @@ _ERROR_WORDS: dict[int, tuple[str, str]] = {
         "The message above says why. If you are not in the room, join it with "
         "its code. If it is for the facilitator, ask them.",
     ),
+    410: (
+        "This room is closed",
+        "Its table can no longer be changed. If you facilitated it, the debrief "
+        "and record are still yours to open. Otherwise ask for a new room code.",
+    ),
     404: (
         "We couldn't find that",
         "Check the room code for typing mistakes, or ask whoever shared it for "
@@ -406,6 +411,8 @@ def table_shell(
     room = get_room_by_code(session, code)
     if room is None:
         raise HTTPException(status_code=404, detail="No such room.")
+    if room.status == "closed":
+        raise HTTPException(status_code=410, detail="This room is closed.")
 
     cookie_id = read_participant_cookie(request)
     participant = get_participant(session, room.id, cookie_id) if cookie_id else None

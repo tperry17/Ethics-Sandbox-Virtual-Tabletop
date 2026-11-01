@@ -117,7 +117,8 @@ def _simulate(
 ) -> tuple[float, float, float]:
     linear = [_linear(c) for c in _rgb(value)]
     out = [
-        max(0.0, min(1.0, sum(m * c for m, c in zip(row, linear)))) for row in matrix
+        max(0.0, min(1.0, sum(m * c for m, c in zip(row, linear, strict=True))))
+        for row in matrix
     ]
     encoded = [
         12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055 for c in out
@@ -141,7 +142,9 @@ def test_seat_tints_stay_distinguishable(
     labs = [_lab(_simulate(tokens[f"--seat-{n}"], matrix)) for n in range(1, 7)]
     for i in range(6):
         for j in range(i + 1, 6):
-            delta = sum((a - b) ** 2 for a, b in zip(labs[i], labs[j])) ** 0.5
+            delta = (
+                sum((a - b) ** 2 for a, b in zip(labs[i], labs[j], strict=True)) ** 0.5
+            )
             assert delta >= 12, (
                 f"{theme}: seats {i + 1} and {j + 1} are only {delta:.1f} apart"
             )

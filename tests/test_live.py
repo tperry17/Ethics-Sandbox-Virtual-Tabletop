@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 from _db_support import make_test_engine
-from _live_support import live_room
+from _live_support import FakeSocket, live_room
 from _model_support import (
     DECK,
     DISCARD,
@@ -29,6 +29,7 @@ from sandbox.db.snapshot import from_snapshot
 from sandbox.model import Move, MoveToZone, Table
 from sandbox.web import live
 from sandbox.web.app import app, get_session
+from sandbox.web.live import HelloMessage
 
 
 def _patch_seqs(socket: Any) -> list[int]:
@@ -248,6 +249,48 @@ async def test_reconnect_with_a_small_gap_is_caught_up_with_patches() -> None:
 
         assert not actor.socket.of_type("snapshot")
         assert _patch_seqs(actor.socket) == [seq_before]
+
+
+async def test_a_new_socket_from_the_same_run_is_caught_up_by_replay() -> None:
+    async with live_room() as room:
+        actor = await room.connect(SEAT_A, display_name="Ana")
+        watcher = await room.connect(SEAT_B, display_name="Bo")
+        await room.intent(actor, "grab", {"piece_id": "card-0"})
+        await room.settle(0.1)
+        epoch = room.runtime.epoch
+        seen = room.runtime.seq
+        await room.intent(actor, "release", {"piece_id": "card-0"})
+        await room.settle(0.1)
+        await room.hub.detach(room.runtime, actor.connection, actor.writer)
+        room.clients.remove(actor)
+        watcher.socket.clear()
+
+        # A brand new connection (a phone that woke up) says how far it got.
+        returning = await room.connect(
+            SEAT_A, display_name="Ana", last_seq=seen, epoch=epoch
+        )
+        await room.settle()
+
+        assert not returning.socket.of_type("snapshot")[1:]
+        assert _patch_seqs(returning.socket) == list(
+            range(seen + 1, room.runtime.seq + 1)
+        )
+
+
+async def test_a_seq_from_another_run_of_the_room_gets_a_snapshot() -> None:
+    async with live_room() as room:
+        actor = await room.connect(SEAT_A, display_name="Ana")
+        await room.intent(actor, "grab", {"piece_id": "card-0"})
+        await room.settle(0.1)
+        seen = room.runtime.seq
+
+        stale = await room.connect(
+            SEAT_B, display_name="Bo", last_seq=seen, epoch="an-earlier-run"
+        )
+        await room.settle()
+
+        assert len(stale.socket.of_type("snapshot")) == 1
+        assert not stale.socket.of_type("patches")
 
 
 async def test_reconnect_with_too_large_a_gap_gets_a_fresh_snapshot() -> None:
@@ -769,3 +812,48 @@ async def test_after_a_take_the_same_person_may_pick_the_piece_up_again() -> Non
 
         assert room.runtime.table.pieces["card-0"].held_by == SEAT_A
         assert not [r for r in ana.socket.of_type("reject") if r["client_id"] == "g2"]
+
+
+async def test_a_server_restart_restores_the_table_and_sends_clients_a_snapshot() -> (
+    None
+):
+    async with live_room() as room:
+        actor = await room.connect(SEAT_A, display_name="Ana")
+        await room.intent(actor, "grab", {"piece_id": "card-0"})
+        await room.intent(actor, "move", {"piece_id": "card-0", "x": 123.0, "y": 45.0})
+        await room.intent(actor, "release", {"piece_id": "card-0"})
+        await room.settle(0.3)
+        epoch = room.runtime.epoch
+        seen = room.runtime.seq
+        code = room.runtime.code
+        await room.hub.shutdown()
+
+        # The server is started again: a new hub reads the table from its snapshot.
+        restarted = live.LiveHub(session_factory=room.factory)
+        try:
+            runtime = await restarted.runtime_for(code)
+            assert runtime is not None
+            piece = runtime.table.pieces["card-0"]
+            assert (piece.x, piece.y) == (123.0, 45.0)
+            assert runtime.epoch != epoch
+
+            socket = FakeSocket()
+            connection, writer = await restarted.attach(
+                runtime,
+                socket,
+                participant_id=f"participant-{SEAT_A}",
+                display_name="Ana",
+                seat_id=SEAT_A,
+                is_facilitator=False,
+                is_observer=False,
+            )
+            # The browser reconnects with the seq and epoch it last saw.
+            await runtime.submit(
+                connection,
+                HelloMessage(room_code=code, last_seq=seen, epoch=epoch),
+            )
+            await runtime.drain()
+            assert len(socket.of_type("snapshot")) == 1
+            await restarted.detach(runtime, connection, writer)
+        finally:
+            await restarted.shutdown()

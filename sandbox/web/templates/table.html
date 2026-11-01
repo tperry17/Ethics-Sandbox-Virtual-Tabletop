@@ -96,6 +96,13 @@
       </section>
       {% endif %}
 
+      {% if participant.is_observer %}
+      <p class="prose" data-observer-note>
+        You are watching: either this room has no free seat, or you chose to
+        watch. You can see everything but not move pieces. If a seat is
+        free, you can take it from the roster above.
+      </p>
+      {% endif %}
       <main class="table-shell__surface">
         {# The table client takes this element over completely: everything
            inside it is replaced on the first frame. #}

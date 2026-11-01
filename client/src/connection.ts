@@ -27,6 +27,7 @@ export class SocketLink implements ServerLink {
   private messageHandler: ((message: ServerMessage) => void) | null = null;
   private statusHandler: ((status: LinkStatus) => void) | null = null;
   private lastSeq = 0;
+  private epoch: string | null = null;
   private attempt = 0;
   private heartbeat: number | null = null;
   private retry: number | null = null;
@@ -76,6 +77,7 @@ export class SocketLink implements ServerLink {
         type: "hello",
         room_code: this.roomCode,
         last_seq: this.lastSeq,
+        ...(this.epoch === null ? {} : { epoch: this.epoch }),
       });
       this.startHeartbeat();
     });
@@ -87,6 +89,9 @@ export class SocketLink implements ServerLink {
         message = JSON.parse(event.data) as ServerMessage;
       } catch {
         return;
+      }
+      if (message.type === "snapshot" && typeof message.epoch === "string") {
+        this.epoch = message.epoch;
       }
       if (message.type === "snapshot" || message.type === "patches") {
         this.lastSeq = message.seq;

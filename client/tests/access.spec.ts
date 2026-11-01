@@ -129,3 +129,126 @@ test("on a phone the public table is read-only and the page says a tablet is bet
   });
   expect(events).toBe("none");
 });
+
+// -- trading and announcing, by keyboard and by touch --------------------------------------
+
+async function startTrading(browser: Browser, touch: boolean) {
+  const options = touch ? { hasTouch: true, isMobile: false, viewport: { width: 1180, height: 820 } } : {};
+  const person = async (path: string, name: string): Promise<Page> => {
+    const page = await (await browser.newContext(options)).newPage();
+    await page.goto(path);
+    await page.locator('input[name="display_name"]').fill(name);
+    await page.locator('form button[type="submit"]').click();
+    await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+    return page;
+  };
+  const ines = await person("/start", "Ines");
+  const code = ines.url().split("/t/")[1]!;
+  const tomas = await person(`/join?code=${code}`, "Tomas");
+  const wren = await person(`/join?code=${code}`, "Wren");
+  await ines.getByLabel("Activity to start").selectOption("value-cards-trading");
+  await ines.getByRole("button", { name: "Start this activity" }).click();
+  await tomas.getByRole("button", { name: "Join" }).click();
+  await wren.getByRole("button", { name: "Join" }).click();
+  await ines.getByRole("button", { name: "Deal 12 each" }).click();
+  return { ines, tomas, wren };
+}
+
+test("a trade is offered and answered with the keyboard alone", async ({ browser }) => {
+  const { ines, tomas, wren } = await startTrading(browser, false);
+  const mine = ines.locator('.tabletop__pieces-layer .piece[data-zone-id$=":hand-seat-1"]');
+  const theirs = ines.locator('.tabletop__pieces-layer .piece[data-zone-id$=":hand-seat-2"]');
+  await expect(mine).toHaveCount(12);
+
+  await mine.first().focus();
+  await ines.keyboard.press("Space");
+  await theirs.first().focus();
+  await ines.keyboard.press("Shift+Space");
+  await expect(ines.locator("[data-announcer]")).toContainText("2 selected");
+
+  await ines.getByRole("button", { name: "Offer a trade" }).focus();
+  await ines.keyboard.press("Enter");
+  await expect(wren.locator("[data-offer-id]")).toHaveCount(1);
+  await tomas.getByRole("button", { name: "Accept" }).focus();
+  await tomas.keyboard.press("Enter");
+  await expect(ines.locator("[data-offer-id]")).toHaveCount(0);
+  // Said out loud, to everyone, in the live region.
+  await expect(wren.locator("[data-announcer]")).toContainText("Ines and Tomas have traded cards.");
+});
+
+test("a trade is offered and answered by touch alone", async ({ browser }) => {
+  const { ines, tomas, wren } = await startTrading(browser, true);
+  const mine = ines.locator('.tabletop__pieces-layer .piece[data-zone-id$=":hand-seat-1"]');
+  const theirs = ines.locator('.tabletop__pieces-layer .piece[data-zone-id$=":hand-seat-2"]');
+  await expect(mine).toHaveCount(12);
+
+  await mine.first().tap();
+  await theirs.first().tap();
+  await ines.getByRole("button", { name: "Offer a trade" }).tap();
+  await expect(wren.locator("[data-offer-id]")).toHaveCount(1);
+  await tomas.getByRole("button", { name: "Accept" }).tap();
+  await expect(ines.locator("[data-offer-id]")).toHaveCount(0);
+});
+
+test("the announcer says joins, and does not say ordinary moves", async ({ browser }) => {
+  const host = await openRoom(browser, "Ines");
+  const guest = await (await browser.newContext()).newPage();
+  await guest.goto(`/join?code=${host.url().split("/t/")[1]}`);
+  await guest.locator('input[name="display_name"]').fill("Tomas");
+  await guest.locator('form button[type="submit"]').click();
+  await expect(host.locator(".tabletop__notices")).toContainText("Tomas has joined the table.");
+
+  const announcer = host.locator("[data-announcer]");
+  const before = await announcer.textContent();
+  const token = host.locator(".tabletop__pieces-layer .piece--token").first();
+  const box = (await token.boundingBox())!;
+  await host.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await host.mouse.down();
+  await host.mouse.move(box.x + 80, box.y + 40, { steps: 6 });
+  await host.mouse.up();
+  await host.waitForTimeout(500);
+  expect(await announcer.textContent()).toBe(before);
+});
+
+test("a card goes out of the hand and back into it with the keyboard alone", async ({
+  browser,
+}) => {
+  const person = async (path: string, name: string): Promise<Page> => {
+    const page = await (await browser.newContext()).newPage();
+    await page.goto(path);
+    await page.locator('input[name="display_name"]').fill(name);
+    await page.locator('form button[type="submit"]').click();
+    await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+    return page;
+  };
+  const host = await person("/start", "Ines");
+  const guest = await person(`/join?code=${host.url().split("/t/")[1]}`, "Tomas");
+  await host.getByLabel("Activity to start").selectOption("pairs");
+  await host.getByRole("button", { name: "Start this activity" }).click();
+  await guest.getByRole("button", { name: "Join" }).click();
+  await expect(host.getByText(/Pairs: running/)).toBeVisible();
+  await host.getByRole("button", { name: "Deal three each" }).click();
+
+  const hand = host.locator(".hand-tray__fan .piece");
+  await expect(hand).toHaveCount(3);
+  const id = (await hand.first().getAttribute("data-piece-id"))!;
+  const choose = async (label: string): Promise<void> => {
+    const item = host.locator(".table-menu__item", { hasText: label }).first();
+    for (let i = 0; i < 40; i += 1) {
+      if (await item.evaluate((el) => el === document.activeElement)) break;
+      await host.keyboard.press("ArrowDown");
+    }
+    await host.keyboard.press("Enter");
+  };
+
+  await host.locator(`[data-piece-id="${id}"]`).focus();
+  await host.keyboard.press("m");
+  await choose("Pairs caught");
+  await expect(host.locator(`.tabletop__pieces-layer [data-piece-id="${id}"]`)).toBeAttached();
+  await expect(hand).toHaveCount(2);
+
+  await host.locator(`.tabletop__pieces-layer [data-piece-id="${id}"]`).focus();
+  await host.keyboard.press("m");
+  await choose("Send to my hand");
+  await expect(hand).toHaveCount(3);
+});

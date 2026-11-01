@@ -152,3 +152,31 @@ def test_joining_an_unknown_code_shows_an_error(client: TestClient) -> None:
 
     assert response.status_code == 400
     assert "no room" in response.text
+
+
+def test_a_closed_room_says_it_is_closed_and_what_to_do(client: TestClient) -> None:
+    from sandbox.web.rooms import close_room, get_room_by_code
+
+    response = client.post("/start", data={"display_name": "Ada"})
+    code = response.headers["location"].removeprefix("/t/")
+    session_gen = app.dependency_overrides[get_session]()
+    session = next(session_gen)
+    room = get_room_by_code(session, code)
+    assert room is not None
+    close_room(session, room)
+    with pytest.raises(StopIteration):
+        next(session_gen)
+
+    page = client.get(f"/t/{code}", headers={"accept": "text/html"})
+    assert page.status_code == 410
+    assert "This room is closed" in page.text
+    assert "ask for a new room code" in page.text
+
+    joined = client.post("/join", data={"room_code": code, "display_name": "Bo"})
+    assert "closed" in joined.text
+    assert "Ask the facilitator for a new room code" in joined.text
+
+
+def test_an_unknown_code_on_the_join_form_says_what_to_do(client: TestClient) -> None:
+    response = client.post("/join", data={"room_code": "ZZZZZZ", "display_name": "Bo"})
+    assert "Check the code for typing mistakes" in response.text

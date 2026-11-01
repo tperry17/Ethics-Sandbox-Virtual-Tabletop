@@ -43,7 +43,7 @@ shows "Claimed" in this table on `main`.
 | 11 | Democracy Simulation | Done | | PR #19 |
 | 12 | Running a session (rewritten, lean) | Done | | PR #20 |
 | 13 | Reflection, debrief and the playtest record | Done | | PR #23 |
-| 14 | Access, tablets and resilience | In progress (partly done) | `claude/step-14-access-and-resilience` | |
+| 14 | Access, tablets and resilience | Done | | PR #24 |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
 | 17 | Open rooms and activities | Done | | PR #18 |
 | 16 | Launch pass | Not started; hosting is the Mac on the local network (below) | `claude/step-16-launch-pass` | |
@@ -1446,11 +1446,7 @@ debrief before they should. Update this plan's status table. Commit.
 
 ## 14. Access, tablets and resilience
 
-**Status: In progress (PR #24).** Done so far: the public-URL setting and
-`/health`, the clipboard fallback, the 10-second hold grace, error pages,
-and the Mac docs. Not yet done: axe-core, contrast and colour-blind checks,
-WebKit in CI, touch and phone layouts, and the Playwright resilience tests.
-Rewritten on 2026-10-30 to account for what
+**Status: Done (PR #24).** Rewritten on 2026-10-30 to account for what
 Prompt 8 already did and for hosting from a Mac on the local network.
 
 **Already in place, so this step checks it rather than builds it.**

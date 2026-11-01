@@ -172,6 +172,10 @@ class HelloMessage(BaseModel):
     type: Literal["hello"] = "hello"
     room_code: str
     last_seq: int = 0
+    # Which run of the room ``last_seq`` belongs to (from the snapshot). A
+    # client that was last connected to an earlier run of the server, or an
+    # earlier life of this room, is sent a whole snapshot, never a replay.
+    epoch: str | None = None
 
 
 class IntentMessage(BaseModel):
@@ -492,6 +496,7 @@ class SnapshotMessage(BaseModel):
 
     type: Literal["snapshot"] = "snapshot"
     seq: int
+    epoch: str = ""
     view_table: TableView
     seats: list[SeatView]
     you: YouView
@@ -1008,6 +1013,9 @@ class RoomRuntime:
         self.room_id = room_id
         self.table = table
         self.seq = 0
+        # Changes whenever this room is loaded, so a seq number from before a
+        # restart is never mistaken for one from now.
+        self.epoch = uuid.uuid4().hex
         # What the pieces on this table look like, and what buttons the
         # toolbar offers, both from the exercise's game definition. An
         # exercise without one has neither, and the client draws generic
@@ -1261,8 +1269,11 @@ class RoomRuntime:
         missed = [
             (seq, patches) for seq, patches in self._history if seq > message.last_seq
         ]
+        same_run = (
+            message.epoch == self.epoch if message.epoch is not None else not first_time
+        )
         replayable = (
-            not first_time
+            same_run
             and message.last_seq > 0
             and message.last_seq <= self.seq
             and (not missed or missed[0][0] == message.last_seq + 1)
@@ -2145,6 +2156,7 @@ class RoomRuntime:
         connection.known_components = {component.id for component in components}
         message = SnapshotMessage(
             seq=self.seq,
+            epoch=self.epoch,
             view_table=self._table_view(view, seats),
             seats=seats,
             you=YouView(
