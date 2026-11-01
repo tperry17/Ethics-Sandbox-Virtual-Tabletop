@@ -1,7 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/** Tests that put three windows on a thirty-six-card table. */
-const HEAVY = /a trade is offered|a card goes out of the hand/;
+/**
+ * Tests that put three windows on a thirty-six-card table, and the thirty-second
+ * offline test, which every WebKit run on the CI runner died in (the runner
+ * is shut down mid-test, with nothing failing). They run in Chromium.
+ */
+const HEAVY = /a trade is offered|a card goes out of the hand|thirty seconds offline/;
 
 export default defineConfig({
   testDir: "client/tests",
