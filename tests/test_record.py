@@ -293,7 +293,13 @@ def test_the_help_page_explains_records_and_the_landing_page_links_to_it() -> No
 
     assert 'href="/help"' in client.get("/").text
     page = client.get("/help").text
-    for phrase in ("never records audio or video", "12 hours", "30 days", "JSON"):
+    for phrase in (
+        "never records audio or video",
+        "12 hours",
+        "30 days",
+        "JSON",
+        "tperry@fas.harvard.edu",
+    ):
         assert phrase in page
 
 
