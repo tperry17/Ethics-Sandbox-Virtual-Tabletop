@@ -18,6 +18,7 @@ jobs:
   python:
     name: Ruff, mypy, pytest
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -33,6 +34,7 @@ jobs:
   browser:
     name: Playwright
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -45,12 +47,39 @@ jobs:
           cache: npm
       - run: uv sync --frozen
       - run: npm ci
-      - run: npx playwright install --with-deps chromium webkit
-      # Builds the client, then runs every browser test against a fresh server.
-      - run: npm run test:e2e
+      - run: npx playwright install --with-deps chromium
+      # Builds the client, then runs the Chromium tests against a fresh server.
+      - run: npm run test:e2e:chromium
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-results
+          path: test-results/
+          retention-days: 7
+
+  webkit:
+    name: Playwright (WebKit, iPad)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: uv sync --frozen
+      - run: npm ci
+      - run: npx playwright install --with-deps webkit
+      # Safari's engine, on a laptop and on an iPad in both orientations. A
+      # separate job, so that it has its own memory and its own time limit.
+      - run: npm run test:e2e:webkit
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-webkit-results
           path: test-results/
           retention-days: 7

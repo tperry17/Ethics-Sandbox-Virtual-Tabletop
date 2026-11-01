@@ -7,7 +7,9 @@
     "build": "npm run typecheck && vite build",
     "dev": "vite build --watch",
     "test:e2e": "npm run build && playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e:chromium": "npm run build && playwright test --project=browser --project=frame-rate",
+    "test:e2e:webkit": "npm run build && playwright test --project=webkit --project=ipad-portrait --project=ipad-landscape"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
