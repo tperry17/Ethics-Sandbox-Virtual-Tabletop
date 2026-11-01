@@ -749,6 +749,7 @@ export class TableRenderer {
   private renderToolbar(): void {
     const toolbar = this.options.toolbar;
     if (toolbar === null) return;
+    const kept = rememberControls(toolbar);
     toolbar.replaceChildren();
     if (this.model.macros.length === 0 && this.model.activityChoices.length === 0) {
       const empty = element("p", "toolbar__empty prose");
@@ -775,6 +776,7 @@ export class TableRenderer {
     );
     if (trades !== null) toolbar.append(trades);
     toolbar.append(this.toolGroup);
+    restoreControls(toolbar, kept);
   }
 
   private macroButton(macro: MacroView): HTMLElement {
@@ -1160,6 +1162,65 @@ export class TableRenderer {
     }
     this.resizeObserver = new ResizeObserver(apply);
     this.resizeObserver.observe(this.surface);
+  }
+}
+
+/**
+ * The toolbar is rebuilt whenever the table changes, and a rebuilt dropdown
+ * starts again at its first entry. Someone choosing an activity must find
+ * their choice still there when they press Start, however many people have
+ * joined or moved a cursor in between.
+ */
+interface KeptControl {
+  value: string;
+  focused: boolean;
+}
+
+/** The toolbar's choices that are made first and acted on later, by a button. */
+const KEPT_LABELS = new Set(["Activity to start", "Activity for the class", "Number of tables"]);
+
+/** A stable name for a control worth keeping, or null: most are acted on at once. */
+function controlKey(control: Element, counts: Map<string, number>): string | null {
+  const label = control.getAttribute("aria-label");
+  const option = (control as HTMLElement).dataset["option"];
+  if (!(label !== null && KEPT_LABELS.has(label)) && option === undefined) return null;
+  const base = `${control.tagName}:${label ?? ""}:${option ?? ""}`;
+  const seen = counts.get(base) ?? 0;
+  counts.set(base, seen + 1);
+  return `${base}#${seen}`;
+}
+
+function rememberControls(toolbar: HTMLElement): Map<string, KeptControl> {
+  const kept = new Map<string, KeptControl>();
+  const counts = new Map<string, number>();
+  for (const control of toolbar.querySelectorAll("select, input")) {
+    if (!(control instanceof HTMLSelectElement || control instanceof HTMLInputElement)) continue;
+    const key = controlKey(control, counts);
+    if (key === null) continue;
+    kept.set(key, {
+      value: control.value,
+      focused: document.activeElement === control,
+    });
+  }
+  return kept;
+}
+
+function restoreControls(toolbar: HTMLElement, kept: Map<string, KeptControl>): void {
+  const counts = new Map<string, number>();
+  for (const control of toolbar.querySelectorAll("select, input")) {
+    if (!(control instanceof HTMLSelectElement || control instanceof HTMLInputElement)) continue;
+    const key = controlKey(control, counts);
+    const before = key === null ? undefined : kept.get(key);
+    if (before === undefined) continue;
+    if (control.value !== before.value) {
+      control.value = before.value;
+      // Only the activity picker has a listener that must catch up (which
+      // options to show); no other control is told, so none acts on its own.
+      if (control.getAttribute("aria-label") === "Activity to start") {
+        control.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+    if (before.focused) control.focus({ preventScroll: true });
   }
 }
 

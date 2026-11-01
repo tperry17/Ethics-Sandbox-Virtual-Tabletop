@@ -85,13 +85,14 @@ test("a tab that was backgrounded catches up by replay, not a reload", async ({ 
   const id = await firstTokenId(ana);
 
   wire.cut();
-  // Bo moves a piece while Ana's tab is asleep.
+  // Ana really is cut off before anything happens.
+  await expect(ana.locator("[data-status]:not([data-status='connected'])")).toBeVisible();
+  // Bo moves a piece while Ana's tab is asleep: four 20-unit steps.
+  const startX = (await positionOf(bo, id))![0];
   await bo.locator(`[data-piece-id="${id}"]`).focus();
   for (let i = 0; i < 4; i += 1) await bo.keyboard.press("ArrowRight");
-  const target = await expect
-    .poll(() => positionOf(bo, id), { timeout: 5000 })
-    .not.toBeNull()
-    .then(() => positionOf(bo, id));
+  await expect.poll(async () => (await positionOf(bo, id))![0], { timeout: 5000 }).toBe(startX + 80);
+  const target = await positionOf(bo, id);
   const before = wire.received.length;
   wire.restore();
 

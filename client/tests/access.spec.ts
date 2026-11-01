@@ -123,6 +123,7 @@ test("on a phone the public table is read-only and the page says a tablet is bet
     isMobile: true,
     viewport: { width: 390, height: 800 },
   });
+  await expect(page.locator(".tabletop__pieces-layer .piece").first()).toBeAttached();
   const events = await page.evaluate(() => {
     const layer = document.querySelector(".tabletop__pieces-layer");
     return layer ? getComputedStyle(layer.querySelector(".piece") ?? layer).pointerEvents : "none";
@@ -251,4 +252,17 @@ test("a card goes out of the hand and back into it with the keyboard alone", asy
   await host.keyboard.press("m");
   await choose("Send to my hand");
   await expect(hand).toHaveCount(3);
+});
+
+test("a chosen activity stays chosen while the toolbar redraws", async ({ browser }) => {
+  const host = await openRoom(browser, "Ines");
+  const select = host.getByLabel("Activity to start");
+  await select.selectOption("pairs");
+  // Someone arriving redraws everyone's toolbar.
+  const guest = await (await browser.newContext()).newPage();
+  await guest.goto(`/join?code=${host.url().split("/t/")[1]}`);
+  await guest.locator('input[name="display_name"]').fill("Tomas");
+  await guest.locator('form button[type="submit"]').click();
+  await expect(host.locator(".tabletop__notices")).toContainText("Tomas has joined the table.");
+  await expect(select).toHaveValue("pairs");
 });
