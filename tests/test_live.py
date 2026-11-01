@@ -216,6 +216,8 @@ async def test_reconnecting_within_the_grace_period_keeps_the_hold(
     monkeypatch.setattr(live, "LEAVE_GRACE_SECONDS", 0.4)
     async with live_room() as room:
         actor = await room.connect(SEAT_A, display_name="Ana")
+        # Someone stays, so the room is still live while Ana is away.
+        await room.connect(SEAT_B, display_name="Bo")
         await room.intent(actor, "grab", {"piece_id": "card-0"})
         await room.settle(0.1)
         await room.hub.detach(room.runtime, actor.connection, actor.writer)
@@ -596,7 +598,10 @@ async def test_a_face_is_described_only_once_per_connection() -> None:
         assert _faces_described(actor.socket) == set()
 
 
-async def test_leaving_the_table_puts_away_a_card_being_shown() -> None:
+async def test_leaving_the_table_puts_away_a_card_being_shown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(live, "LEAVE_GRACE_SECONDS", 0.2)
     async with live_room() as room:
         watcher = await room.connect(SEAT_B, display_name="Bo")
         actor = await room.connect(SEAT_A, display_name="Ana")
@@ -607,7 +612,7 @@ async def test_leaving_the_table_puts_away_a_card_being_shown() -> None:
 
         room.clients.remove(actor)
         await room.hub.detach(room.runtime, actor.connection, actor.writer)
-        await room.settle(0.1)
+        await room.settle(0.5)
 
         assert room.runtime.table.pieces[card].revealed_to == frozenset()
         ended = [
