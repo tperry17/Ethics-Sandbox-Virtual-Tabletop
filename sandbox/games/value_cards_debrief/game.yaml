@@ -61,7 +61,7 @@ zones:
 setup:
   - {op: spawn_deck, deck: outcomes, zone: outcome-pile, where: {slug: value-cards-trading}}
   - {op: spawn_deck, deck: questions, zone: deck}
-  - {op: deal, from: outcome-pile, to: outcomes, count: 1, face_up: true}
+  - {op: deal, from: outcome-pile, to: outcomes, count: 2, face_up: true}
 
 macros:
   - id: setup
@@ -70,7 +70,7 @@ macros:
       - {op: setup}
   - id: deal
     steps:
-      - {op: draw, from: deck, to: table, count: 1, face_up: true}
+      - {op: draw, from: deck, to: table, count: 2, face_up: true}
   - id: add_note
     who: anyone
     steps:

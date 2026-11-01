@@ -276,7 +276,8 @@ def test_each_exercise_shows_its_learning_outcomes() -> None:
     ):
         assert title in democracy
     assert "Learning outcomes" in cards
-    assert "own moral outlook" in cards
+    assert "Self-knowledge" in cards
+    assert "Engagement across differences" in cards
 
 
 def test_a_debrief_can_be_started_as_an_activity_in_any_room() -> None:
