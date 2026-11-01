@@ -58,9 +58,15 @@ jobs:
           retention-days: 7
 
   webkit:
-    name: Playwright (WebKit, iPad)
+    name: Playwright (WebKit, iPad) ${{ matrix.shard }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      # Three short runs rather than one long one: a single WebKit run of the
+      # whole set was shut down by the runner about four minutes in, every time.
+      matrix:
+        shard: ["1/3", "2/3", "3/3"]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -76,10 +82,10 @@ jobs:
       - run: npx playwright install --with-deps webkit
       # Safari's engine, on a laptop and on an iPad in both orientations. A
       # separate job, so that it has its own memory and its own time limit.
-      - run: npm run test:e2e:webkit
+      - run: npm run test:e2e:webkit -- --shard=${{ matrix.shard }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-webkit-results
+          name: playwright-webkit-results-${{ strategy.job-index }}
           path: test-results/
           retention-days: 7
