@@ -43,7 +43,7 @@ shows "Claimed" in this table on `main`.
 | 11 | Democracy Simulation | Done | | PR #19 |
 | 12 | Running a session (rewritten, lean) | Done | | PR #20 |
 | 13 | Reflection, debrief and the playtest record | Done | | PR #23 |
-| 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
+| 14 | Access, tablets and resilience | Claimed | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
 | 17 | Open rooms and activities | Done | | PR #18 |
 | 16 | Launch pass | Not started; hosting is the Mac on the local network (below) | `claude/step-16-launch-pass` | |
