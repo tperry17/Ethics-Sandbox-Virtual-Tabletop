@@ -1,10 +1,10 @@
 {# A still picture of a table after setup, built by sandbox/web/preview.py
    from the spectator projection. Colours come from the design tokens. #}
-{% macro table_preview(preview) -%}
+{% macro table_preview(preview, caption=none) -%}
 <figure class="table-picture">
   <svg class="table-picture__svg" viewBox="{{ preview.view_box }}" role="img"
        aria-labelledby="table-picture-title">
-    <title id="table-picture-title">The {{ preview.title }} table after setup, as anyone at it sees it</title>
+    <title id="table-picture-title">The {{ preview.title }} table</title>
     {% for zone in preview.zones %}
     <g class="table-picture__zone table-picture__zone--{{ zone.visibility }} table-picture__zone--{{ zone.kind }}">
       <rect x="{{ zone.x }}" y="{{ zone.y }}" width="{{ zone.width }}" height="{{ zone.height }}" rx="12"></rect>
@@ -22,8 +22,8 @@
     {% endfor %}
   </svg>
   <figcaption class="table-picture__caption">
-    Set up for {{ preview.seats }} {{ "seat" if preview.seats == 1 else "seats" }}. Faces
-    nobody may see yet are drawn as backs.
+    {% if caption %}{{ caption }}{% else %}Set up for {{ preview.seats }} {{ "seat" if preview.seats == 1 else "seats" }}. Faces
+    nobody may see yet are drawn as backs.{% endif %}
   </figcaption>
 </figure>
 {%- endmacro %}

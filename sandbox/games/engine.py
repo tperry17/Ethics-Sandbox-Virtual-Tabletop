@@ -18,6 +18,7 @@ Nothing here knows any particular exercise. It reads the definition.
 from __future__ import annotations
 
 import copy
+import dataclasses
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -568,8 +569,11 @@ def build_activity_start(
         builder.run(BeginActivity(activity_id=activity_id, zones=made))
     except _Refused as refusal:
         return Reject(refusal.reason)
-    return builder.transaction(
-        name=f"activity:{activity_id}", label=f"Begin {activity.title}"
+    return dataclasses.replace(
+        builder.transaction(
+            name=f"activity:{activity_id}", label=f"Begin {activity.title}"
+        ),
+        activity_id=activity_id,
     )
 
 
@@ -751,8 +755,11 @@ def build_macro(
             )
     except _Refused as refusal:
         return Reject(refusal.reason)
-    return builder.transaction(
-        name=f"macro:{macro_id}", label=game.buttons[macro_id].label
+    return dataclasses.replace(
+        builder.transaction(
+            name=f"macro:{macro_id}", label=game.buttons[macro_id].label
+        ),
+        activity_id=activity_id or "",
     )
 
 

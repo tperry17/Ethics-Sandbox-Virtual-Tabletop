@@ -12,10 +12,12 @@ its colours come from the design tokens like everything else.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from sandbox.games import Game
 from sandbox.games.engine import build_seat, build_table
+from sandbox.games.loader import Face
 from sandbox.model import Ok, Polygon, Rect, Table, TableRng, project, run_op
 
 # The table client's default piece sizes (``client/src/piece-node.ts``), so a
@@ -81,8 +83,23 @@ def _set_up(game: Game) -> Table:
 
 def table_preview(game: Game) -> Preview:
     """The table for ``game`` after setup, as a spectator sees it."""
-    view = project(_set_up(game), None)
-    faces = game.faces()
+    return table_picture(_set_up(game), game.faces(), game.title)
+
+
+def table_picture(
+    table: Table,
+    faces: Mapping[str, Face],
+    title: str,
+    *,
+    all_faces: bool = False,
+) -> Preview:
+    """``table`` drawn as a spectator sees it, or with every face showing.
+
+    ``all_faces`` is for the facilitator's replay: a face-down card is drawn
+    with its title. Without it, nothing is drawn that is not public.
+    """
+    view = project(table, None)
+    raw = table.pieces
 
     zones: list[PreviewZone] = []
     for zone in view.zones:
@@ -110,7 +127,12 @@ def table_preview(game: Game) -> Preview:
     pieces: list[PreviewPiece] = []
     zone_order = {zone.id: index for index, zone in enumerate(view.zones)}
     for piece in sorted(view.pieces, key=lambda p: (zone_order.get(p.zone_id, 0), p.z)):
-        face = None if piece.component_id is None else faces.get(piece.component_id)
+        component = (
+            raw[piece.id].component_id
+            if all_faces and piece.id in raw
+            else piece.component_id
+        )
+        face = None if component is None else faces.get(component)
         width, height = DEFAULT_SIZES.get(str(piece.kind), DEFAULT_SIZES["token"])
         if face is not None:
             width = face.width or width
@@ -138,7 +160,7 @@ def table_preview(game: Game) -> Preview:
     left, top = min(lefts) - MARGIN, min(tops) - MARGIN
     width, height = max(rights) - left + MARGIN, max(bottoms) - top + MARGIN
     return Preview(
-        title=game.title,
+        title=title,
         view_box=f"{left:g} {top:g} {width:g} {height:g}",
         zones=tuple(zones),
         pieces=tuple(pieces),
@@ -146,4 +168,4 @@ def table_preview(game: Game) -> Preview:
     )
 
 
-__all__ = ["Preview", "PreviewPiece", "PreviewZone", "table_preview"]
+__all__ = ["Preview", "PreviewPiece", "PreviewZone", "table_picture", "table_preview"]

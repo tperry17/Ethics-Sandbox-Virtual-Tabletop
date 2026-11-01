@@ -61,6 +61,17 @@
         </ol>
       </section>
 
+      {% if exercise.learning_outcomes %}
+      <section class="site__section" id="learning-outcomes">
+        {{ ui.section_rule("Learning outcomes") }}
+        <ol class="prose">
+          {% for outcome in exercise.learning_outcomes %}
+          <li><strong>{{ outcome.title }}.</strong> {{ outcome.text }}</li>
+          {% endfor %}
+        </ol>
+      </section>
+      {% endif %}
+
       <section class="site__section" id="tensions">
         {{ ui.section_rule("Tensions worth sitting with") }}
         <ul class="tension-list">

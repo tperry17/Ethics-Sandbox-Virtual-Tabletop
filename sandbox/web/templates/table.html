@@ -52,6 +52,48 @@
         </p>
       {% endcall %}
 
+      <p class="prose table-shell__links">
+        <a href="/t/{{ room.code }}/reflect" target="_blank" rel="noopener">Write a reflection</a>
+        · <a href="/t/{{ room.code }}/debrief" target="_blank" rel="noopener">Debriefs</a>
+        {% if is_facilitator %}· <a href="/t/{{ room.code }}/replay" target="_blank" rel="noopener">Replay</a>{% endif %}
+        · <a href="/help" target="_blank" rel="noopener">Help</a>
+      </p>
+
+      {% if is_facilitator %}
+      <section class="prose" aria-labelledby="record-heading">
+        <h2 id="record-heading">The record of this room</h2>
+        <p>
+          {% if dormant %}This room is dormant: nobody has been active for 12 hours.
+          {% else %}This room goes dormant after 12 hours without activity.{% endif %}
+          Its record is deleted on {{ purge_date.strftime("%-d %B %Y") }} unless someone
+          is active before then; after 30 days idle, it is deleted.
+        </p>
+        <form method="get" action="/t/{{ room.code }}/record.json" aria-label="Export the record">
+          <fieldset>
+            <legend>Export what happened in this room</legend>
+            <label class="field__check">
+              <input type="checkbox" name="include_text" value="true">
+              Include the notes and other text people wrote
+              <span class="field__hint">(an answer someone kept private is never included)</span>
+            </label>
+            <label class="field__check">
+              <input type="checkbox" name="anonymise" value="true">
+              Replace names with Participant A, B, C
+            </label>
+          </fieldset>
+          <div class="toolbar" role="group" aria-label="Export format">
+            {{ ui.button("Export as JSON", variant="primary", size="sm", type="submit") }}
+            <button class="button button--quiet button--sm" type="submit"
+                    formaction="/t/{{ room.code }}/record.zip">Export as CSV files</button>
+          </div>
+        </form>
+        <form method="post" action="/t/{{ room.code }}/record/delete"
+              onsubmit="return confirm('Delete this room and everything recorded in it? This cannot be undone.');">
+          {{ ui.button("Delete this room's record", variant="quiet", size="sm", type="submit") }}
+        </form>
+      </section>
+      {% endif %}
+
       <main class="table-shell__surface">
         {# The table client takes this element over completely: everything
            inside it is replaced on the first frame. #}

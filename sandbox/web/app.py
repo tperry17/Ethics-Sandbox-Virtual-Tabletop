@@ -1,7 +1,11 @@
 """FastAPI application entry point."""
 
-from collections.abc import AsyncIterator, Iterator
+import asyncio
+import contextlib
+import json
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 import anyio.from_thread
@@ -20,10 +24,12 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from sandbox.content_loading import CONTENT_ROOT
-from sandbox.db import init_db, session_scope
+from sandbox.db import Room, init_db, session_scope
 from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, OPEN_ROOM_SLUG
 from sandbox.games.loader import IMAGE_SUFFIXES
-from sandbox.web.content import SITE_COPY
+from sandbox.web.content import HELP_RECORDS, SITE_COPY
+from sandbox.web.debrief import router as debrief_router
+from sandbox.web.deps import get_session as get_session
 from sandbox.web.identity import (
     new_participant_id,
     read_participant_cookie,
@@ -31,42 +37,57 @@ from sandbox.web.identity import (
 )
 from sandbox.web.live import hub
 from sandbox.web.preview import table_preview as picture_of_table
+from sandbox.web.record import build_record, record_zip
 from sandbox.web.rooms import (
     FacilitatorTakenError,
     RoomClosedError,
     RoomNotFoundError,
     create_room,
+    delete_room_record,
     get_participant,
     get_room_by_code,
+    is_dormant,
     join_room,
     load_table,
+    purge_date,
+    purge_expired,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+SWEEP_EVERY_SECONDS = 3600
+
+
+def _purge_once() -> list[str]:
+    with session_scope() as session:
+        return purge_expired(session)
+
+
+async def _sweep_forever() -> None:
+    """Delete rooms idle for thirty days, at start and then every hour."""
+    while True:
+        for code in await asyncio.to_thread(_purge_once):
+            await hub.close_room(code)
+        await asyncio.sleep(SWEEP_EVERY_SECONDS)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Ensure the schema exists on startup. A no-op against a migrated database."""
     init_db()
+    sweeper = asyncio.create_task(_sweep_forever())
     yield
+    sweeper.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await sweeper
     await hub.shutdown()
 
 
 app = FastAPI(title="Ethics Sandbox", lifespan=lifespan)
+app.include_router(debrief_router)
 app.mount("/static", StaticFiles(directory=PROJECT_ROOT / "static"), name="static")
 templates = Jinja2Templates(directory=PROJECT_ROOT / "sandbox" / "web" / "templates")
-
-
-def get_session() -> Iterator[Session]:
-    """One request-scoped database session, committed or rolled back for you.
-
-    Routes that take one are plain ``def``, not ``async def``: FastAPI runs
-    them on a worker thread, so a query waiting on SQLite's write lock waits
-    there, not on the event loop that the lock's holder needs to finish.
-    """
-    with session_scope() as session:
-        yield session
 
 
 def _identify(request: Request) -> str:
@@ -98,6 +119,14 @@ async def home(request: Request) -> HTMLResponse:
             "site_copy": SITE_COPY,
             "exercises": EXERCISES,
         },
+    )
+
+
+@app.get("/help", response_class=HTMLResponse)
+async def help_page(request: Request) -> HTMLResponse:
+    """Render the Help page: how rooms, records, export and deletion work."""
+    return templates.TemplateResponse(
+        request=request, name="help.html", context={"records": HELP_RECORDS}
     )
 
 
@@ -306,6 +335,9 @@ def table_shell(
         other.seat_id: other for other in room.participants if other.seat_id is not None
     }
     observers = [other for other in room.participants if other.is_observer]
+    is_facilitator = participant.seat_id is not None and table.is_facilitator(
+        participant.seat_id
+    )
 
     return templates.TemplateResponse(
         request=request,
@@ -318,8 +350,89 @@ def table_shell(
             "seats": seats,
             "participants_by_seat": participants_by_seat,
             "observers": observers,
+            "is_facilitator": is_facilitator,
+            "dormant": is_dormant(room),
+            "purge_date": purge_date(room),
         },
     )
+
+
+def _facilitator_room(request: Request, code: str, session: Session) -> Room:
+    """The room, if the caller is its facilitator; otherwise a 404 or 403."""
+    room = get_room_by_code(session, code)
+    if room is None:
+        raise HTTPException(status_code=404, detail="No such room.")
+    cookie_id = read_participant_cookie(request)
+    participant = get_participant(session, room.id, cookie_id) if cookie_id else None
+    seat_id = participant.seat_id if participant is not None else None
+    if seat_id is None or not load_table(session, room).is_facilitator(seat_id):
+        raise HTTPException(
+            status_code=403, detail="Only the facilitator can open the record."
+        )
+    return room
+
+
+def _export(
+    session: Session, room: Room, anonymise: bool, include_text: bool
+) -> dict[str, object]:
+    return build_record(
+        session,
+        room,
+        anonymise=anonymise,
+        include_text=include_text,
+        exported_at=datetime.now(UTC),
+    )
+
+
+@app.get("/t/{code}/record.json")
+def record_json(
+    request: Request,
+    code: str,
+    anonymise: bool = False,
+    include_text: bool = False,
+    session: Session = Depends(get_session),
+) -> Response:
+    """The room's event log as JSON, for the facilitator."""
+    room = _facilitator_room(request, code, session)
+    body = json.dumps(_export(session, room, anonymise, include_text), indent=2)
+    return Response(
+        body,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{room.code}.json"'},
+    )
+
+
+@app.get("/t/{code}/record.zip")
+def record_csv(
+    request: Request,
+    code: str,
+    anonymise: bool = False,
+    include_text: bool = False,
+    session: Session = Depends(get_session),
+) -> Response:
+    """The room's event log as one CSV per event type, zipped."""
+    room = _facilitator_room(request, code, session)
+    body = record_zip(_export(session, room, anonymise, include_text))
+    return Response(
+        body,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{room.code}.zip"'},
+    )
+
+
+@app.post("/t/{code}/record/delete")
+def record_delete(
+    request: Request,
+    code: str,
+    session: Session = Depends(get_session),
+) -> Response:
+    """Delete the room and everything recorded in it, for the facilitator."""
+    room = _facilitator_room(request, code, session)
+    code = room.code
+    delete_room_record(session, room)
+    session.commit()
+    anyio.from_thread.run(hub.close_room, code)
+    return RedirectResponse(url="/", status_code=303)
 
 
 @app.websocket("/ws/t/{code}")

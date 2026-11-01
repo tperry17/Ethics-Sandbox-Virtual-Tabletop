@@ -1,0 +1,38 @@
+{% import "_ui.html" as ui %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Debrief · Ethics Sandbox</title>
+    <link rel="icon" href="{{ url_for('static', path='/icons/favicon.ico') }}" sizes="48x48">
+    <link rel="icon" href="{{ url_for('static', path='/icons/seal-512.png') }}" type="image/png" sizes="512x512">
+    <link rel="apple-touch-icon" href="{{ url_for('static', path='/icons/apple-touch-icon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
+  </head>
+  <body>
+    <main class="site">
+      <p class="site__back"><a href="/t/{{ room.code }}">← Back to the table</a></p>
+      <header class="site__header">
+        <p class="eyebrow">Debrief</p>
+        <h1>What happened at the tables</h1>
+        <div class="prose site__lede">
+          <p>{% if is_facilitator %}Every activity and class in this room that has a debrief.
+          People see one only once you open it.{% else %}The debriefs your facilitator has opened.{% endif %}</p>
+        </div>
+      </header>
+      <section class="site__section">
+        {% if rows %}
+        <ul class="prose">
+          {% for row in rows %}
+          <li><a href="{{ row.href }}">{{ row.title }}</a>{% if is_facilitator %} ({{ "open" if row.open else "not opened" }}){% endif %}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="prose">Nothing to look at yet.</p>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>

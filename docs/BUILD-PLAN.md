@@ -42,7 +42,7 @@ shows "Claimed" in this table on `main`.
 | 10 | Value Cards Trading | Done | | PR #16 |
 | 11 | Democracy Simulation | Done | | PR #19 |
 | 12 | Running a session (rewritten, lean) | Done | | PR #20 |
-| 13 | Reflection, debrief and the playtest record | Claimed | `claude/step-13-reflection-and-debrief` | |
+| 13 | Reflection, debrief and the playtest record | Done | | PR #23 |
 | 14 | Access, tablets and resilience | Not started | `claude/step-14-access-and-resilience` | |
 | 15 | Tests | Not started | `claude/step-15-tests` | |
 | 17 | Open rooms and activities | Done | | PR #18 |
@@ -103,8 +103,9 @@ Checked against the code on `main`; none of these has been fixed yet.
   exist; the site has `/` and `/exercises/{slug}` only. No page sets OG
   meta tags. The exercise page's "preview image" is an HTML mock-up built
   from `content/site/exercise_preview_*.csv`, not an image of a real table.
-- **Prompt 5.** Rooms do not go dormant after 12 idle hours and are not
-  purged after 30 days, and the UI does not announce either.
+- **Prompt 5.** Closed by Prompt 13 (PR #23): rooms are dormant after 12
+  idle hours and purged after 30 days, and the join notice and the
+  facilitator's view say so.
 - **Prompt 2.** `/styleguide` still describes the design as a "scholarly
   edition", which CLAUDE.md now rules out. Being removed in a separate PR.
 - **CI.** `.github/workflows/ci.yml` runs Ruff (lint and format), mypy,
@@ -1280,8 +1281,55 @@ they are needed:
 
 ## 13. Reflection, debrief and the playtest record
 
-**Status: Not started.** Rewritten on 2026-10-30 for the two exercises as
-they actually are.
+**Status: Done (PR #23).** Rewritten on 2026-10-30 for the two
+exercises as they actually are.
+
+Decided by the author on 2026-11-01 (these replace the prompt text below
+where they differ):
+
+- A debrief is an **activity**, like Value Cards Trading: it is started from
+  the sandbox by someone who becomes its facilitator, not a page. There is
+  one for each exercise (`value-cards-debrief`, `democracy-debrief`).
+- There is **no consent statement** and no `CONSENT.md`; the join screen is
+  unchanged.
+- The facilitator exports some of the session's notes and text with
+  **checkboxes**, not links.
+- The debrief activity **draws on what was logged** at the exercise it
+  follows; the facilitator picks which table's or class's record to open
+  it with. Rooms still go dormant after 12 idle hours and are purged after
+  30 days, and the facilitator can still delete a room's record.
+- Each exercise's **learning outcomes** are shown on its page and are the
+  cards on its debrief table (`content/site/exercise_learning_outcomes.csv`).
+
+Built (PR #23):
+
+- The two debrief **activities**, and each exercise's learning outcomes on
+  its page.
+- **Debrief pages**, keyed by activity or class (a room holds many):
+  `/t/{code}/debrief`, `/t/{code}/debrief/{activity_id}` and
+  `/t/{code}/class/{class_id}/debrief`. Each exercise's reading of the log is
+  in its game package (`debrief.py`) and registers in
+  `sandbox/games/debrief.py`; `sandbox/web/debrief.py` only draws it. The
+  facilitator sees a page at any time and opens it to the room with one
+  button; an ended activity or class can still be read, from the table as it
+  stood. Charts are plain bars on one scale, tokens only; people are never
+  ranked.
+- **Observation notes** (facilitator only, tagged with an outcome, kept in
+  the log as a `Record` named `observation`) and **reflections** at
+  `/t/{code}/reflect` (private unless shared; shared ones show on the debrief
+  without names).
+- **Replay** at `/t/{code}/replay`: the table rebuilt from the log
+  (`sandbox/web/replay.py`), read-only, with a slider; public view by
+  default, every face for the facilitator on request. A test checks the
+  rebuilt table equals the live one.
+- **Timing** from event times on each debrief: the parts of the exercise and
+  stretches with nothing logged.
+- The export, retention, the facilitator's delete, and the Help page.
+
+Added on the author's answers: an "Open the public assembly" button for
+Hudrosia (a king or the facilitator; logged, shown in the timeline), and
+shared reflections show their writer's name. The plan's `/t/{code}/debrief`
+and `/c/{code}/debrief` became the activity and class routes above.
 
 The point of this step is to give the debrief, which both source documents
 say is where the learning happens, something accurate to work from. The

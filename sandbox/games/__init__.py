@@ -14,6 +14,7 @@ use it to load their fixture games (``tests/games``) into a running server;
 nothing in production sets it.
 """
 
+import importlib
 import os
 from pathlib import Path
 
@@ -56,6 +57,14 @@ def _load_all() -> dict[str, Game]:
 
 
 GAMES: dict[str, Game] = _load_all()
+
+
+# Each exercise's reading of the log registers itself on import.
+for _module in (
+    "sandbox.games.democracy_simulation.debrief",
+    "sandbox.games.value_cards_trading.debrief",
+):
+    importlib.import_module(_module)
 
 
 def playable_slugs() -> frozenset[str]:

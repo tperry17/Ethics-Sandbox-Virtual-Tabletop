@@ -9,11 +9,12 @@ This is the one place that reads those files; each exercise module (e.g.
 from __future__ import annotations
 
 from sandbox.content_loading import read_rows, rows_for_slug
-from sandbox.games.models import Exercise, PreviewCard
+from sandbox.games.models import Exercise, LearningOutcome, PreviewCard
 
 EXERCISES_CSV = "site/exercises.csv"
 SESSION_SHAPE_CSV = "site/exercise_session_shape.csv"
 TENSIONS_CSV = "site/exercise_tensions.csv"
+LEARNING_OUTCOMES_CSV = "site/exercise_learning_outcomes.csv"
 FACILITATOR_NOTES_CSV = "site/exercise_facilitator_notes.csv"
 PREVIEW_ZONES_CSV = "site/exercise_preview_zones.csv"
 PREVIEW_CARDS_CSV = "site/exercise_preview_cards.csv"
@@ -52,6 +53,10 @@ def load_exercise(slug: str) -> Exercise:
             row["label"] for row in rows_for_slug(PREVIEW_ZONES_CSV, slug)
         ),
         preview_cards=preview_cards,
+        learning_outcomes=tuple(
+            LearningOutcome(title=row["title"], text=row["text"])
+            for row in rows_for_slug(LEARNING_OUTCOMES_CSV, slug)
+        ),
     )
 
 

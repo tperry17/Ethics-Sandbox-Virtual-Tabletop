@@ -1,0 +1,59 @@
+{% import "_ui.html" as ui %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Replay · Ethics Sandbox</title>
+    <link rel="icon" href="{{ url_for('static', path='/icons/favicon.ico') }}" sizes="48x48">
+    <link rel="icon" href="{{ url_for('static', path='/icons/seal-512.png') }}" type="image/png" sizes="512x512">
+    <link rel="apple-touch-icon" href="{{ url_for('static', path='/icons/apple-touch-icon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
+  </head>
+  <body>
+    <main class="site">
+      <p class="site__back"><a href="/t/{{ room.code }}">← Back to the table</a></p>
+      <header class="site__header">
+        <p class="eyebrow">Replay</p>
+        <h1>The table, rebuilt from the log</h1>
+        <div class="prose site__lede"><p>Read-only. Move the slider to see the table after each event.
+        By default you see what anyone at the table could see.</p></div>
+      </header>
+      <section class="site__section">
+        {% if count %}
+        <label class="field__check"><input type="checkbox" id="replay-faces"> Show every face</label>
+        <label class="field"><span class="field__label" id="replay-caption">Event 1 of {{ count }}</span>
+          <input type="range" id="replay-slider" min="0" max="{{ count - 1 }}" value="{{ count - 1 }}" step="1" aria-labelledby="replay-caption">
+        </label>
+        <div id="replay-frame" aria-live="polite"></div>
+        {% else %}
+        <p class="prose">Nothing has been logged yet.</p>
+        {% endif %}
+      </section>
+      <script>
+        (function () {
+          var steps = {{ steps | safe }};
+          var slider = document.getElementById("replay-slider");
+          if (!slider) { return; }
+          var faces = document.getElementById("replay-faces");
+          var frame = document.getElementById("replay-frame");
+          var caption = document.getElementById("replay-caption");
+          var timer = null;
+          function show() {
+            var step = steps[Number(slider.value)];
+            caption.textContent = "Event " + (Number(slider.value) + 1) + " of " + steps.length +
+              " · " + step.label + " · " + Math.floor(step.offset / 60) + " min " + (step.offset % 60) + " s in";
+            fetch("/t/{{ room.code }}/replay/frame?seq=" + step.seq + "&faces=" + (faces.checked ? "true" : "false"))
+              .then(function (r) { return r.text(); })
+              .then(function (html) { frame.innerHTML = html; });
+          }
+          function later() { clearTimeout(timer); timer = setTimeout(show, 120); }
+          slider.addEventListener("input", later);
+          faces.addEventListener("change", show);
+          show();
+        })();
+      </script>
+    </main>
+  </body>
+</html>

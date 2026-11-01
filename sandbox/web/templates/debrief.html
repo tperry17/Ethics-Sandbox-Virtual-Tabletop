@@ -1,0 +1,137 @@
+{% import "_ui.html" as ui %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Debrief · Ethics Sandbox</title>
+    <link rel="icon" href="{{ url_for('static', path='/icons/favicon.ico') }}" sizes="48x48">
+    <link rel="icon" href="{{ url_for('static', path='/icons/seal-512.png') }}" type="image/png" sizes="512x512">
+    <link rel="apple-touch-icon" href="{{ url_for('static', path='/icons/apple-touch-icon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
+  </head>
+  <body>
+    <main class="site">
+      <p class="site__back"><a href="/t/{{ room.code }}">← Back to the table</a>
+        · <a href="/t/{{ room.code }}/debrief">All debriefs</a></p>
+
+      <header class="site__header">
+        <p class="eyebrow">{% if is_class %}Class debrief{% else %}Debrief{% endif %}</p>
+        <h1>{{ title }}</h1>
+        <div class="prose site__lede">
+          <p>Read from what was logged at the table. It does not rank anyone
+          and does not say which choice was right. What was said on the call
+          is not recorded; for that there are only the facilitator's notes.</p>
+        </div>
+      </header>
+
+      {% if is_facilitator %}
+      <section class="site__section" aria-labelledby="controls">
+        {{ ui.section_rule("Facilitator", mark="§") }}
+        <form method="post" action="/t/{{ room.code }}/debrief/{{ key }}/open">
+          <input type="hidden" name="is_class" value="{{ 'true' if is_class else 'false' }}">
+          <label class="field__check">
+            <input type="checkbox" name="opened" value="true" {% if open %}checked{% endif %}>
+            Open this debrief to everyone in the room
+          </label>
+          {{ ui.button("Save", variant="quiet", size="sm", type="submit") }}
+        </form>
+        {% if has_council and not is_class %}
+        <form method="post" action="/t/{{ room.code }}/debrief/{{ key }}/settings">
+          <input type="hidden" name="is_class" value="false">
+          <input type="hidden" name="which" value="council">
+          <label class="field__check">
+            <input type="checkbox" name="show_council_votes" value="true" {% if show_council_votes %}checked{% endif %}>
+            Show how each council member voted (otherwise only the tally)
+          </label>
+          {{ ui.button("Save", variant="quiet", size="sm", type="submit") }}
+        </form>
+        {% endif %}
+        <form method="post" action="/t/{{ room.code }}/debrief/{{ key }}/note">
+          <input type="hidden" name="is_class" value="{{ 'true' if is_class else 'false' }}">
+          <label class="field">
+            <span class="field__label">An observation note</span>
+            <textarea name="text" rows="3" required></textarea>
+          </label>
+          <label class="field">
+            <span class="field__label">Learning outcome it shows</span>
+            <select name="outcome">
+              <option value="">None</option>
+              {% for outcome in outcomes %}<option>{{ outcome }}</option>{% endfor %}
+            </select>
+          </label>
+          {{ ui.button("Add note", variant="primary", size="sm", type="submit") }}
+        </form>
+        {% if notes %}
+        <h3>Your notes</h3>
+        <ul class="prose">
+          {% for note in notes %}
+          <li>{{ note.when }}{% if note.outcome %} · {{ note.outcome }}{% endif %}: {{ note.text }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </section>
+      {% endif %}
+
+      {% for section in sections %}
+      <section class="site__section">
+        {{ ui.section_rule(section.title) }}
+        {% if section.note %}<p class="prose field__hint">{{ section.note }}</p>{% endif %}
+        {% for block in section.blocks %}
+          {% if block.title %}<h3>{{ block.title }}</h3>{% endif %}
+          {% if block.kind == "text" %}
+            <div class="prose"><p>{{ block.text }}</p></div>
+          {% elif block.kind == "table" %}
+            <div class="debrief-table">
+            <table>
+              <thead><tr>{% for column in block.columns %}<th scope="col">{{ column }}</th>{% endfor %}</tr></thead>
+              <tbody>
+                {% for row in block.rows %}
+                <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            </div>
+          {% elif block.kind == "bars" %}
+            {% set top = block.bars | map(attribute=1) | max %}
+            <ul class="bars" role="list">
+              {% for label, value in block.bars %}
+              <li class="bars__row">
+                <span class="bars__label">{{ label }}</span>
+                <span class="bars__track"><span class="bars__fill" style="width: {{ (value * 100 / top) | round(1) }}%"></span></span>
+                <span class="bars__value">{{ value }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+          {% elif block.kind == "checklist" %}
+            <form method="post" action="/t/{{ room.code }}/debrief/{{ key }}/settings">
+              <input type="hidden" name="is_class" value="false">
+              <input type="hidden" name="which" value="surfaced">
+              {% for id, label, on in block.rows %}
+              <label class="field__check">
+                <input type="checkbox" name="surfaced" value="{{ id }}" {% if on == "1" %}checked{% endif %}>
+                {{ label }}
+              </label>
+              {% endfor %}
+              {{ ui.button("Save", variant="quiet", size="sm", type="submit") }}
+            </form>
+          {% else %}
+            <ul class="prose">{% for item in block.items %}<li>{{ item }}</li>{% endfor %}</ul>
+          {% endif %}
+        {% endfor %}
+      </section>
+      {% endfor %}
+
+      {% if reflections %}
+      <section class="site__section">
+        {{ ui.section_rule("Shared with the table") }}
+        <p class="prose field__hint">Answers people chose to share with the table.</p>
+        <ul class="prose">
+          {% for r in reflections %}<li><em>{{ r.prompt }}</em> {{ r.name }}: {{ r.body }}</li>{% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+    </main>
+  </body>
+</html>
