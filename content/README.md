@@ -25,6 +25,10 @@ size, running time, and the rest of the fields on its catalog and detail
 pages. Add a row here (with a new `slug`) and matching rows in the files
 below to add a new exercise to the site without touching any template.
 
+`site/exercise_learning_outcomes.csv` - what each exercise is designed to
+achieve: one row per outcome (`slug`, `id`, `title`, `text`). It is shown on
+the exercise's page and is the set of outcome cards on its debrief table.
+
 `site/exercise_session_shape.csv`, `exercise_tensions.csv`,
 `exercise_facilitator_notes.csv`, `exercise_preview_zones.csv`,
 `exercise_preview_cards.csv` - each holds the repeating list items for the

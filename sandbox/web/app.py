@@ -27,7 +27,7 @@ from sandbox.content_loading import CONTENT_ROOT
 from sandbox.db import Room, init_db, session_scope
 from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, OPEN_ROOM_SLUG
 from sandbox.games.loader import IMAGE_SUFFIXES
-from sandbox.web.content import CONSENT, SITE_COPY
+from sandbox.web.content import SITE_COPY
 from sandbox.web.identity import (
     new_participant_id,
     read_participant_cookie,
@@ -253,12 +253,7 @@ async def join_form(request: Request, code: str = "") -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
         name="join.html",
-        context={
-            "error": None,
-            "code": code,
-            "display_name": "",
-            "consent": CONSENT,
-        },
+        context={"error": None, "code": code, "display_name": ""},
     )
 
 
@@ -278,12 +273,7 @@ def join_room_route(
             request=request,
             name="join.html",
             status_code=400,
-            context={
-                "error": message,
-                "code": room_code,
-                "display_name": display_name,
-                "consent": CONSENT,
-            },
+            context={"error": message, "code": room_code, "display_name": display_name},
         )
         set_participant_cookie(response, request, cookie_id)
         return response

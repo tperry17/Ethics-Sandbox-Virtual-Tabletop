@@ -1,13 +1,13 @@
-id,text
-debrief-01,How strongly do you feel about the values you prioritized?
-debrief-02,What experiences or influences have shaped the values you hold most strongly?
-debrief-03,Did this reflection reinforce or challenge any of your existing beliefs?
-debrief-04,Were there moments when you second-guessed your decisions? Why?
-debrief-05,How did the group dynamics influence which values were chosen? How might the result have been different if there were different members? What was your role in this group dynamic?
-debrief-06,Do you think your values would change if you did this activity in a different phase of your life?
-debrief-07,Are there areas in your life where your actions don't fully align with your values? How might you bridge that gap?
-debrief-08,"In what ways do your values guide your relationships, career choices, or goals?"
-debrief-09,How might this reflection shape the way you navigate ethical dilemmas in the future?
-debrief-10,"If someone were to observe your actions, what values do you think they would say you prioritize?"
-debrief-11,What is one value you want to be more intentional about upholding?
-debrief-12,Did the group make any decisions that reflected shared values?
+id,text,outcome
+debrief-01,How strongly do you feel about the values you prioritized?,Moral outlook and cooperation
+debrief-02,What experiences or influences have shaped the values you hold most strongly?,Moral outlook and cooperation
+debrief-03,Did this reflection reinforce or challenge any of your existing beliefs?,Moral outlook and cooperation
+debrief-04,Were there moments when you second-guessed your decisions? Why?,Moral outlook and cooperation
+debrief-05,How did the group dynamics influence which values were chosen? How might the result have been different if there were different members? What was your role in this group dynamic?,Moral outlook and cooperation
+debrief-06,Do you think your values would change if you did this activity in a different phase of your life?,Moral outlook and cooperation
+debrief-07,Are there areas in your life where your actions don't fully align with your values? How might you bridge that gap?,Moral outlook and cooperation
+debrief-08,"In what ways do your values guide your relationships, career choices, or goals?",Moral outlook and cooperation
+debrief-09,How might this reflection shape the way you navigate ethical dilemmas in the future?,Moral outlook and cooperation
+debrief-10,"If someone were to observe your actions, what values do you think they would say you prioritize?",Moral outlook and cooperation
+debrief-11,What is one value you want to be more intentional about upholding?,Moral outlook and cooperation
+debrief-12,Did the group make any decisions that reflected shared values?,Moral outlook and cooperation

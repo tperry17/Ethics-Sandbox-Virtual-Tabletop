@@ -1,0 +1,96 @@
+# Democracy Simulation debrief. A guided debrief, started in a room after (or beside) the exercise.
+# The outcomes and questions are the exercise's own, read from its content files.
+meta:
+  slug: democracy-debrief
+  title: Democracy Simulation debrief
+  players: {min: 1, max: 30}
+  duration_minutes: 20
+  facilitator: required
+  listed: false
+
+components:
+  decks:
+    - id: outcomes
+      source: site/exercise_learning_outcomes.csv
+      key: id
+      title: title
+      body: text
+      image: null
+      width: 300
+      height: 260
+    - id: questions
+      source: exercises/democracy-simulation/prompts.csv
+      key: id
+      title: outcome
+      body: text
+      image: null
+      width: 300
+      height: 260
+  pieces:
+    - {id: note, kind: note, title: Note}
+
+seats:
+  labels: [Participant]
+
+zones:
+  - id: table
+    kind: table
+    label: The table
+    rect: [0, 0, 2200, 1200]
+    visibility: public
+    layout: free
+  - id: outcome-pile
+    kind: deck
+    label: Outcomes
+    rect: [40, 40, 240, 320]
+    visibility: hidden
+    layout: stack
+  - id: outcomes
+    kind: slot
+    label: Learning outcomes
+    rect: [320, 40, 1840, 320]
+    visibility: public
+    layout: spread
+  - id: deck
+    kind: deck
+    label: Debrief questions
+    rect: [40, 420, 240, 320]
+    visibility: hidden
+    layout: stack
+
+setup:
+  - {op: spawn_deck, deck: outcomes, zone: outcome-pile, where: {slug: democracy-simulation}}
+  - {op: spawn_deck, deck: questions, zone: deck}
+  - {op: deal, from: outcome-pile, to: outcomes, count: 3, face_up: true}
+
+macros:
+  - id: setup
+    steps:
+      - {op: reset_table}
+      - {op: setup}
+  - id: deal
+    steps:
+      - {op: draw, from: deck, to: table, count: 1, face_up: true}
+  - id: add_note
+    who: anyone
+    steps:
+      - {op: spawn, component: note, zone: table}
+  - id: reset
+    steps:
+      - {op: reset_table}
+  - id: shuffle
+    steps:
+      - {op: shuffle, zone: deck}
+  - id: collect
+    steps:
+      - {op: collect, to: deck, kinds: [card], from: [table], face_up: false}
+      - {op: shuffle, zone: deck}
+  - id: clear_ink
+    steps:
+      - {op: clear_ink}
+
+buttons:
+  source: exercises/democracy-debrief/buttons.csv
+
+prompts:
+  source: exercises/democracy-simulation/prompts.csv

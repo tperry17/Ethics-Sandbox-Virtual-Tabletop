@@ -17,7 +17,6 @@ from sqlalchemy.orm import Session, sessionmaker
 from sandbox.db.models import Event, Participant, Reflection, Room
 from sandbox.model import SetText
 from sandbox.web.app import app, get_session
-from sandbox.web.content import CONSENT
 from sandbox.web.record import (
     build_record,
     data_dictionary_markdown,
@@ -244,17 +243,48 @@ def test_delete_room_record_removes_everything(
         assert session.query(Room).count() == 0
 
 
-def test_the_join_screen_carries_the_notice_and_consent_md_says_the_same() -> None:
+def test_the_join_screen_has_no_consent_notice() -> None:
     page = TestClient(app).get("/join").text
-    consent = (ROOT / "CONSENT.md").read_text()
 
-    for text in CONSENT.values():
-        escaped = text.replace("&", "&amp;")
-        assert escaped in page
-        assert text in consent
-    assert "never records audio or video" in page
-    assert "12 hours" in page
-    assert "30 days" in page
+    assert "consent" not in page.lower()
+    assert not (ROOT / "CONSENT.md").exists()
+
+
+def test_the_facilitator_exports_with_checkboxes(
+    factory: sessionmaker[Session],
+) -> None:
+    client = _client(factory)
+    code, _ = _room_with_people(client, factory)
+
+    page = client.get(f"/t/{code}").text
+
+    assert 'name="include_text"' in page
+    assert 'name="anonymise"' in page
+    assert f'formaction="/t/{code}/record.zip"' in page
+
+
+def test_each_exercise_shows_its_learning_outcomes() -> None:
+    app_client = TestClient(app)
+
+    democracy = app_client.get("/exercises/democracy-simulation").text
+    cards = app_client.get("/exercises/value-cards-trading").text
+
+    for title in (
+        "Experience a deliberative process",
+        "Practice civil discourse skills",
+        "Face trade-offs between moral values and strategic goals",
+    ):
+        assert title in democracy
+    assert "Learning outcomes" in cards
+    assert "own moral outlook" in cards
+
+
+def test_a_debrief_can_be_started_as_an_activity_in_any_room() -> None:
+    from sandbox.web.live import activity_choices
+
+    slugs = {choice.slug for choice in activity_choices()}
+
+    assert {"value-cards-debrief", "democracy-debrief"} <= slugs
 
 
 def test_the_data_dictionary_is_current_and_covers_every_logged_type() -> None:

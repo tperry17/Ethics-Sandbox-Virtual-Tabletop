@@ -13,6 +13,14 @@ class PreviewCard:
 
 
 @dataclass(frozen=True)
+class LearningOutcome:
+    """One thing an exercise is designed to achieve, stated in the author's words."""
+
+    title: str
+    text: str
+
+
+@dataclass(frozen=True)
 class Exercise:
     """Everything the public site needs to describe an exercise."""
 
@@ -30,3 +38,4 @@ class Exercise:
     preview_label: str
     preview_zones: tuple[str, ...]
     preview_cards: tuple[PreviewCard, ...]
+    learning_outcomes: tuple[LearningOutcome, ...] = ()

@@ -1284,12 +1284,26 @@ they are needed:
 **Status: In progress (PR #23).** Rewritten on 2026-10-30 for the two
 exercises as they actually are.
 
-Built so far: part 4 (consent notice on the join screen, `CONSENT.md`, the
-facilitator's delete, dormancy and the 30-day purge) and the export half of
-part 3 (JSON and CSV, anonymised, optional written text,
-`docs/DATA-DICTIONARY.md`). Still to build: observation notes and reflection
-boxes (part 1), both debrief pages with charts (part 2), replay and timing
-from events (rest of part 3), and the tests that need them.
+Decided by the author on 2026-11-01 (these replace the prompt text below
+where they differ):
+
+- A debrief is an **activity**, like Value Cards Trading: it is started from
+  the sandbox by someone who becomes its facilitator, not a page. There is
+  one for each exercise (`value-cards-debrief`, `democracy-debrief`).
+- There is **no consent statement** and no `CONSENT.md`; the join screen is
+  unchanged.
+- The facilitator exports some of the session's notes and text with
+  **checkboxes**, not links.
+- Each exercise's **learning outcomes** are shown on its page and are the
+  cards on its debrief table (`content/site/exercise_learning_outcomes.csv`).
+
+Built so far: the two debrief activities (outcomes face up, questions
+drawn one at a time, notes); learning outcomes on the exercise pages;
+rooms dormant after 12 idle hours and purged after 30 days, with the
+facilitator's delete; and the export (JSON or CSV, optional names and
+written text, `docs/DATA-DICTIONARY.md`). Still to build: observation notes
+tagged by outcome and reflection boxes (part 1); the debrief drawn from the
+event log (trades, votes, interest against vote); replay and timing.
 
 The point of this step is to give the debrief, which both source documents
 say is where the learning happens, something accurate to work from. The
