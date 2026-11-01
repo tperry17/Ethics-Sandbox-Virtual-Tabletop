@@ -158,10 +158,18 @@ if command -v ipconfig >/dev/null 2>&1; then
     LAN_IP="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)"
 fi
 
+# Every link the app shares is built from this, so it must be the address other
+# devices can reach, never localhost. Set SANDBOX_PUBLIC_URL to override it.
+if [ -z "${SANDBOX_PUBLIC_URL:-}" ] && [ -n "$LAN_IP" ]; then
+    SANDBOX_PUBLIC_URL="http://$LAN_IP:$PORT"
+fi
+export SANDBOX_PUBLIC_URL="${SANDBOX_PUBLIC_URL:-}"
+
 step "Serving"
 echo "On this Mac:          http://localhost:$PORT"
 if [ -n "$LAN_IP" ]; then
     echo "On the same network:  http://$LAN_IP:$PORT"
+    echo "Check from a tablet:  http://$LAN_IP:$PORT/health"
 fi
 echo "If macOS asks whether Python may accept incoming connections, choose Allow."
 echo "Press Ctrl-C to stop."

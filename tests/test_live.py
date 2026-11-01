@@ -189,7 +189,10 @@ async def test_a_drag_logs_only_the_position_the_piece_was_let_go_in() -> None:
         assert room.runtime.table.pieces["card-0"].x == 19.0
 
 
-async def test_a_disconnect_releases_the_pieces_that_seat_was_holding() -> None:
+async def test_a_disconnect_releases_the_pieces_after_the_grace_period(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(live, "LEAVE_GRACE_SECONDS", 0.3)
     async with live_room() as room:
         actor = await room.connect(SEAT_A, display_name="Ana")
         watcher = await room.connect(SEAT_B, display_name="Bo")
@@ -198,11 +201,31 @@ async def test_a_disconnect_releases_the_pieces_that_seat_was_holding() -> None:
         await room.settle(0.1)
         await room.hub.detach(room.runtime, actor.connection, actor.writer)
         room.clients.remove(actor)
-        await room.settle()
+        await room.settle(0.1)
 
+        assert room.runtime.table.pieces["card-0"].held_by == SEAT_A
+        await room.settle(0.5)
         assert room.runtime.table.pieces["card-0"].held_by is None
         notices = [message["text"] for message in watcher.socket.of_type("notice")]
         assert "Ana has left the table." in notices
+
+
+async def test_reconnecting_within_the_grace_period_keeps_the_hold(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(live, "LEAVE_GRACE_SECONDS", 0.4)
+    async with live_room() as room:
+        actor = await room.connect(SEAT_A, display_name="Ana")
+        await room.intent(actor, "grab", {"piece_id": "card-0"})
+        await room.settle(0.1)
+        await room.hub.detach(room.runtime, actor.connection, actor.writer)
+        room.clients.remove(actor)
+        await room.settle(0.1)
+
+        await room.connect(SEAT_A, display_name="Ana")
+        await room.settle(0.6)
+
+        assert room.runtime.table.pieces["card-0"].held_by == SEAT_A
 
 
 # -- reconnect -------------------------------------------------------------------------

@@ -142,6 +142,10 @@ MOVE_FLUSH_SECONDS = 1 / 15
 CURSOR_FLUSH_SECONDS = 1 / 10
 CURSOR_STALE_SECONDS = 3.0
 HOLD_TIMEOUT_SECONDS = 10.0
+# How long a dropped participant keeps what they were holding or showing. A
+# blip in the Wi-Fi must not drop a card in mid-drag; coming back inside this
+# time keeps the hold.
+LEAVE_GRACE_SECONDS = 10.0
 
 # A client that has not drained this many messages is more than two seconds
 # behind at any plausible message rate, and is served a fresh snapshot
@@ -1029,6 +1033,8 @@ class RoomRuntime:
         # whose hand it was. That person's drag is over: what they send for
         # the piece next is refused, until they pick it up afresh.
         self._taken: dict[str, str] = {}
+        # Seats whose last connection closed, and when their holds are let go.
+        self._leaving: dict[str, float] = {}
         self._pending_events: list[_PendingEvent] = []
         self._events_since_snapshot = 0
         self._snapshot_due = False
@@ -1111,6 +1117,7 @@ class RoomRuntime:
             self._last_move_flush = now
             self._flush_moves()
         self._expire_holds(now)
+        self._expire_leavers(now)
         if now - self._last_presence_flush >= CURSOR_FLUSH_SECONDS:
             self._last_presence_flush = now
             self._expire_cursors(now)
@@ -1125,6 +1132,7 @@ class RoomRuntime:
         if isinstance(command, _Join):
             self._connections[command.connection.id] = command.connection
             if command.connection.seat_id is not None:
+                self._leaving.pop(command.connection.seat_id, None)
                 self._names[command.connection.seat_id] = (
                     command.connection.display_name
                 )
@@ -1215,11 +1223,11 @@ class RoomRuntime:
         self._connections.pop(connection.id, None)
         seat_id = connection.seat_id
         if seat_id is not None:
-            for piece_id, holder in list(self._taken.items()):
-                if holder == seat_id:
-                    del self._taken[piece_id]
             self._cursors.pop(seat_id, None)
-            self._release_seat_holds(seat_id)
+            if not any(c.seat_id == seat_id for c in self._connections.values()):
+                # Holds are let go after a grace period, in _tick, unless the
+                # same seat comes back first.
+                self._leaving[seat_id] = time.monotonic() + LEAVE_GRACE_SECONDS
         self._presence_due = True
         self._notice(f"{connection.display_name} has left the table.")
 
@@ -1875,8 +1883,19 @@ class RoomRuntime:
             self._settle_piece(piece_id)
             self._apply(seat_id, Release(piece_id=piece_id), log=True)
 
+    def _expire_leavers(self, now: float) -> None:
+        """Let go of what a seat held once its grace period has run out."""
+        for seat_id, deadline in list(self._leaving.items()):
+            if now < deadline:
+                continue
+            del self._leaving[seat_id]
+            for piece_id, holder in list(self._taken.items()):
+                if holder == seat_id:
+                    del self._taken[piece_id]
+            self._release_seat_holds(seat_id)
+
     def _release_seat_holds(self, seat_id: str) -> None:
-        """A disconnect drops every soft lock that seat was holding, at once."""
+        """Drop every soft lock a seat was holding, once its grace has run out."""
         held = [
             piece_id
             for piece_id, (holder, _touched) in self._holds.items()
