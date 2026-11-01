@@ -126,9 +126,9 @@
       {% if reflections %}
       <section class="site__section">
         {{ ui.section_rule("Shared with the table") }}
-        <p class="prose field__hint">Answers people chose to share, without their names.</p>
+        <p class="prose field__hint">Answers people chose to share with the table.</p>
         <ul class="prose">
-          {% for r in reflections %}<li><em>{{ r.prompt }}</em> {{ r.body }}</li>{% endfor %}
+          {% for r in reflections %}<li><em>{{ r.prompt }}</em> {{ r.name }}: {{ r.body }}</li>{% endfor %}
         </ul>
       </section>
       {% endif %}

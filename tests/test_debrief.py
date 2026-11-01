@@ -299,7 +299,7 @@ def test_a_reflection_is_private_unless_shared(
     page = played.get("Di", f"/t/{played.code}/debrief/{aid}").text
     facilitator = played.get("Ada", f"/t/{played.code}/debrief/{aid}").text
 
-    assert "for everyone" in page
+    assert "Cy: for everyone" in page
     assert "kept to myself" not in page
     assert "kept to myself" not in facilitator
     assert "kept to myself" in played.get("Bea", f"/t/{played.code}/reflect").text
@@ -599,3 +599,32 @@ def test_nothing_in_a_democracy_export_names_a_person_when_anonymised(
         assert f'"{name}"' not in body
     without = played.get("Ada", f"/t/{played.code}/record.json").text
     assert "Build the dam" not in without  # a proposal's text is written text
+
+
+def test_hudrosia_opens_its_council_to_an_assembly_and_the_timeline_shows_it(
+    factory: sessionmaker[Session],
+) -> None:
+    played, aid, _ = _democracy(factory, "hudrosia", 12)
+    played.press("democracy-simulation", "open_assembly", aid)
+    played.clients["Ada"].post(
+        f"/t/{played.code}/debrief/{aid}/open",
+        data={"opened": "true", "is_class": "false"},
+    )
+
+    page = played.get("Bea", f"/t/{played.code}/debrief/{aid}").text
+
+    assert "Council opened to a public assembly" in page
+    again = build_macro(
+        GAMES["democracy-simulation"], played.table(), "seat-1", "open_assembly", aid
+    )
+    assert isinstance(again, Reject)
+
+
+def test_potamosia_has_no_assembly_to_open(factory: sessionmaker[Session]) -> None:
+    played, aid, _ = _democracy(factory, "potamosia", 9)
+
+    built = build_macro(
+        GAMES["democracy-simulation"], played.table(), "seat-1", "open_assembly", aid
+    )
+
+    assert isinstance(built, Reject)

@@ -3,6 +3,7 @@ setup,Set up,"Clear the city's table and lay it out again.",This clears the city
 deal,Deal role cards,"One role card to each citizen, and the information sheets to the elite. Allowed until the meeting starts.",,{name} dealt the role cards.
 choose_moderators,Choose the co-Chairs,"Two citizens picked at random. Potamosia only.",,{name} chose the co-Chairs.
 start_meeting,Start the meeting,"Keeps who holds which card and its interest, and closes the dealing.",,{name} started the meeting.
+open_assembly,Open the public assembly,"A king opens the council's meeting to the townspeople to question and heckle. Hudrosia only.",,{name} opened the public assembly.
 put_to_vote,Call the vote,"Calls a vote on the written proposal you moved onto the floor and hands out the ballots. A co-Chair or king, or the facilitator.",,{name} called a vote.
 close_vote,Count the vote,"Anyone without a hand up counts against. A co-Chair or king, or the facilitator.",,{name} counted the vote.
 new_proposal,Add a proposal,"A blank proposal note. Double-click it to write the proposal.",,{name} added a proposal.

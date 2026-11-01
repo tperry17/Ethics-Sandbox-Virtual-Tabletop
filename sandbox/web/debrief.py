@@ -265,7 +265,7 @@ def _page(
 
 
 def _shared_reflections(who: Viewer, key: str) -> list[dict[str, str]]:
-    """What people chose to share with the table, without their names."""
+    """What people chose to share with the table, with their names."""
     session = Session.object_session(who.room)
     if session is None:
         return []
@@ -278,12 +278,17 @@ def _shared_reflections(who: Viewer, key: str) -> list[dict[str, str]]:
         .where(Reflection.room_id == who.room.id, Reflection.visibility == "shared")
         .order_by(Reflection.created_at)
     ).scalars()
+    writers = {p.id: p.display_name for p in who.log.people}
     found: list[dict[str, str]] = []
     for row in rows:
         scope, _, prompt_id = row.prompt_key.partition("/")
         if scope == key:
             found.append(
-                {"prompt": game_prompts.get(prompt_id, prompt_id), "body": row.body}
+                {
+                    "prompt": game_prompts.get(prompt_id, prompt_id),
+                    "body": row.body,
+                    "name": writers.get(row.participant_id, ""),
+                }
             )
     return found
 

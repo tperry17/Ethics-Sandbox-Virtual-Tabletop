@@ -300,6 +300,29 @@ def start_meeting(table: Table, context: GameContext) -> list[Operation]:
     ]
 
 
+@macro("open_assembly")
+def open_assembly(table: Table, context: GameContext) -> list[Operation]:
+    """Hudrosia: a king (or the facilitator) opens the council to the townspeople.
+
+    The log keeps when, so the debrief can show the change from council to
+    assembly. Nothing else on the table changes.
+    """
+    if _city(context) != HUDROSIA:
+        raise MacroRefused("Only Hudrosia has a council that opens to an assembly.")
+    _require_caller(table, context)
+    if not _meeting_started(table, context):
+        raise MacroRefused("Start the meeting first.")
+    if _of(table, context, "assembly-open"):
+        raise MacroRefused("The public assembly is open already.")
+    return [
+        _spawn("assembly-open", PieceKind.MARKER, context.zone("floor")),
+        Record(
+            label="assembly_opened",
+            data={"city": _city(context), "phase": context.options.get("phase", "")},
+        ),
+    ]
+
+
 # -- proposals and votes -------------------------------------------------------------
 
 PROPOSAL_ZONES = ("proposals", "floor", "passed", "not-passed")

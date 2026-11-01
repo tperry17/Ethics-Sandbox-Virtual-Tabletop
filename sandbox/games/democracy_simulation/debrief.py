@@ -161,6 +161,17 @@ def democracy_debrief(context: Context) -> list[Section]:
         )
     for entry in _records(context, "meeting_started"):
         timeline.append((entry.seq, (clock(entry.at, started), "Meeting started", "")))
+    for entry in _records(context, "assembly_opened"):
+        timeline.append(
+            (
+                entry.seq,
+                (
+                    clock(entry.at, started),
+                    "Council opened to a public assembly",
+                    "",
+                ),
+            )
+        )
     proposals = _proposals(context)
     for proposal in proposals:
         who = _person(context, proposal["by"])
@@ -204,10 +215,7 @@ def democracy_debrief(context: Context) -> list[Section]:
     sections.append(
         Section(
             title="Timeline",
-            note=(
-                "Read from the log. The change from council to assembly in Hudrosia "
-                "is not logged, so it is not shown."
-            ),
+            note="Read from the log.",
             blocks=(
                 table(["When", "What", "Detail"], [row for _, row in timeline])
                 if timeline

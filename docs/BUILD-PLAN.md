@@ -1326,10 +1326,10 @@ Built (PR #23):
   stretches with nothing logged.
 - The export, retention, the facilitator's delete, and the Help page.
 
-Not done, and why: the Democracy Simulation's change from council to assembly
-is not in the log (no button for it), so the timeline cannot show it. The
-plan's `/t/{code}/debrief` and `/c/{code}/debrief` became the activity and
-class routes above.
+Added on the author's answers: an "Open the public assembly" button for
+Hudrosia (a king or the facilitator; logged, shown in the timeline), and
+shared reflections show their writer's name. The plan's `/t/{code}/debrief`
+and `/c/{code}/debrief` became the activity and class routes above.
 
 The point of this step is to give the debrief, which both source documents
 say is where the learning happens, something accurate to work from. The

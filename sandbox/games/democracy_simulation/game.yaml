@@ -51,6 +51,7 @@ components:
     - {id: result-tie, kind: marker, title: "A tie, so nothing passes"}
     - {id: lot, kind: marker, title: Lot}
     - {id: meeting-started, kind: marker, title: The meeting has started}
+    - {id: assembly-open, kind: marker, title: The public assembly is open}
 
 seats:
   labels: []
@@ -91,6 +92,9 @@ macros:
     python: choose_moderators
   - id: start_meeting
     python: start_meeting
+  - id: open_assembly
+    who: anyone
+    python: open_assembly
   - id: put_to_vote
     who: anyone
     python: put_to_vote
