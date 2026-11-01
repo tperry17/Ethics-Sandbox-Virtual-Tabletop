@@ -109,3 +109,33 @@ h4 { font-size: var(--text-md); }
     scroll-behavior: smooth;
   }
 }
+
+/* Nothing slides, fades or glides for people who asked for less motion. The
+   table client reads the same preference for piece interpolation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Touch: every control is at least 44 px each way, and nothing needs hover. */
+@media (pointer: coarse) {
+  html .button,
+  html .button--sm,
+  html .field__control,
+  html select,
+  html input[type="text"],
+  html input[type="number"],
+  html summary,
+  html .toast__dismiss {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .field__check input { inline-size: 1.5rem; block-size: 1.5rem; }
+}

@@ -104,8 +104,9 @@ def _public_base(request: Request) -> str:
 
 _ERROR_WORDS: dict[int, tuple[str, str]] = {
     403: (
-        "You can't do that here",
-        "Only the facilitator can open this. Ask them, or go back to the room.",
+        "You can't open that yet",
+        "The message above says why. If you are not in the room, join it with "
+        "its code. If it is for the facilitator, ask them.",
     ),
     404: (
         "We couldn't find that",
@@ -376,9 +377,15 @@ def join_room_route(
             as_facilitator=as_facilitator,
         )
     except RoomNotFoundError:
-        return _error(f"There is no room with the code {room_code.strip().upper()!r}.")
+        return _error(
+            f"There is no room with the code {room_code.strip().upper()!r}. "
+            "Check the code for typing mistakes, or ask for it again."
+        )
     except RoomClosedError:
-        return _error("That room is closed.")
+        return _error(
+            "That room is closed, so no one can join it. "
+            "Ask the facilitator for a new room code."
+        )
     except FacilitatorTakenError:
         return _error("That room already has a facilitator. Join as a player.")
     if participant.seat_id is not None:

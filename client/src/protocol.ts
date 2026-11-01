@@ -360,7 +360,7 @@ export type ClientMessage =
   | MenuRequestMessage;
 
 /** Connected, catching up, or not talking to anything. */
-export type LinkStatus = "connected" | "reconnecting" | "offline";
+export type LinkStatus = "connected" | "reconnecting" | "offline" | "refused";
 
 /**
  * Anything the renderer can be driven by.

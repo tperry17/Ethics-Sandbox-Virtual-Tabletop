@@ -133,12 +133,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-.piece--cube { width: 3.5rem; border-radius: var(--radius-sm); background: var(--seat-tint, var(--seat-1)); }
+.piece--cube { width: 3.5rem; border-radius: var(--radius-sm); background: var(--seat-tint, var(--seat-1)); color: var(--seat-label, var(--seat-ink)); }
 
 .piece--meeple {
   width: 4rem;
   height: 5.5rem;
   background: var(--seat-tint, var(--seat-2));
+  color: var(--seat-label, var(--seat-ink));
   clip-path: polygon(34% 28%, 25% 18%, 28% 7%, 39% 0, 61% 0, 72% 7%, 75% 18%, 66% 28%, 96% 45%, 85% 62%, 69% 53%, 75% 100%, 25% 100%, 31% 53%, 15% 62%, 4% 45%);
   filter: drop-shadow(0 0.3rem 0.25rem var(--shadow-color-strong));
 }
@@ -818,4 +819,19 @@
 .tabletop__prompt-text {
   margin: 0;
   line-height: var(--leading-reading);
+}
+
+/* Phones: your hand and the actions, with the public table to read. Pieces on
+   the shared table are not draggable at this width; the table can still be
+   panned and zoomed, and the hand tray (a separate layer) works as usual. */
+@media (max-width: 37.5rem) {
+  .tabletop__pieces-layer .piece { pointer-events: none; }
+  .tabletop__controls { flex-wrap: wrap; justify-content: flex-end; }
+}
+
+/* On a touch screen the on-screen keyboard shrinks the visual viewport, not the
+   layout; keep a typed-in field clear of the bottom edge. */
+@media (pointer: coarse) {
+  .tabletop__controls input,
+  .toolbar input { scroll-margin-block: 40vh; }
 }

@@ -19,6 +19,8 @@ const HEARTBEAT_MS = 20_000;
 const BACKOFF_MS = [500, 1000, 2000, 4000, 8000];
 /** After this many failures in a row, say plainly that the table is offline. */
 const OFFLINE_AFTER = 3;
+/** The server's close code for "you are not in this room" (live.py). */
+const REFUSED_CLOSE_CODE = 4403;
 
 export class SocketLink implements ServerLink {
   private socket: WebSocket | null = null;
@@ -92,9 +94,16 @@ export class SocketLink implements ServerLink {
       this.messageHandler?.(message);
     });
 
-    socket.addEventListener("close", () => {
+    socket.addEventListener("close", (event) => {
       this.clearTimers();
       this.socket = null;
+      if (event.code === REFUSED_CLOSE_CODE) {
+        // The server says this person is not in this room, or it is gone.
+        // Retrying cannot change that.
+        this.stopped = true;
+        this.statusHandler?.("refused");
+        return;
+      }
       this.scheduleRetry();
     });
 

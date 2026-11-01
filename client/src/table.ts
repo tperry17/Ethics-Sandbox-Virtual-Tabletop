@@ -189,6 +189,9 @@ export class TableRenderer {
       },
       bounds: () => this.tableBounds(),
       size: () => this.surfaceSize(),
+      ...(this.options.roomCode === ""
+        ? {}
+        : { storageKey: `sandbox:view:${this.options.roomCode}` }),
     });
     this.viewport = this.controller.current;
 
@@ -797,8 +800,26 @@ export class TableRenderer {
         ? "Connected"
         : status === "reconnecting"
           ? "Reconnecting…"
-          : "Offline";
+          : status === "refused"
+            ? "Not in this room"
+            : "Offline";
+    if (status === "offline" && !this.offlineTold) {
+      this.offlineTold = true;
+      this.notice(
+        "Can't reach the table. Check your Wi-Fi. Your place is kept, and this page keeps trying.",
+        "warning",
+      );
+    }
+    if (status === "connected") this.offlineTold = false;
+    if (status === "refused") {
+      this.notice(
+        "This table would not open for you: you have not joined this room, or it is closed. Go to the join page and enter the room code again.",
+        "warning",
+      );
+    }
   }
+
+  private offlineTold = false;
 
   notice(text: string, level: "info" | "warning"): void {
     // One refused gesture can draw the same refusal for several pieces at
@@ -1107,7 +1128,7 @@ export class TableRenderer {
       this.ink.resize(width, height, window.devicePixelRatio || 1);
       this.canvasDirty = true;
       this.trayDirty = true;
-      if (!this.controller.adjustedByPerson) this.controller.fit();
+      this.controller.resized();
       this.schedule();
     };
     apply();
