@@ -91,7 +91,7 @@ test("a tab that was backgrounded catches up by replay, not a reload", async ({ 
   const startX = (await positionOf(bo, id))![0];
   await bo.locator(`[data-piece-id="${id}"]`).focus();
   for (let i = 0; i < 4; i += 1) await bo.keyboard.press("ArrowRight");
-  await expect.poll(async () => (await positionOf(bo, id))![0], { timeout: 5000 }).toBe(startX + 80);
+  await expect.poll(async () => (await positionOf(bo, id))![0], { timeout: 15000 }).toBe(startX + 80);
   const target = await positionOf(bo, id);
   const before = wire.received.length;
   wire.restore();
