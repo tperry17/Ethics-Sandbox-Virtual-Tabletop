@@ -78,6 +78,16 @@ export class RecordedLink implements ServerLink {
     this.statusHandler?.("offline");
   }
 
+  /**
+   * Stop replaying where it is, still connected. For a test that plays the
+   * server's part itself, so a recorded frame (a presence message replaces
+   * the whole seat list) cannot land in the middle of what it injects.
+   */
+  hold(): void {
+    for (const timer of this.timers) window.clearTimeout(timer);
+    this.timers = [];
+  }
+
   send(message: ClientMessage): void {
     this.sent.push(message);
   }

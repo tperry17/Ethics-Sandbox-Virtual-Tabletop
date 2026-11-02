@@ -458,6 +458,10 @@ test.describe("the hand and revealing", () => {
     page,
   }) => {
     await page.goto(PREVIEW);
+    // The recording's own presence frames carry two seats and would replace the
+    // three injected here; stop the replay so the test is the only server.
+    await expect(piece(page, "hand-2-b")).toBeAttached();
+    await page.evaluate(() => window.ethicsSandboxLink!.hold());
     await inject(page, {
       type: "presence",
       cursors: [],
