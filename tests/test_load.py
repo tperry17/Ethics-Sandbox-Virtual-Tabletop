@@ -13,6 +13,7 @@ import asyncio
 import gc
 import os
 import resource
+import sys
 import tracemalloc
 
 from _live_support import Client, LiveFixture, live_room
@@ -21,6 +22,12 @@ from _model_support import SEAT_A, SEAT_B
 SECONDS = float(os.environ.get("SANDBOX_LOAD_SECONDS", "8"))
 PIECES = 300
 OBSERVERS = 6
+
+
+def _peak_rss_bytes() -> int:
+    """Peak resident memory in bytes: macOS reports bytes, Linux kilobytes."""
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return peak if sys.platform == "darwin" else peak * 1024
 
 
 async def _drag(room: LiveFixture, client: Client, first: int, stop: float) -> None:
@@ -67,7 +74,7 @@ async def test_eight_people_and_three_hundred_pieces_stay_flat_and_unbacklogged(
             client.socket.clear()
         gc.collect()
         baseline, _ = tracemalloc.get_traced_memory()
-        rss_before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        rss_before = _peak_rss_bytes()
 
         deepest = 0
         # Which connections were sent something during the run.
@@ -102,7 +109,7 @@ async def test_eight_people_and_three_hundred_pieces_stay_flat_and_unbacklogged(
         gc.collect()
         current, _ = tracemalloc.get_traced_memory()
         tracemalloc.stop()
-        rss_after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        rss_after = _peak_rss_bytes()
 
         # No backlog: queues drained and never near their limit.
         assert all(c.connection.queue.qsize() == 0 for c in room.clients)
@@ -110,6 +117,9 @@ async def test_eight_people_and_three_hundred_pieces_stay_flat_and_unbacklogged(
         # Flat memory: what the room holds does not grow with time.
         grown = current - baseline
         assert grown < 8 * 1024 * 1024, f"traced memory grew by {grown} bytes"
-        assert rss_after - rss_before < 150 * 1024, "peak resident memory kept rising"
+        rss_grown = rss_after - rss_before
+        assert rss_grown < 150 * 1024 * 1024, (
+            f"peak resident memory grew by {rss_grown} bytes"
+        )
         # Everyone was still being served at the end.
         assert served == set(range(len(room.clients)))
