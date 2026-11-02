@@ -27,7 +27,7 @@ from sandbox.model import (
     Zone,
     ZoneKind,
 )
-from sandbox.model.entities import Geometry
+from sandbox.model.entities import APPLIED_OP_IDS_KEPT, Geometry
 
 Snapshot = dict[str, Any]
 
@@ -88,7 +88,7 @@ def to_snapshot(table: Table) -> Snapshot:
         "class_serial": table.class_serial,
         "rng": _dump_rng(table.rng),
         "version": table.version,
-        "applied_op_ids": sorted(table.applied_op_ids),
+        "applied_op_ids": list(table.applied_op_ids),
     }
 
 
@@ -161,7 +161,7 @@ def from_snapshot(data: Snapshot) -> Table:
         class_serial=data.get("class_serial", 0),
         rng=_load_rng(data["rng"]),
         version=data["version"],
-        applied_op_ids=set(data["applied_op_ids"]),
+        applied_op_ids=dict.fromkeys(data["applied_op_ids"][-APPLIED_OP_IDS_KEPT:]),
     )
 
 

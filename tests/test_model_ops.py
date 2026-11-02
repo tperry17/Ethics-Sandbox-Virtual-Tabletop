@@ -11,7 +11,7 @@ from _model_support import (
     build_sample_table,
 )
 
-from sandbox.model.entities import Piece, Rect, Table
+from sandbox.model.entities import APPLIED_OP_IDS_KEPT, Piece, Rect, Table
 from sandbox.model.ops import (
     AddSeat,
     AddZone,
@@ -703,6 +703,21 @@ def test_run_op_is_idempotent_by_op_id() -> None:
     assert isinstance(second, Ok)
     assert second.patches == []
     assert table.version == version_after_first
+
+
+def test_a_table_remembers_only_the_most_recent_op_ids() -> None:
+    table = build_sample_table(deck_size=1)
+    for step in range(APPLIED_OP_IDS_KEPT + 50):
+        run_op(table, SEAT_A, Move(piece_id="card-0", x=1.0, y=1.0, op_id=f"m{step}"))
+
+    assert len(table.applied_op_ids) == APPLIED_OP_IDS_KEPT
+    assert "m0" not in table.applied_op_ids
+    # A retry of a recent intent is still applied only once.
+    latest = f"m{APPLIED_OP_IDS_KEPT + 49}"
+    version = table.version
+    outcome = run_op(table, SEAT_A, Move(piece_id="card-0", x=9.0, y=9.0, op_id=latest))
+    assert isinstance(outcome, Ok) and outcome.patches == []
+    assert table.version == version
 
 
 def test_a_retried_move_does_not_move_the_piece_again() -> None:

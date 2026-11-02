@@ -50,10 +50,8 @@ async def test_eight_people_and_three_hundred_pieces_stay_flat_and_unbacklogged(
             await room.connect(SEAT_A, display_name="Ana"),
             await room.connect(SEAT_B, display_name="Bo"),
         ]
-        observers = [
+        for n in range(OBSERVERS):
             await room.connect(None, display_name=f"Watcher {n}")
-            for n in range(OBSERVERS)
-        ]
         assert len(room.clients) == 8
         assert len(room.runtime.table.pieces) == PIECES
 
@@ -72,6 +70,8 @@ async def test_eight_people_and_three_hundred_pieces_stay_flat_and_unbacklogged(
         rss_before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
         deepest = 0
+        # Which connections were sent something during the run.
+        served: set[int] = set()
         stop = loop.time() + SECONDS
 
         async def watch_queues() -> None:
@@ -80,7 +80,9 @@ async def test_eight_people_and_three_hundred_pieces_stay_flat_and_unbacklogged(
                 deepest = max(
                     deepest, *(c.connection.queue.qsize() for c in room.clients)
                 )
-                for client in room.clients:
+                for number, client in enumerate(room.clients):
+                    if client.socket.sent:
+                        served.add(number)
                     # Stop the test log growing without bound: what matters is
                     # the server's memory, not the fake sockets'.
                     if len(client.socket.sent) > 500:
@@ -93,6 +95,10 @@ async def test_eight_people_and_three_hundred_pieces_stay_flat_and_unbacklogged(
             watch_queues(),
         )
         await room.settle(0.5)
+        # What the fake sockets kept is the test's, not the server's: drop it
+        # before measuring, as it was dropped before the baseline.
+        for client in room.clients:
+            client.socket.clear()
         gc.collect()
         current, _ = tracemalloc.get_traced_memory()
         tracemalloc.stop()
@@ -106,4 +112,4 @@ async def test_eight_people_and_three_hundred_pieces_stay_flat_and_unbacklogged(
         assert grown < 8 * 1024 * 1024, f"traced memory grew by {grown} bytes"
         assert rss_after - rss_before < 150 * 1024, "peak resident memory kept rising"
         # Everyone was still being served at the end.
-        assert all(c.socket.sent for c in [*actors, *observers])
+        assert served == set(range(len(room.clients)))

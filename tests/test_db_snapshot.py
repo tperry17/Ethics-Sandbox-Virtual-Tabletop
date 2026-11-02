@@ -6,6 +6,7 @@ from _model_support import DECK, PUBLIC_TABLE, SEAT_A, build_sample_table
 
 from sandbox.db.snapshot import from_snapshot, to_snapshot
 from sandbox.model import Grab, Move, Ok, Shuffle, Stroke, Table, run_op
+from sandbox.model.entities import APPLIED_OP_IDS_KEPT
 
 
 def test_empty_table_round_trips() -> None:
@@ -82,3 +83,17 @@ def test_applied_op_ids_round_trip() -> None:
 
     assert restored.applied_op_ids == table.applied_op_ids
     assert len(restored.applied_op_ids) == 1
+
+
+def test_a_snapshot_keeps_the_most_recent_op_ids_in_order() -> None:
+    table = build_sample_table()
+    for step in range(APPLIED_OP_IDS_KEPT + 5):
+        table.remember_op_id(f"op-{step}")
+    data = to_snapshot(table)
+    # A snapshot written before the limit existed may hold more; loading trims it.
+    data["applied_op_ids"] = ["older-1", "older-2", *data["applied_op_ids"]]
+
+    restored = from_snapshot(data)
+
+    assert list(restored.applied_op_ids) == list(table.applied_op_ids)
+    assert next(iter(restored.applied_op_ids)) == "op-5"
