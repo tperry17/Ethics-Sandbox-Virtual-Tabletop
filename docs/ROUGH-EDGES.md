@@ -5,7 +5,8 @@ secret; most of it is a choice made to ship.
 
 ## Hosting
 
-- Hosting is a Mac on the local network, one process, one worker. There is
+- Hosting is one machine running one process and one worker, reached over
+  a Cloudflare Tunnel (or, in the Mac case, the local network). There is
   no staging or production, no TLS, and no way for people outside the
   network to join. Fly.io or Render is set aside until the author asks.
 - Live tables are held in memory by the one process. If it stops, the table
@@ -18,9 +19,10 @@ secret; most of it is a choice made to ship.
 
 ## Site
 
-- No page has a social-preview image. The Center's seal would be the
-  obvious picture, and any new use of it needs the Center's approval. Pages
-  do carry titles, descriptions and Open Graph text.
+- Social-preview images (`static/og/`) are the seal, the title and one
+  line, made by `node scripts/make-og-images.mjs`; rerun it when an
+  exercise's title or short description changes. Only the home and
+  exercise pages have one; a room link previews as plain text.
 - The exercise page's picture of a table is an HTML mock-up from CSV, not a
   capture of a real table.
 - `/exercises` and `/about` do not exist.

@@ -37,6 +37,25 @@ will drop every table's connections. Hosting is the Mac on the local
 network for now; Fly.io or Render, with staging and production, is set
 aside until asked for.
 
+### Serving it publicly through a Cloudflare Tunnel
+
+The plan is to run the app on a machine other than the author's MacBook and
+reach it through a Cloudflare Tunnel, which gives participants an HTTPS
+address from anywhere. `scripts/deploy.sh` runs on Linux too (its Mac-only
+steps, the network address lookup and `caffeinate`, are skipped when those
+tools are absent). Set `SANDBOX_PUBLIC_URL` to the tunnel's address so
+invite links use it:
+
+```
+SANDBOX_PUBLIC_URL=https://sandbox.example.org scripts/deploy.sh
+cloudflared tunnel --url http://localhost:8000   # or a named tunnel to the same port
+```
+
+Cloudflare Tunnel carries websockets without extra settings. The machine
+must stay on, awake and online for the whole session, keep the same
+`SANDBOX_SECRET_KEY` and database file between runs (`deploy.sh` does), and
+run one copy of the server only.
+
 ### Showing an exercise without a group
 
 `uv run sandbox seed-demo value-cards-trading` (or

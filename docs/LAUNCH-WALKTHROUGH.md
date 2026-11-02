@@ -44,5 +44,6 @@ Ordered by how likely each is to spoil a real session.
 9. **Nothing in the sandbox says what the table's pieces do** until the
    person tries them. Proposed fix: a one-line "Drag a card; double-tap to
    turn it over" hint for the first visit, dismissed once used.
-10. **No social-preview image** when a link is pasted into a chat. Waiting
-    on the Center's approval for the seal.
+10. **A room link previews as plain text** in a chat, since only the home
+    and exercise pages have a social-preview image. Proposed fix: give the
+    join page the default image.

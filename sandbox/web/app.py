@@ -209,6 +209,7 @@ async def home(request: Request) -> HTMLResponse:
             "site_copy": SITE_COPY,
             "exercises": EXERCISES,
             "canonical_url": _public_base(request) + "/",
+            "og_image": _public_base(request) + "/static/og/default.png",
         },
     )
 
@@ -234,6 +235,7 @@ async def exercise_detail(request: Request, slug: str) -> HTMLResponse:
         context={
             "exercise": exercise,
             "canonical_url": f"{_public_base(request)}/exercises/{slug}",
+            "og_image": f"{_public_base(request)}/static/og/{slug}.png",
             "preview": None if game is None else picture_of_table(game),
         },
     )
