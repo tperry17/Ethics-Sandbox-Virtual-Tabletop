@@ -44,7 +44,7 @@ shows "Claimed" in this table on `main`.
 | 12 | Running a session (rewritten, lean) | Done | | PR #20 |
 | 13 | Reflection, debrief and the playtest record | Done | | PR #23 |
 | 14 | Access, tablets and resilience | Done | | PR #24 |
-| 15 | Tests | Not started | `claude/step-15-tests` | |
+| 15 | Tests | Claimed | `claude/step-15-tests` | |
 | 17 | Open rooms and activities | Done | | PR #18 |
 | 16 | Launch pass | Not started; hosting is the Mac on the local network (below) | `claude/step-16-launch-pass` | |
 
