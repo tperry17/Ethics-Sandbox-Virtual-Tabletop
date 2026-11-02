@@ -1,0 +1,59 @@
+{
+  "seats": [
+    "seat-1",
+    "seat-2",
+    "seat-3"
+  ],
+  "zones": {
+    "activity-1:deck": {
+      "kind": "deck",
+      "owner_seat": null,
+      "pieces": {
+        "card": 36
+      },
+      "visibility": "hidden"
+    },
+    "activity-1:hand-seat-1": {
+      "kind": "hand",
+      "owner_seat": "seat-1",
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:hand-seat-2": {
+      "kind": "hand",
+      "owner_seat": "seat-2",
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:hand-seat-3": {
+      "kind": "hand",
+      "owner_seat": "seat-3",
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:table": {
+      "kind": "table",
+      "owner_seat": null,
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:top-three-seat-1": {
+      "kind": "slot",
+      "owner_seat": "seat-1",
+      "pieces": {},
+      "visibility": "private_to_owner"
+    },
+    "activity-1:top-three-seat-2": {
+      "kind": "slot",
+      "owner_seat": "seat-2",
+      "pieces": {},
+      "visibility": "private_to_owner"
+    },
+    "activity-1:top-three-seat-3": {
+      "kind": "slot",
+      "owner_seat": "seat-3",
+      "pieces": {},
+      "visibility": "private_to_owner"
+    }
+  }
+}
