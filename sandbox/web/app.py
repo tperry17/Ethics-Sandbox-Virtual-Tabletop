@@ -208,6 +208,7 @@ async def home(request: Request) -> HTMLResponse:
             "project_name": "Ethics Sandbox",
             "site_copy": SITE_COPY,
             "exercises": EXERCISES,
+            "canonical_url": _public_base(request) + "/",
         },
     )
 
@@ -232,6 +233,7 @@ async def exercise_detail(request: Request, slug: str) -> HTMLResponse:
         name="exercise.html",
         context={
             "exercise": exercise,
+            "canonical_url": f"{_public_base(request)}/exercises/{slug}",
             "preview": None if game is None else picture_of_table(game),
         },
     )

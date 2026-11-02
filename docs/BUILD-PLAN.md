@@ -46,7 +46,7 @@ shows "Claimed" in this table on `main`.
 | 14 | Access, tablets and resilience | Done | | PR #24 |
 | 15 | Tests | Done | | PR #25 |
 | 17 | Open rooms and activities | Done | | PR #18 |
-| 16 | Launch pass | Claimed | `claude/step-16-launch-pass` | |
+| 16 | Launch pass | Done | | PR #26 |
 
 ### Claiming a step
 
@@ -1590,7 +1590,7 @@ Wire it all into CI. Commit.
 
 ## 16. Launch pass
 
-**Status: Not started.** Hosting is decided: a MacBook on the local
+**Status: Done (PR #26).** Built: `.env.example` and the README's variable table and hosting constraint, `uv run sandbox seed-demo`, titles and Open Graph text (no image; see the PR's questions), `docs/FACILITATING.md`, `docs/ROUGH-EDGES.md`, and `docs/LAUNCH-WALKTHROUGH.md` (a desk walkthrough, not a tablet session). Hosting is decided: a MacBook on the local
 network, served with `scripts/deploy.sh`. Read the prompt's first item as
 "make `scripts/deploy.sh` the documented way to serve a session, with every
 environment variable in .env.example and the README". Deploying to Fly.io

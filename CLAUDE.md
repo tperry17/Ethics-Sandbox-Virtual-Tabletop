@@ -48,6 +48,7 @@ Do not substitute the stack.
 - `sandbox/db/` — SQLAlchemy models and migrations
 - `sandbox/content_loading.py` — reads the CSV files under `content/` into plain rows
 - `sandbox/cli.py` — the `sandbox` command (`uv run sandbox validate-games`)
+- `sandbox/seed.py` — `uv run sandbox seed-demo <exercise>`: a demo room with fake participants
 - `content/` — editorial text as CSV, edited as a spreadsheet; see `content/README.md`
 - `client/` — TypeScript table client built by Vite
 - `static/` — compiled client output, CSS, and fonts
