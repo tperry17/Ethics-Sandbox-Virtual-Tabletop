@@ -46,7 +46,7 @@ shows "Claimed" in this table on `main`.
 | 14 | Access, tablets and resilience | Done | | PR #24 |
 | 15 | Tests | Done | | PR #25 |
 | 17 | Open rooms and activities | Done | | PR #18 |
-| 16 | Launch pass | Not started; hosting is the Mac on the local network (below) | `claude/step-16-launch-pass` | |
+| 16 | Launch pass | Claimed | `claude/step-16-launch-pass` | |
 
 ### Claiming a step
 
