@@ -44,7 +44,7 @@ shows "Claimed" in this table on `main`.
 | 12 | Running a session (rewritten, lean) | Done | | PR #20 |
 | 13 | Reflection, debrief and the playtest record | Done | | PR #23 |
 | 14 | Access, tablets and resilience | Done | | PR #24 |
-| 15 | Tests | Claimed | `claude/step-15-tests` | |
+| 15 | Tests | Done | | PR #25 |
 | 17 | Open rooms and activities | Done | | PR #18 |
 | 16 | Launch pass | Not started; hosting is the Mac on the local network (below) | `claude/step-16-launch-pass` | |
 
@@ -109,8 +109,8 @@ Checked against the code on `main`; none of these has been fixed yet.
 - **Prompt 2.** `/styleguide` still describes the design as a "scholarly
   edition", which CLAUDE.md now rules out. Being removed in a separate PR.
 - **CI.** `.github/workflows/ci.yml` runs Ruff (lint and format), mypy,
-  pytest and the Playwright suite on every pull request. Prompt 15 still
-  adds the load check and the recorded-session security test.
+  pytest and the Playwright suite on every pull request, and a ten-minute
+  load check (Prompt 15).
 
 ## Changes since the plan was written
 
@@ -1562,7 +1562,7 @@ Update this plan's status table. Commit.
 
 ## 15. Tests
 
-**Status: Not started.**
+**Status: Done (PR #25).**
 
 ```text
 Read CLAUDE.md. Bring the test suite up to the standard the project needs.

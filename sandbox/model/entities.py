@@ -43,6 +43,15 @@ Geometry = Rect | Polygon
 # everyone's card, which no single player could do alone.
 SYSTEM_SEAT = "room"
 
+APPLIED_OP_IDS_KEPT = 5000
+"""How many of the most recent operation ids a table remembers.
+
+An id is remembered only so that a retried message is not applied twice,
+and a client gives up on an unanswered intent after eight seconds. Five
+thousand is minutes of the busiest table; keeping every id ever applied
+grew without limit over a long session, and into every snapshot.
+"""
+
 
 @dataclass
 class Piece:
@@ -230,7 +239,14 @@ class Table:
     class_serial: int = 0
     rng: TableRng = field(default_factory=lambda: TableRng(seed=0))
     version: int = 0
-    applied_op_ids: set[str] = field(default_factory=set)
+    applied_op_ids: dict[str, None] = field(default_factory=dict)
+    """The most recent operation ids applied, oldest first (a dict keeps order)."""
+
+    def remember_op_id(self, op_id: str) -> None:
+        """Record ``op_id`` as applied, forgetting the oldest past the limit."""
+        self.applied_op_ids[op_id] = None
+        while len(self.applied_op_ids) > APPLIED_OP_IDS_KEPT:
+            del self.applied_op_ids[next(iter(self.applied_op_ids))]
 
     def pieces_in_zone(self, zone_id: str) -> list[Piece]:
         """Pieces currently in a zone, in ascending z-order (bottom to top)."""

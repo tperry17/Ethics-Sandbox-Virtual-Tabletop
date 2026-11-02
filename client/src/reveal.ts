@@ -43,10 +43,20 @@ export class RevealLayer {
     const shown = [...model.pieces.values()]
       .filter((piece) => piece.revealed_by !== null && piece.revealed_to.length > 0)
       .sort((a, b) => a.id.localeCompare(b.id));
+    // The names are part of it: a seat that arrives, leaves or is renamed
+    // after a reveal began must not leave a stale name on the notice.
     const signature = shown
-      .map((piece) =>
-        [piece.id, piece.revealed_by, piece.revealed_to.join(","), piece.component_id].join(":"),
-      )
+      .map((piece) => {
+        const by = piece.revealed_by!;
+        return [
+          piece.id,
+          by,
+          piece.revealed_to.join(","),
+          piece.component_id,
+          by === me ? "" : this.callbacks.nameOf(by),
+          this.audience(model, piece.revealed_to, by, me),
+        ].join(":");
+      })
       .join("|");
     for (const id of [...this.dismissed]) {
       if (!shown.some((piece) => piece.id === id)) this.dismissed.delete(id);

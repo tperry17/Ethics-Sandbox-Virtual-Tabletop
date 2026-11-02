@@ -1,0 +1,309 @@
+{
+  "seats": [
+    "seat-1",
+    "seat-2",
+    "seat-3",
+    "seat-4",
+    "seat-5",
+    "seat-6",
+    "seat-7",
+    "seat-8",
+    "seat-9"
+  ],
+  "zones": {
+    "activity-1:ballot-box-seat-1": {
+      "kind": "tray",
+      "owner_seat": "seat-1",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-box-seat-2": {
+      "kind": "tray",
+      "owner_seat": "seat-2",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-box-seat-3": {
+      "kind": "tray",
+      "owner_seat": "seat-3",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-box-seat-4": {
+      "kind": "tray",
+      "owner_seat": "seat-4",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-box-seat-5": {
+      "kind": "tray",
+      "owner_seat": "seat-5",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-box-seat-6": {
+      "kind": "tray",
+      "owner_seat": "seat-6",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-box-seat-7": {
+      "kind": "tray",
+      "owner_seat": "seat-7",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-box-seat-8": {
+      "kind": "tray",
+      "owner_seat": "seat-8",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-box-seat-9": {
+      "kind": "tray",
+      "owner_seat": "seat-9",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-seat-1": {
+      "kind": "slot",
+      "owner_seat": "seat-1",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-seat-2": {
+      "kind": "slot",
+      "owner_seat": "seat-2",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-seat-3": {
+      "kind": "slot",
+      "owner_seat": "seat-3",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-seat-4": {
+      "kind": "slot",
+      "owner_seat": "seat-4",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-seat-5": {
+      "kind": "slot",
+      "owner_seat": "seat-5",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-seat-6": {
+      "kind": "slot",
+      "owner_seat": "seat-6",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-seat-7": {
+      "kind": "slot",
+      "owner_seat": "seat-7",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-seat-8": {
+      "kind": "slot",
+      "owner_seat": "seat-8",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:ballot-seat-9": {
+      "kind": "slot",
+      "owner_seat": "seat-9",
+      "pieces": {},
+      "visibility": "facilitator_only"
+    },
+    "activity-1:box": {
+      "kind": "deck",
+      "owner_seat": null,
+      "pieces": {
+        "card": 20
+      },
+      "visibility": "hidden"
+    },
+    "activity-1:floor": {
+      "kind": "tray",
+      "owner_seat": null,
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:hand-seat-1": {
+      "kind": "hand",
+      "owner_seat": "seat-1",
+      "pieces": {},
+      "visibility": "private_to_owner"
+    },
+    "activity-1:hand-seat-2": {
+      "kind": "hand",
+      "owner_seat": "seat-2",
+      "pieces": {},
+      "visibility": "private_to_owner"
+    },
+    "activity-1:hand-seat-3": {
+      "kind": "hand",
+      "owner_seat": "seat-3",
+      "pieces": {},
+      "visibility": "private_to_owner"
+    },
+    "activity-1:hand-seat-4": {
+      "kind": "hand",
+      "owner_seat": "seat-4",
+      "pieces": {},
+      "visibility": "private_to_owner"
+    },
+    "activity-1:hand-seat-5": {
+      "kind": "hand",
+      "owner_seat": "seat-5",
+      "pieces": {},
+      "visibility": "private_to_owner"
+    },
+    "activity-1:hand-seat-6": {
+      "kind": "hand",
+      "owner_seat": "seat-6",
+      "pieces": {},
+      "visibility": "private_to_owner"
+    },
+    "activity-1:hand-seat-7": {
+      "kind": "hand",
+      "owner_seat": "seat-7",
+      "pieces": {},
+      "visibility": "private_to_owner"
+    },
+    "activity-1:hand-seat-8": {
+      "kind": "hand",
+      "owner_seat": "seat-8",
+      "pieces": {},
+      "visibility": "private_to_owner"
+    },
+    "activity-1:hand-seat-9": {
+      "kind": "hand",
+      "owner_seat": "seat-9",
+      "pieces": {},
+      "visibility": "private_to_owner"
+    },
+    "activity-1:lots": {
+      "kind": "deck",
+      "owner_seat": null,
+      "pieces": {},
+      "visibility": "hidden"
+    },
+    "activity-1:not-passed": {
+      "kind": "tray",
+      "owner_seat": null,
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:notice": {
+      "kind": "table",
+      "owner_seat": null,
+      "pieces": {
+        "card": 1
+      },
+      "visibility": "public"
+    },
+    "activity-1:passed": {
+      "kind": "tray",
+      "owner_seat": null,
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:proposals": {
+      "kind": "tray",
+      "owner_seat": null,
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:queue": {
+      "kind": "tray",
+      "owner_seat": null,
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:spare": {
+      "kind": "deck",
+      "owner_seat": null,
+      "pieces": {
+        "card": 7
+      },
+      "visibility": "hidden"
+    },
+    "activity-1:table": {
+      "kind": "table",
+      "owner_seat": null,
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:tally-no": {
+      "kind": "tray",
+      "owner_seat": null,
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:tally-yes": {
+      "kind": "tray",
+      "owner_seat": null,
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:tent-seat-1": {
+      "kind": "slot",
+      "owner_seat": "seat-1",
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:tent-seat-2": {
+      "kind": "slot",
+      "owner_seat": "seat-2",
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:tent-seat-3": {
+      "kind": "slot",
+      "owner_seat": "seat-3",
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:tent-seat-4": {
+      "kind": "slot",
+      "owner_seat": "seat-4",
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:tent-seat-5": {
+      "kind": "slot",
+      "owner_seat": "seat-5",
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:tent-seat-6": {
+      "kind": "slot",
+      "owner_seat": "seat-6",
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:tent-seat-7": {
+      "kind": "slot",
+      "owner_seat": "seat-7",
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:tent-seat-8": {
+      "kind": "slot",
+      "owner_seat": "seat-8",
+      "pieces": {},
+      "visibility": "public"
+    },
+    "activity-1:tent-seat-9": {
+      "kind": "slot",
+      "owner_seat": "seat-9",
+      "pieces": {},
+      "visibility": "public"
+    }
+  }
+}

@@ -71,7 +71,7 @@ def run_op(table: Table, actor_seat: str, op: Operation) -> OpOutcome:
     if reason is not None:
         return Reject(reason)
     patches = op.apply(table, actor_seat)
-    table.applied_op_ids.add(op.op_id)
+    table.remember_op_id(op.op_id)
     table.version += 1
     return Ok(patches)
 

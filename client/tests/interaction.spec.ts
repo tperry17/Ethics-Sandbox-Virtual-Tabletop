@@ -458,6 +458,10 @@ test.describe("the hand and revealing", () => {
     page,
   }) => {
     await page.goto(PREVIEW);
+    // The recording's own presence frames carry two seats and would replace the
+    // three injected here; stop the replay so the test is the only server.
+    await expect(piece(page, "hand-2-b")).toBeAttached();
+    await page.evaluate(() => window.ethicsSandboxLink!.hold());
     await inject(page, {
       type: "presence",
       cursors: [],
@@ -509,6 +513,59 @@ test.describe("the hand and revealing", () => {
     await expect(notice.locator(".piece")).toHaveCount(0);
     await expect(piece(page, "hand-2-b")).toHaveClass(/is-shown/);
     await expect(piece(page, "hand-2-b")).toHaveClass(/is-face-down/);
+  });
+
+  test("a reveal notice follows a name that changes while it is up", async ({ page }) => {
+    await page.goto(PREVIEW);
+    await expect(piece(page, "hand-2-b")).toBeAttached();
+    await page.evaluate(() => window.ethicsSandboxLink!.hold());
+    const seats = (third: string) => [
+      {
+        id: "seat-1",
+        label: "Seat 1",
+        tint_index: 0,
+        participant_id: "p-1",
+        display_name: "Ines Okafor",
+        is_facilitator: true,
+        connected: true,
+      },
+      {
+        id: "seat-2",
+        label: "Seat 2",
+        tint_index: 1,
+        participant_id: "p-2",
+        display_name: "Rowan Bell",
+        is_facilitator: false,
+        connected: true,
+      },
+      {
+        id: "seat-3",
+        label: "Seat 3",
+        tint_index: 2,
+        participant_id: "p-3",
+        display_name: third,
+        is_facilitator: false,
+        connected: true,
+      },
+    ];
+    await inject(page, { type: "presence", cursors: [], seats: seats("Sam Ortiz") });
+    await inject(page, {
+      type: "patches",
+      seq: 75,
+      patches: [
+        {
+          kind: "piece",
+          op: "upsert",
+          entity_id: "hand-2-b",
+          fields: { revealed_to: ["seat-3"], revealed_by: "seat-2" },
+        },
+      ],
+    });
+    const notice = page.locator(".reveal--elsewhere");
+    await expect(notice).toHaveText("Rowan Bell is showing a card to Sam Ortiz.");
+
+    await inject(page, { type: "presence", cursors: [], seats: seats("Samira Ortiz") });
+    await expect(notice).toHaveText("Rowan Bell is showing a card to Samira Ortiz.");
   });
 
   test("a card this viewer is showing can be put away", async ({ page }) => {
