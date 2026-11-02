@@ -143,13 +143,19 @@ test("Democracy Simulation: a city of nine, a rejoin, and the role cards stay pr
   });
   expect(held).toBeGreaterThan(0);
 
-  // A macro pressed while someone is mid-drag leaves the table intact.
+  // The facilitator collects every card while a citizen is dragging one: the
+  // server takes it out of their hand mid-drag, and letting go puts nothing back.
   const card = mine.first();
   const box = (await card.boundingBox())!;
   await citizens[0]!.page.mouse.move(box.x + 10, box.y + 10);
   await citizens[0]!.page.mouse.down();
   await citizens[0]!.page.mouse.move(box.x + 30, box.y - 80, { steps: 5 });
-  await host.page.locator("button[data-activity-id]", { hasText: "Add a proposal" }).click();
+  await host.page.locator("button[data-activity-id]", { hasText: "Collect all cards" }).click();
   await citizens[0]!.page.mouse.up();
-  await expect(host.page.locator("[data-status='connected']")).toBeVisible();
+  for (const page of [host.page, citizens[0]!.page, citizens[1]!.page]) {
+    await expect(page.locator('.piece[data-zone-id*=":hand-seat-"]')).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    await expect(page.locator("[data-status='connected']")).toBeVisible();
+  }
 });
