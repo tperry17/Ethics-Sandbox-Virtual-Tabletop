@@ -94,3 +94,14 @@ def test_json_requests_keep_json_errors() -> None:
     )
     assert response.status_code == 404
     assert response.json()["detail"]
+
+
+def test_every_page_with_a_preview_names_an_image_that_exists() -> None:
+    client = TestClient(app)
+    paths = ["/"] + [f"/exercises/{exercise.slug}" for exercise in EXERCISES]
+    for path in paths:
+        text = client.get(path).text
+        assert 'property="og:image" content="http://testserver/static/og/' in text
+        image = text.split('property="og:image" content="http://testserver')[1]
+        image = image.split('"')[0]
+        assert client.get(image).status_code == 200
