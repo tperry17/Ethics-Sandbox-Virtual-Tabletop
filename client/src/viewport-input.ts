@@ -23,6 +23,14 @@ interface Options {
   onChange: (viewport: Viewport) => void;
   bounds: () => Bounds | null;
   size: () => Size;
+  /** Where this room's view is kept between visits, if anywhere. */
+  storageKey?: string;
+}
+
+interface SavedView {
+  scale: number;
+  centreX: number;
+  centreY: number;
 }
 
 export class ViewportController {
@@ -35,7 +43,85 @@ export class ViewportController {
   /** True once the person has moved the camera themselves. */
   private touchedByPerson = false;
 
+  private lastSize: Size | null = null;
+
   constructor(private readonly options: Options) {}
+
+  /**
+   * The surface changed size: the window opened, or the iPad turned over.
+   *
+   * The first time, a view kept from an earlier visit is brought back;
+   * otherwise the table is fitted. After that, a view the person chose keeps
+   * the same point of the table in the middle of the screen.
+   */
+  resized(): void {
+    const size = this.options.size();
+    const before = this.lastSize;
+    this.lastSize = size;
+    if (before === null) {
+      const saved = this.load();
+      if (saved !== null) {
+        this.touchedByPerson = true;
+        this.set({
+          scale: saved.scale,
+          offsetX: size.width / 2 - saved.centreX * saved.scale,
+          offsetY: size.height / 2 - saved.centreY * saved.scale,
+        });
+        return;
+      }
+    }
+    if (!this.touchedByPerson) {
+      this.fit();
+      return;
+    }
+    const view = this.viewport;
+    const centreX = (before ?? size).width / 2;
+    const centreY = (before ?? size).height / 2;
+    const worldX = (centreX - view.offsetX) / view.scale;
+    const worldY = (centreY - view.offsetY) / view.scale;
+    this.set({
+      scale: view.scale,
+      offsetX: size.width / 2 - worldX * view.scale,
+      offsetY: size.height / 2 - worldY * view.scale,
+    });
+  }
+
+  private load(): SavedView | null {
+    const key = this.options.storageKey;
+    if (key === undefined) return null;
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw === null) return null;
+      const value = JSON.parse(raw) as Partial<SavedView>;
+      const { scale, centreX, centreY } = value;
+      if (
+        typeof scale === "number" && typeof centreX === "number" &&
+        typeof centreY === "number" && [scale, centreX, centreY].every(Number.isFinite)
+      ) {
+        return { scale, centreX, centreY };
+      }
+    } catch {
+      // Storage can be blocked or empty: the view simply starts fresh.
+    }
+    return null;
+  }
+
+  private save(): void {
+    const key = this.options.storageKey;
+    if (key === undefined || !this.touchedByPerson) return;
+    const size = this.options.size();
+    const view = this.viewport;
+    const saved: SavedView = {
+      scale: view.scale,
+      centreX: (size.width / 2 - view.offsetX) / view.scale,
+      centreY: (size.height / 2 - view.offsetY) / view.scale,
+    };
+    try {
+      window.localStorage.setItem(key, JSON.stringify(saved));
+    } catch {
+      // Not kept; nothing else depends on it.
+    }
+  }
 
   get current(): Viewport {
     return this.viewport;
@@ -87,6 +173,7 @@ export class ViewportController {
       bounds === null ? next : clampPan(next, bounds, this.options.size());
     if (viewportsEqual(clamped, this.viewport)) return;
     this.viewport = clamped;
+    this.save();
     this.options.onChange(clamped);
   }
 

@@ -3,6 +3,7 @@
 import asyncio
 import contextlib
 import json
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -22,6 +23,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from sandbox.content_loading import CONTENT_ROOT
 from sandbox.db import Room, init_db, session_scope
@@ -88,6 +90,94 @@ app = FastAPI(title="Ethics Sandbox", lifespan=lifespan)
 app.include_router(debrief_router)
 app.mount("/static", StaticFiles(directory=PROJECT_ROOT / "static"), name="static")
 templates = Jinja2Templates(directory=PROJECT_ROOT / "sandbox" / "web" / "templates")
+
+
+def _public_base(request: Request) -> str:
+    """The address to put in every link people share.
+
+    ``SANDBOX_PUBLIC_URL`` (set by scripts/deploy.sh from the Mac's network
+    address) wins; otherwise the address this request arrived at.
+    """
+    configured = os.environ.get("SANDBOX_PUBLIC_URL", "").strip().rstrip("/")
+    return configured or str(request.base_url).rstrip("/")
+
+
+_ERROR_WORDS: dict[int, tuple[str, str]] = {
+    403: (
+        "You can't open that yet",
+        "The message above says why. If you are not in the room, join it with "
+        "its code. If it is for the facilitator, ask them.",
+    ),
+    410: (
+        "This room is closed",
+        "Its table can no longer be changed. If you facilitated it, the debrief "
+        "and record are still yours to open. Otherwise ask for a new room code.",
+    ),
+    404: (
+        "We couldn't find that",
+        "Check the room code for typing mistakes, or ask whoever shared it for "
+        "the link again. A room that nobody used for thirty days is deleted.",
+    ),
+}
+
+
+def _wants_html(request: Request) -> bool:
+    path = request.url.path
+    if path.endswith((".json", ".zip")):
+        return False
+    return "text/html" in request.headers.get("accept", "text/html")
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_error_page(request: Request, error: StarletteHTTPException) -> Response:
+    """Say what happened and what to do next, on pages; plain JSON elsewhere."""
+    if not _wants_html(request):
+        return Response(
+            json.dumps({"detail": error.detail}),
+            status_code=error.status_code,
+            media_type="application/json",
+        )
+    heading, advice = _ERROR_WORDS.get(
+        error.status_code,
+        ("Something went wrong", "Try again, or go back to the start page."),
+    )
+    return templates.TemplateResponse(
+        request=request,
+        name="error.html",
+        context={
+            "heading": heading,
+            "what_happened": error.detail,
+            "advice": advice,
+        },
+        status_code=error.status_code,
+    )
+
+
+@app.exception_handler(Exception)
+async def server_error_page(request: Request, _error: Exception) -> Response:
+    """An unexpected failure: nothing is lost, and the table is saved."""
+    return templates.TemplateResponse(
+        request=request,
+        name="error.html",
+        context={
+            "heading": "The server hit a problem",
+            "what_happened": "Something went wrong on our side.",
+            "advice": "Wait a few seconds and reload. Tables are saved as they go, "
+            "so nothing on the table is lost. If it keeps happening, tell "
+            "whoever is running the server.",
+        },
+        status_code=500,
+    )
+
+
+@app.get("/health", response_class=HTMLResponse)
+async def health(request: Request) -> HTMLResponse:
+    """A page anyone can open to check they can reach the server at all."""
+    return templates.TemplateResponse(
+        request=request,
+        name="health.html",
+        context={"address": _public_base(request)},
+    )
 
 
 def _identify(request: Request) -> str:
@@ -292,9 +382,15 @@ def join_room_route(
             as_facilitator=as_facilitator,
         )
     except RoomNotFoundError:
-        return _error(f"There is no room with the code {room_code.strip().upper()!r}.")
+        return _error(
+            f"There is no room with the code {room_code.strip().upper()!r}. "
+            "Check the code for typing mistakes, or ask for it again."
+        )
     except RoomClosedError:
-        return _error("That room is closed.")
+        return _error(
+            "That room is closed, so no one can join it. "
+            "Ask the facilitator for a new room code."
+        )
     except FacilitatorTakenError:
         return _error("That room already has a facilitator. Join as a player.")
     if participant.seat_id is not None:
@@ -315,6 +411,8 @@ def table_shell(
     room = get_room_by_code(session, code)
     if room is None:
         raise HTTPException(status_code=404, detail="No such room.")
+    if room.status == "closed":
+        raise HTTPException(status_code=410, detail="This room is closed.")
 
     cookie_id = read_participant_cookie(request)
     participant = get_participant(session, room.id, cookie_id) if cookie_id else None
@@ -351,6 +449,7 @@ def table_shell(
             "participants_by_seat": participants_by_seat,
             "observers": observers,
             "is_facilitator": is_facilitator,
+            "invite_url": f"{_public_base(request)}/join?code={room.code}",
             "dormant": is_dormant(room),
             "purge_date": purge_date(room),
         },

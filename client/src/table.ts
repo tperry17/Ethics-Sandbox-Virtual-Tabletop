@@ -189,6 +189,9 @@ export class TableRenderer {
       },
       bounds: () => this.tableBounds(),
       size: () => this.surfaceSize(),
+      ...(this.options.roomCode === ""
+        ? {}
+        : { storageKey: `sandbox:view:${this.options.roomCode}` }),
     });
     this.viewport = this.controller.current;
 
@@ -317,9 +320,18 @@ export class TableRenderer {
       return;
     }
     if (message.type === "patches") {
+      const swappedBefore = new Set(this.model.swapped);
       this.absorb(
         this.model.applyPatches(message.patches, message.seq, message.components ?? []),
       );
+      for (const pair of this.model.swapped) {
+        if (swappedBefore.has(pair)) continue;
+        const [a, b] = pair.split("|");
+        if (a !== undefined && b !== undefined) {
+          // Said at the next render, in place of the cards' own moves.
+          this.tradeAnnouncement = `${this.nameOf(a)} and ${this.nameOf(b)} have traded cards.`;
+        }
+      }
       return;
     }
     if (message.type === "ack") {
@@ -737,6 +749,7 @@ export class TableRenderer {
   private renderToolbar(): void {
     const toolbar = this.options.toolbar;
     if (toolbar === null) return;
+    const kept = rememberControls(toolbar);
     toolbar.replaceChildren();
     if (this.model.macros.length === 0 && this.model.activityChoices.length === 0) {
       const empty = element("p", "toolbar__empty prose");
@@ -763,6 +776,7 @@ export class TableRenderer {
     );
     if (trades !== null) toolbar.append(trades);
     toolbar.append(this.toolGroup);
+    restoreControls(toolbar, kept);
   }
 
   private macroButton(macro: MacroView): HTMLElement {
@@ -797,8 +811,27 @@ export class TableRenderer {
         ? "Connected"
         : status === "reconnecting"
           ? "Reconnecting…"
-          : "Offline";
+          : status === "refused"
+            ? "Not in this room"
+            : "Offline";
+    if (status === "offline" && !this.offlineTold) {
+      this.offlineTold = true;
+      this.notice(
+        "Can't reach the table. Check your Wi-Fi. Your place is kept, and this page keeps trying.",
+        "warning",
+      );
+    }
+    if (status === "connected") this.offlineTold = false;
+    if (status === "refused") {
+      this.notice(
+        "This table would not open for you: you have not joined this room, or it is closed. Go to the join page and enter the room code again.",
+        "warning",
+      );
+    }
   }
+
+  private offlineTold = false;
+  private tradeAnnouncement: string | null = null;
 
   notice(text: string, level: "info" | "warning"): void {
     // One refused gesture can draw the same refusal for several pieces at
@@ -1037,7 +1070,19 @@ export class TableRenderer {
   }
 
   private announceZoneChanges(diff: Diff): void {
-    const changes = diff.zoneChanges;
+    if (this.tradeAnnouncement !== null) {
+      this.announcer.announce(this.tradeAnnouncement);
+      this.tradeAnnouncement = null;
+      return;
+    }
+    if (diff.zoneChanges.length === 0) return;
+    // A piece set down on the open table is an ordinary move, and ordinary
+    // moves are not announced. A few pieces going into a hand, a deck or a
+    // named zone are; so is a deal or a collect, which moves many at once.
+    const changes =
+      diff.zoneChanges.length > ANNOUNCE_EACH_UP_TO
+        ? diff.zoneChanges
+        : diff.zoneChanges.filter((change) => this.model.zones.get(change.to)?.kind !== "table");
     if (changes.length === 0) return;
     if (changes.length > ANNOUNCE_EACH_UP_TO) {
       this.announcer.announce(`${changes.length} pieces moved.`);
@@ -1107,7 +1152,7 @@ export class TableRenderer {
       this.ink.resize(width, height, window.devicePixelRatio || 1);
       this.canvasDirty = true;
       this.trayDirty = true;
-      if (!this.controller.adjustedByPerson) this.controller.fit();
+      this.controller.resized();
       this.schedule();
     };
     apply();
@@ -1117,6 +1162,65 @@ export class TableRenderer {
     }
     this.resizeObserver = new ResizeObserver(apply);
     this.resizeObserver.observe(this.surface);
+  }
+}
+
+/**
+ * The toolbar is rebuilt whenever the table changes, and a rebuilt dropdown
+ * starts again at its first entry. Someone choosing an activity must find
+ * their choice still there when they press Start, however many people have
+ * joined or moved a cursor in between.
+ */
+interface KeptControl {
+  value: string;
+  focused: boolean;
+}
+
+/** The toolbar's choices that are made first and acted on later, by a button. */
+const KEPT_LABELS = new Set(["Activity to start", "Activity for the class", "Number of tables"]);
+
+/** A stable name for a control worth keeping, or null: most are acted on at once. */
+function controlKey(control: Element, counts: Map<string, number>): string | null {
+  const label = control.getAttribute("aria-label");
+  const option = (control as HTMLElement).dataset["option"];
+  if (!(label !== null && KEPT_LABELS.has(label)) && option === undefined) return null;
+  const base = `${control.tagName}:${label ?? ""}:${option ?? ""}`;
+  const seen = counts.get(base) ?? 0;
+  counts.set(base, seen + 1);
+  return `${base}#${seen}`;
+}
+
+function rememberControls(toolbar: HTMLElement): Map<string, KeptControl> {
+  const kept = new Map<string, KeptControl>();
+  const counts = new Map<string, number>();
+  for (const control of toolbar.querySelectorAll("select, input")) {
+    if (!(control instanceof HTMLSelectElement || control instanceof HTMLInputElement)) continue;
+    const key = controlKey(control, counts);
+    if (key === null) continue;
+    kept.set(key, {
+      value: control.value,
+      focused: document.activeElement === control,
+    });
+  }
+  return kept;
+}
+
+function restoreControls(toolbar: HTMLElement, kept: Map<string, KeptControl>): void {
+  const counts = new Map<string, number>();
+  for (const control of toolbar.querySelectorAll("select, input")) {
+    if (!(control instanceof HTMLSelectElement || control instanceof HTMLInputElement)) continue;
+    const key = controlKey(control, counts);
+    const before = key === null ? undefined : kept.get(key);
+    if (before === undefined) continue;
+    if (control.value !== before.value) {
+      control.value = before.value;
+      // Only the activity picker has a listener that must catch up (which
+      // options to show); no other control is told, so none acts on its own.
+      if (control.getAttribute("aria-label") === "Activity to start") {
+        control.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+    if (before.focused) control.focus({ preventScroll: true });
   }
 }
 

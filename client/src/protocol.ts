@@ -254,6 +254,7 @@ export interface CursorView {
 export interface SnapshotMessage {
   type: "snapshot";
   seq: number;
+  epoch?: string;
   view_table: TableView;
   seats: SeatView[];
   you: YouView;
@@ -326,6 +327,8 @@ export interface HelloMessage {
   type: "hello";
   room_code: string;
   last_seq: number;
+  /** Which run of the room `last_seq` belongs to; absent before a first snapshot. */
+  epoch?: string;
 }
 
 export interface IntentMessage {
@@ -360,7 +363,7 @@ export type ClientMessage =
   | MenuRequestMessage;
 
 /** Connected, catching up, or not talking to anything. */
-export type LinkStatus = "connected" | "reconnecting" | "offline";
+export type LinkStatus = "connected" | "reconnecting" | "offline" | "refused";
 
 /**
  * Anything the renderer can be driven by.

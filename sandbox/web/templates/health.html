@@ -1,0 +1,28 @@
+{% import "_ui.html" as ui %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Connection check · Ethics Sandbox</title>
+    <link rel="icon" href="{{ url_for('static', path='/icons/favicon.ico') }}" sizes="48x48">
+    <link rel="icon" href="{{ url_for('static', path='/icons/seal-512.png') }}" type="image/png" sizes="512x512">
+    <link rel="apple-touch-icon" href="{{ url_for('static', path='/icons/apple-touch-icon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
+  </head>
+  <body>
+    <main class="site">
+      <p class="site__back"><a href="/">← Ethics Sandbox</a></p>
+
+      <header class="site__header">
+        <p class="eyebrow">Connection check</p>
+        <h1>You can reach the server</h1>
+        <div class="prose site__lede">
+          <p>If you can read this, this device can reach the computer running the sandbox at <strong>{{ address }}</strong>. Rooms and tables are served from there.</p>
+          <p>If the table will not open but this page does, tell the facilitator.</p>
+        </div>
+      </header>
+    </main>
+  </body>
+</html>

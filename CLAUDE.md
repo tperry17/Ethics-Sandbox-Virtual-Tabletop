@@ -139,7 +139,8 @@ when they leave the table. Who is showing what to whom is public; the face
 is not.
 
 Keyboard: Tab reaches every piece; arrow keys move by a 20-unit step (Shift
-for five); Enter turns over; R and Shift-R rotate; M, the context-menu key
+for five); Space selects (Shift-Space adds to the selection; on a touch
+screen, tapping a piece toggles it); Enter turns over; R and Shift-R rotate; M, the context-menu key
 or Shift-F10 open the menu; P points; Escape clears. With nothing focused,
 R and Enter act on the selection.
 
@@ -330,6 +331,7 @@ after committing, and a live room's snapshots never overwrite it.
 - PyYAML reads each exercise's `game.yaml`, the definition format the build plan specifies.
 - types-PyYAML gives mypy strict the types for PyYAML.
 - anyio (already installed by Starlette, now imported directly) lets the `/join` route, which runs on a worker thread, tell a live room about a new seat before it answers.
+- @axe-core/playwright runs the axe accessibility engine from the Playwright suite, so every page and the table are checked for roles, labels and contrast on each pull request.
 
 ## Design tokens
 

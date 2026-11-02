@@ -41,8 +41,21 @@ function linkFor(root: HTMLElement): ServerLink {
   return new RecordedLink(recording, { loop: root.dataset.loop === "1" });
 }
 
+/**
+ * An on-screen keyboard covers the bottom of the page. When a field takes
+ * focus, wait for the keyboard to open and bring the field back into view.
+ */
+function keepTypingVisible(): void {
+  document.addEventListener("focusin", (event) => {
+    const field = event.target;
+    if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) return;
+    window.setTimeout(() => field.scrollIntoView({ block: "center", inline: "nearest" }), 300);
+  });
+}
+
 function boot(): void {
   document.documentElement.dataset.tableClient = "ready";
+  keepTypingVisible();
   const root = document.getElementById("table-root");
   if (!(root instanceof HTMLElement)) return;
 

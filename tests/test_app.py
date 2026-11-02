@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from sandbox.games import EXERCISES
@@ -71,3 +72,25 @@ def test_favicon_is_served_at_the_root_and_linked_from_pages() -> None:
     for path in ("favicon.ico", "seal-512.png", "apple-touch-icon.png"):
         assert f"/static/icons/{path}" in page.text
         assert client.get(f"/static/icons/{path}").status_code == 200
+
+
+def test_health_page_names_the_public_address(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SANDBOX_PUBLIC_URL", "http://192.168.1.20:8000/")
+    response = TestClient(app).get("/health")
+    assert response.status_code == 200
+    assert "http://192.168.1.20:8000" in response.text
+
+
+def test_an_unknown_room_says_what_happened_and_what_to_do() -> None:
+    response = TestClient(app).get("/exercises/nope", headers={"accept": "text/html"})
+    assert response.status_code == 404
+    assert "No such exercise." in response.text
+    assert "Check the room code" in response.text
+
+
+def test_json_requests_keep_json_errors() -> None:
+    response = TestClient(app).get(
+        "/exercises/nope", headers={"accept": "application/json"}
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"]

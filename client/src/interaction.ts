@@ -227,7 +227,9 @@ export class InteractionController {
       startY: event.clientY,
       pieceId,
       fromTray,
-      additive: event.shiftKey,
+      // A finger has no Shift key: tapping a piece toggles it in the selection,
+      // tapping empty table clears it.
+      additive: event.shiftKey || (event.pointerType === "touch" && pieceId !== null),
       timer: null,
     };
     if (pieceId !== null && fromTray) {
@@ -786,6 +788,19 @@ export class InteractionController {
     if (event.key === "Enter") {
       event.preventDefault();
       this.flip(ids);
+      return;
+    }
+    if (event.key === " ") {
+      // Select, as a click does: Space picks this piece alone, Shift-Space
+      // adds it to (or takes it from) the selection. Offers use the selection.
+      event.preventDefault();
+      this.click(pieceId, event.shiftKey);
+      const count = this.table.selected.size;
+      this.table.announcer.announce(
+        this.table.selected.has(pieceId)
+          ? `${capital(this.table.pieceLabel(pieceId))} selected. ${count} selected.`
+          : `${capital(this.table.pieceLabel(pieceId))} not selected. ${count} selected.`,
+      );
       return;
     }
     if (event.key === "r" || event.key === "R") {

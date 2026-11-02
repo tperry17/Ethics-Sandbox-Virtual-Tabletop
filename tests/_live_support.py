@@ -82,6 +82,7 @@ class LiveFixture:
         display_name: str = "Someone",
         is_facilitator: bool = False,
         last_seq: int = 0,
+        epoch: str | None = None,
     ) -> Client:
         socket = FakeSocket()
         connection, writer = await self.hub.attach(
@@ -97,14 +98,20 @@ class LiveFixture:
             socket=socket, connection=connection, writer=writer, seat_id=seat_id
         )
         self.clients.append(client)
-        await self.hello(client, last_seq=last_seq)
+        await self.hello(client, last_seq=last_seq, epoch=epoch)
         return client
 
-    async def hello(self, client: Client, *, last_seq: int = 0) -> None:
-        await self.send(
-            client,
-            {"type": "hello", "room_code": self.runtime.code, "last_seq": last_seq},
-        )
+    async def hello(
+        self, client: Client, *, last_seq: int = 0, epoch: str | None = None
+    ) -> None:
+        message: dict[str, Any] = {
+            "type": "hello",
+            "room_code": self.runtime.code,
+            "last_seq": last_seq,
+        }
+        if epoch is not None:
+            message["epoch"] = epoch
+        await self.send(client, message)
 
     async def intent(
         self,

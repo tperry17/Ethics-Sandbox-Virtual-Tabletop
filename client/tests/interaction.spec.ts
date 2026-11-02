@@ -43,6 +43,27 @@ async function centre(locator: Locator): Promise<{ x: number; y: number }> {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
+/**
+ * Wait until the table is drawn and the camera has stopped moving. Screen
+ * positions are read once and used a moment later, so they must not be read
+ * while the first snapshot is still arriving and the view is being fitted.
+ */
+async function cameraSettled(page: Page): Promise<void> {
+  await expect(piece(page, "token-1")).toBeAttached();
+  let last = "";
+  await expect
+    .poll(async () => {
+      const now = await page.evaluate(() =>
+        JSON.stringify(window.ethicsSandboxTable!.currentViewport),
+      );
+      const steady = now === last;
+      last = now;
+      await page.waitForTimeout(150);
+      return steady;
+    })
+    .toBe(true);
+}
+
 /** Where a world point is on screen right now. */
 async function onScreen(page: Page, x: number, y: number): Promise<{ x: number; y: number }> {
   return page.evaluate(
@@ -231,6 +252,7 @@ test.describe("dragging", () => {
 test.describe("selecting", () => {
   test("marquee-selects pieces, which then rotate and move together", async ({ page }) => {
     await page.goto(PREVIEW);
+    await cameraSettled(page);
     await drag(page, await onScreen(page, 120, 120), await onScreen(page, 300, 220));
 
     await expect(piece(page, "token-1")).toHaveClass(/is-selected/);
