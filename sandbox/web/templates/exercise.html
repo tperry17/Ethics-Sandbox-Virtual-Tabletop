@@ -60,7 +60,7 @@
 
       {% if exercise.overview %}
       <section class="site__section" id="premise">
-        {{ ui.section_rule("Premise") }}
+        {{ ui.section_rule(exercise.overview_heading or "Premise") }}
         <div class="prose">
           <p>{{ exercise.overview }}</p>
         </div>
@@ -101,6 +101,11 @@
             </div>
           </div>
         {% endif %}
+        <p class="prose">
+          {% if preview %}<a href="/games/{{ exercise.slug }}/preview">See the table on its own page</a>{% endif %}
+          {% if preview and has_deck %} · {% endif %}
+          {% if has_deck %}<a href="/exercises/{{ exercise.slug }}/deck">Print the cards</a>{% endif %}
+        </p>
       </section>
     </main>
   </body>

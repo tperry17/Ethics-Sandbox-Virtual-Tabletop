@@ -12,10 +12,7 @@ from sandbox.content_loading import read_rows, rows_for_slug
 from sandbox.games.models import Exercise, LearningOutcome, PreviewCard
 
 EXERCISES_CSV = "site/exercises.csv"
-SESSION_SHAPE_CSV = "site/exercise_session_shape.csv"
-TENSIONS_CSV = "site/exercise_tensions.csv"
 LEARNING_OUTCOMES_CSV = "site/exercise_learning_outcomes.csv"
-FACILITATOR_NOTES_CSV = "site/exercise_facilitator_notes.csv"
 PREVIEW_ZONES_CSV = "site/exercise_preview_zones.csv"
 PREVIEW_CARDS_CSV = "site/exercise_preview_cards.csv"
 
@@ -38,17 +35,10 @@ def load_exercise(slug: str) -> Exercise:
         short_description=fields["short_description"],
         premise=fields["premise"],
         overview=fields["overview"],
+        overview_heading=fields["overview_heading"],
         group_size=fields["group_size"],
         running_time=fields["running_time"],
         facilitator=fields["facilitator"],
-        alongside=fields["alongside"],
-        session_shape=tuple(
-            row["text"] for row in rows_for_slug(SESSION_SHAPE_CSV, slug)
-        ),
-        tensions=tuple(row["text"] for row in rows_for_slug(TENSIONS_CSV, slug)),
-        facilitator_notes=tuple(
-            row["text"] for row in rows_for_slug(FACILITATOR_NOTES_CSV, slug)
-        ),
         preview_label=fields["preview_label"],
         preview_zones=tuple(
             row["label"] for row in rows_for_slug(PREVIEW_ZONES_CSV, slug)

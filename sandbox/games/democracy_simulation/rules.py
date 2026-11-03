@@ -1,4 +1,6 @@
-"""The Democracy Simulation's rules: dealing, the co-Chairs, proposals, votes.
+"""The rules: dealing, the co-Chairs, proposals, votes.
+
+For Leadership and Knowledge in Popular Rule.
 
 One activity is one city, and its options say which: ``city`` (Potamosia, a
 democracy, or Hudrosia, an oligarchy) and ``phase`` (1, the construction

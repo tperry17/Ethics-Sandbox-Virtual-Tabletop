@@ -1,4 +1,4 @@
-"""Definition for the Democracy Simulation exercise.
+"""Definition for the Leadership and Knowledge in Popular Rule exercise.
 
 Its catalog and detail-page copy lives in ``content/site/exercise*.csv``,
 keyed by this slug (see ``content/README.md``). Once the game-definition
