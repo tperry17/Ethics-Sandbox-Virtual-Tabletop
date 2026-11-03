@@ -1,8 +1,8 @@
-# Democracy Simulation debrief. A guided debrief, started in a room after (or beside) the exercise.
+# Leadership and Knowledge in Popular Rule debrief. A guided debrief, started in a room after (or beside) the exercise.
 # The outcomes and questions are the exercise's own, read from its content files.
 meta:
   slug: democracy-debrief
-  title: Democracy Simulation debrief
+  title: Leadership and Knowledge in Popular Rule debrief
   players: {min: 1, max: 30}
   duration_minutes: 20
   facilitator: required

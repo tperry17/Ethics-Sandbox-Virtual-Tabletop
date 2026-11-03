@@ -29,13 +29,10 @@ class Exercise:
     short_description: str
     premise: str
     overview: str
+    overview_heading: str
     group_size: str
     running_time: str
     facilitator: str
-    alongside: str
-    session_shape: tuple[str, ...]
-    tensions: tuple[str, ...]
-    facilitator_notes: tuple[str, ...]
     preview_label: str
     preview_zones: tuple[str, ...]
     preview_cards: tuple[PreviewCard, ...]

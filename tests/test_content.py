@@ -13,9 +13,6 @@ def test_load_exercise_assembles_every_field() -> None:
 
     assert exercise == VALUE_CARDS_TRADING
     assert exercise.title == "Value Cards Trading"
-    assert len(exercise.session_shape) == 3
-    assert len(exercise.tensions) == 3
-    assert len(exercise.facilitator_notes) == 3
     assert len(exercise.preview_zones) == 3
     assert len(exercise.preview_cards) == 3
     assert exercise.preview_cards[0].title == "Freedom of inquiry"

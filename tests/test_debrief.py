@@ -347,7 +347,7 @@ def test_replay_is_for_the_facilitator_and_shows_public_or_every_face(
     assert "Every face is showing." in everything
 
 
-# -- Democracy Simulation ------------------------------------------------------------
+# -- Leadership and Knowledge in Popular Rule ------------------------------------
 
 PEOPLE = [
     "Ada",
@@ -527,7 +527,10 @@ def test_the_democracy_class_page_sets_democracies_and_oligarchies_apart(
 
         tables = [_context(log, aid, who) for aid in aids]
         group = ClassGroup(
-            id="class-1", kind=slug, title="Democracy Simulation", tables=tuple(aids)
+            id="class-1",
+            kind=slug,
+            title="Leadership and Knowledge in Popular Rule",
+            tables=tuple(aids),
         )
         sections = CLASS_DEBRIEFS[slug](
             ClassContext(game=GAMES[slug], group=group, tables=tables, final=log.final)

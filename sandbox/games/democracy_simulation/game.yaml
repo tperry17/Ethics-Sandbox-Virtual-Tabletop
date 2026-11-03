@@ -1,8 +1,8 @@
-# The Democracy Simulation. The rules are in docs/BUILD-PLAN.md, Prompt 11.
+# Leadership and Knowledge in Popular Rule. The rules are in docs/BUILD-PLAN.md, Prompt 11.
 # One activity is one city. Its two options say which city and which scenario.
 meta:
   slug: democracy-simulation
-  title: Democracy Simulation
+  title: Leadership and Knowledge in Popular Rule
   players: {min: 9, max: 20}
   duration_minutes: 45
   facilitator: optional

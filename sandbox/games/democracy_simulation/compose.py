@@ -1,4 +1,6 @@
-"""Building the Democracy Simulation's card files, ``*_cards.csv``, from its sheets.
+"""Building the card files, ``*_cards.csv``, from the sheets.
+
+For Leadership and Knowledge in Popular Rule.
 
 The author edits ``roles.csv``, ``jobs.csv``, ``features.csv``,
 ``elite_sheets.csv`` and ``invitations.csv`` as spreadsheets. A card's back

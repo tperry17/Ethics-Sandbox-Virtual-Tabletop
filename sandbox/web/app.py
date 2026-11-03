@@ -28,7 +28,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from sandbox.content_loading import CONTENT_ROOT
 from sandbox.db import Room, init_db, session_scope
 from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, OPEN_ROOM_SLUG
-from sandbox.games.loader import IMAGE_SUFFIXES
+from sandbox.games.loader import IMAGE_SUFFIXES, Card, Game
 from sandbox.web.content import HELP_RECORDS, SITE_COPY
 from sandbox.web.debrief import router as debrief_router
 from sandbox.web.deps import get_session as get_session
@@ -238,25 +238,29 @@ async def exercise_detail(request: Request, slug: str) -> HTMLResponse:
             "canonical_url": f"{_public_base(request)}/exercises/{slug}",
             "og_image": f"{_public_base(request)}/static/og/{slug}.png",
             "preview": None if game is None else picture_of_table(game),
+            "has_deck": game is not None and bool(_printable_decks(game)),
         },
     )
+
+
+def _printable_decks(game: Game) -> list[tuple[Card, ...]]:
+    """The decks an exercise's print page shows.
+
+    A deck marked revealable: false is private for the whole session, so the
+    public page never prints it.
+    """
+    return [
+        game.decks[deck.id]
+        for deck in game.definition.components.decks
+        if deck.revealable and game.decks[deck.id]
+    ]
 
 
 @app.get("/exercises/{slug}/deck", response_class=HTMLResponse)
 async def exercise_deck(request: Request, slug: str) -> HTMLResponse:
     """Every card of an exercise's decks, laid out to print and cut out."""
     game = GAMES.get(slug)
-    # A deck marked revealable: false is private for the whole session, so
-    # the public page never prints it.
-    shown = (
-        []
-        if game is None
-        else [
-            game.decks[deck.id]
-            for deck in game.definition.components.decks
-            if deck.revealable and game.decks[deck.id]
-        ]
-    )
+    shown = [] if game is None else _printable_decks(game)
     if game is None or not shown:
         raise HTTPException(status_code=404, detail="That exercise has no deck.")
     return templates.TemplateResponse(
