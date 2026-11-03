@@ -14,9 +14,20 @@ Facilitators—teachers, community organisers, and workshop leads—run groups o
 
 ## Rooms and activities
 
-A room is an open sandbox, not one exercise. Up to 30 people join it and use the table however they please: the free table, the value cards, dice, tokens and other loose pieces. No activity is built into a room. An activity is a guided exercise started inside a room: someone presses "Start the <activity>", a sign-up opens for the activity's players (the facilitator may choose them instead), and the activity lays out its own zones for those seats and guides them through its steps. Everyone else keeps using the sandbox, and several activities, or several groups doing the same one, can run in a room at once. An activity's `players: {min, max}` is how many people it takes (three for Value Cards Trading), never the room's capacity.
+A room belongs to one exercise, and it is that exercise's sandbox. Up to 30 people join it and use its table however they please: the free table and the exercise's own loose pieces. A Value Cards room holds the value cards; a Democracy Simulation room holds the two cities' seals and a general account of each city, with nothing about either scenario. Every room, whatever its exercise, has a "Pieces" menu that can be opened to add dice, cubes, meeples and tokens to the table; they are not laid out on it.
+
+A room is opened only from its exercise's page, with "Open a room", which opens that exercise's room directly; whoever opened it is then asked for a display name, as anyone joining is. Nothing is started by typing an address: there is no `/start` page, and no room, activity or class is opened by a URL alone. People reach a room from its invite link or by entering its code with "Join a room".
+
+Each room offers its own exercise's activities, and its own debrief:
+
+- Value Cards room: Value Cards Trading, and the Value Cards debrief.
+- Democracy Simulation room: Scenario 1 (Construction project), Scenario 2 (Going to war?), and the Democracy Simulation debrief.
+
+An activity is a guided exercise started inside a room: someone presses "Start <activity>", a sign-up opens for the activity's players (the facilitator may choose them instead), and the activity lays out its own zones for those seats and guides them through its steps. Everyone else keeps using the sandbox, and several activities, or several groups doing the same one, can run in a room at once. An activity's `players: {min, max}` is how many people it takes (three for Value Cards Trading), never the room's capacity.
 
 A class is an activity run as several tables at once. Someone presses "Start a class" instead of "Start the <activity>", chooses how many tables, and becomes the facilitator of all of them, as a non-playing admin: they sit at none. The facilitator can sort the room's people into the tables at random (shown first, adjustable by hand, then confirmed), begin the tables, run one timer and push one prompt to every table at once, and, for a game that declares `pairing`, pair two tables so their decisions are read together. The facilitator can move anyone to another table at any time, begun or not (at a begun table their cards go back face down into the decks they came from, which are shuffled, their other zones go, and they get fresh ones at the new table), and a person who arrives after the sort takes the table with the most room. Players at a paired table propose their table's choice and the facilitator confirms it; they see only their own table's. The class is a `ClassGroup` in `sandbox/model/classes.py`; its tables are ordinary activities.
+
+Scenario 2 of the Democracy Simulation always runs as a class, in one room, with one table per city. It is best with two paired cities; it can be run with one, and then the other city is hypothetical. On the call the group splits into breakout groups, one per table, so each table is self-contained: its own notes, its own votes, its own list of participants.
 
 The facilitator is optional, an admin seat. Nobody is the facilitator by default, the room's creator included. Any participant may take the seat with a "Become facilitator" button, or choose it when joining; only one person holds it, and nothing in any activity requires it.
 
@@ -258,8 +269,8 @@ def call_pairs(table: Table, context: GameContext) -> list[Operation]:
 it uses, and plays every macro at both ends of the player range; pytest
 runs the same check. `/games/{slug}/preview` draws a game's table after
 setup from the spectator projection, and an exercise page shows it once
-the exercise has a definition. Any game, listed or not, can be started as an
-activity in a room; `/start` always opens the sandbox. Definitions and
+the exercise has a definition. A room offers only its own exercise's
+activities and debrief (see "Rooms and activities"). Definitions and
 content hot-reload under `uv run dev`.
 
 ### Who may move what
@@ -327,7 +338,7 @@ after committing, and a live room's snapshots never overwrite it.
 - Playwright provides the required browser-level test runner.
 - Hypothesis provides property-based tests for `sandbox/model/`, required to check the security and integrity invariants of `project()` and the operations against far more tables and sequences than hand-written examples could cover.
 - Alembic manages the SQLAlchemy schema as versioned migrations, so production (Postgres) and local development (SQLite) are always brought to the same shape deliberately, never by `create_all` drift.
-- python-multipart is required by Starlette to parse the HTML form submissions on `/start` and `/join`.
+- python-multipart is required by Starlette to parse the HTML form submissions, such as `/join` and an exercise page's "Open a room".
 - pytest-asyncio runs the realtime tests, which must await the room task itself rather than a synchronous stand-in for it.
 - PyYAML reads each exercise's `game.yaml`, the definition format the build plan specifies.
 - types-PyYAML gives mypy strict the types for PyYAML.

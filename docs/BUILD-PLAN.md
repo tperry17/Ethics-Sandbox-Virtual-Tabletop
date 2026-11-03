@@ -25,6 +25,11 @@ and comes first: Prompts 10, 11 and 12 start activities inside the rooms it
 builds. Prompt 10 has a paused draft, pull request #16; see its section. Prompt 14 does not depend on the games and can run alongside the
 others.
 
+Prompts 1–17 are done. **Prompt 18 (room types and the room redesign)** was
+added on 2026-11-03 at the author's direction. It replaces the open room
+Prompt 17 built with one room per exercise; CLAUDE.md's "Rooms and
+activities" already states the new rules.
+
 Before starting a step, claim it (see "Claiming a step"). A claimed step
 shows "Claimed" in this table on `main`.
 
@@ -47,6 +52,7 @@ shows "Claimed" in this table on `main`.
 | 15 | Tests | Done | | PR #25 |
 | 17 | Open rooms and activities | Done | | PR #18 |
 | 16 | Launch pass | Done | | PR #26 |
+| 18 | Room types and the room redesign | In progress | `claude/room-types` | |
 
 ### Claiming a step
 
@@ -150,10 +156,15 @@ Where these conflict with a prompt below, these win.
   an optional admin seat that nobody holds by default. Prompt 17 builds
   this; CLAUDE.md's "Rooms and activities" is the rule.
 - **"Start a table" is "Open a room".** Prompt 3 asks for a "Start a
-  table" action on the landing page and on each exercise page. Because a
-  room is not created for an exercise, both pages offer "Open a room"
-  (to `/start`), and the exercise page says to choose the exercise from the
-  room's toolbar. The wording is in `content/site/site_copy.csv`.
+  table" action on the landing page and on each exercise page. Both pages
+  offer "Open a room"; the wording is in `content/site/site_copy.csv`.
+  Until Prompt 18 is built it goes to `/start` and opens the open room.
+- **Room types** (the author, 2026-11-03; superseding the 2026-10-31 note
+  above that a room is an open sandbox for every exercise). A room belongs
+  to one exercise and is its sandbox, opened only from that exercise's
+  page. `/start` goes. Each room offers its own exercise's activities and
+  debrief. Dice, cubes, meeples and tokens are in a "Pieces" menu in every
+  room instead of on the table. Prompt 18 builds this.
 - **Call.** Section 0 says Zoom; CLAUDE.md says a separate video or phone
   call. Nothing depends on which.
 - **No principles of engagement.** The six principles that were on the
@@ -1683,6 +1694,50 @@ zones; the sandbox is unaffected. validate-games passes, and the live
 tests and the Playwright suite pass. Update this plan's status table.
 Commit.
 ```
+
+## 18. Room types and the room redesign
+
+**Status: In progress (branch `claude/room-types`).** Added on 2026-11-03
+at the author's direction, from their review of the room page on the
+design canvas. Read CLAUDE.md's "Rooms and activities" first: it states
+the rules this step builds.
+
+The author's decisions, 2026-11-03:
+
+- **One room per exercise.** A Value Cards room and a Democracy Simulation
+  room, each a sandbox with its own loose pieces and its own activities.
+  The open room (`sandbox/games/open_room/`) goes.
+- **Opened from the exercise page.** "Open a room" on an exercise page
+  opens that exercise's room directly. `/start` is removed: nothing is
+  started by typing an address. The landing page has no "Open a room"
+  of its own once this lands, since a room needs an exercise; it keeps
+  "Join a room".
+- **Activities per room.** Value Cards room: Value Cards Trading, and the
+  Value Cards debrief. Democracy Simulation room: Scenario 1
+  (Construction project), Scenario 2 (Going to war?), and the Democracy
+  Simulation debrief. The scenario stops being an option chosen when the
+  activity starts; each scenario is its own activity. The city stays a
+  choice.
+- **Scenario 2 runs as a class** in one room, one table per city. It is
+  best with two paired cities (Potamosia and Hudrosia); with one city,
+  the other is hypothetical. The group splits into breakout calls, one
+  per table, so each table has its own notes, votes and list of
+  participants.
+- **The Democracy room's table** holds the two cities' seals
+  (`content/exercises/democracy-simulation/images/`) and a general account
+  of each city, with nothing about either scenario.
+- **Pieces menu.** Dice, cubes, meeples and tokens are no longer laid out
+  on the table. Every room has a "Pieces" menu that adds one where the
+  person is looking.
+- **Meeples** use the author's outline (in the canvas thread; the path is
+  64 units wide, centred on 0,0).
+- **The room page is redesigned**: a slim top bar (room code, invite
+  link, who is here, Become facilitator, connection), a side panel
+  (activities, class, the table's buttons, links), the table filling the
+  rest on a light ground with a floating tool palette, and the hand docked
+  below. The drafts are on the author's design canvas, page "Room".
+
+Open questions are in this step's pull request.
 
 ---
 
