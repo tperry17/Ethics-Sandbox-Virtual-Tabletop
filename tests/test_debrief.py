@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 from _db_support import make_test_engine
+from _room_support import start_room
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -65,8 +66,8 @@ class Played:
         self.factory = factory
         self.clients: dict[str, TestClient] = {}
         first = TestClient(app, follow_redirects=False)
-        response = first.post(
-            "/start", data={"display_name": names[0], "as_facilitator": "true"}
+        response = start_room(
+            first, data={"display_name": names[0], "as_facilitator": "true"}
         )
         self.code = response.headers["location"].rsplit("/", 1)[1]
         self.clients[names[0]] = first

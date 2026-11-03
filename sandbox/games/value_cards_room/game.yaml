@@ -1,0 +1,106 @@
+# The Value Cards room: the exercise's sandbox. A free table, the value
+# cards, and a private hand for each seat. Its activities are its own:
+# Value Cards Trading and its debrief. Dice and player pieces come from the
+# room's Pieces menu rather than lying on the table.
+meta:
+  slug: value-cards-room
+  title: Value Cards
+  players: {min: 1, max: 30}     # the room's capacity
+  duration_minutes: 60
+  facilitator: optional
+  listed: false
+
+room:
+  exercise: value-cards-trading
+  label: Value Cards
+  activities:
+    - {id: value-cards-trading, game: value-cards-trading}
+    - {id: value-cards-debrief, game: value-cards-debrief}
+  pieces: [d6, cube-1, cube-2, cube-3, cube-4, cube-5, cube-6, meeple-1, meeple-2, meeple-3, meeple-4, meeple-5, meeple-6, token-1, token-2, token-3, token-4, token-5, token-6]
+
+components:
+  decks:
+    - id: values
+      source: decks/value-cards/cards.csv
+      key: key
+      title: name
+      body: definition
+      folio: number
+      image: art
+  pieces:
+    - {id: d6, kind: die, title: Die, faces: ["1", "2", "3", "4", "5", "6"]}
+    - {id: cube-1, kind: cube, title: Cube, tint_index: 0}
+    - {id: cube-2, kind: cube, title: Cube, tint_index: 1}
+    - {id: cube-3, kind: cube, title: Cube, tint_index: 2}
+    - {id: cube-4, kind: cube, title: Cube, tint_index: 3}
+    - {id: cube-5, kind: cube, title: Cube, tint_index: 4}
+    - {id: cube-6, kind: cube, title: Cube, tint_index: 5}
+    - {id: meeple-1, kind: meeple, title: Meeple, tint_index: 0}
+    - {id: meeple-2, kind: meeple, title: Meeple, tint_index: 1}
+    - {id: meeple-3, kind: meeple, title: Meeple, tint_index: 2}
+    - {id: meeple-4, kind: meeple, title: Meeple, tint_index: 3}
+    - {id: meeple-5, kind: meeple, title: Meeple, tint_index: 4}
+    - {id: meeple-6, kind: meeple, title: Meeple, tint_index: 5}
+    - {id: token-1, kind: token, title: Token, tint_index: 0}
+    - {id: token-2, kind: token, title: Token, tint_index: 1}
+    - {id: token-3, kind: token, title: Token, tint_index: 2}
+    - {id: token-4, kind: token, title: Token, tint_index: 3}
+    - {id: token-5, kind: token, title: Token, tint_index: 4}
+    - {id: token-6, kind: token, title: Token, tint_index: 5}
+
+zones:
+  - id: table
+    kind: table
+    label: The table
+    rect: [0, 0, 1700, 900]
+    visibility: public
+    layout: free
+  - id: deck
+    kind: deck
+    label: Value cards
+    rect: [40, 40, 240, 320]
+    visibility: hidden
+    layout: stack
+  - id: hand
+    kind: hand
+    label: Hand
+    rect: [40, 940, 1200, 220]
+    visibility: private_to_owner
+    layout: fan
+    per_seat: true
+    step: [0, 240]
+
+setup:
+  - {op: spawn_deck, deck: values, zone: deck}
+
+macros:
+  - id: setup
+    steps:
+      - {op: reset_table}
+      - {op: setup}
+  - id: deal
+    who: anyone
+    steps:
+      - {op: deal, from: deck, to: hand, count: 3}
+  - id: reset
+    steps:
+      - {op: reset_table}
+  - id: shuffle
+    who: anyone
+    steps:
+      - {op: shuffle, zone: deck}
+  - id: collect
+    who: anyone
+    steps:
+      - {op: collect, to: deck, kinds: [card], face_up: false}
+      - {op: shuffle, zone: deck}
+  - id: clear_ink
+    who: anyone
+    steps:
+      - {op: clear_ink}
+
+buttons:
+  source: exercises/value-cards-room/buttons.csv
+
+prompts:
+  source: exercises/value-cards-room/prompts.csv

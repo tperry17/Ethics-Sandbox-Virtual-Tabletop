@@ -18,7 +18,10 @@ from test_live_classes import _act, open_room
 
 from sandbox.model import project
 
-EXERCISES = [("value-cards-trading", 3), ("democracy-simulation", 9)]
+EXERCISES = [
+    ("value-cards-room", "value-cards-trading", 3),
+    ("democracy-room", "scenario-1", 9),
+]
 
 
 def _ids_in(value: Any, known: set[str]) -> set[str]:
@@ -32,11 +35,11 @@ def _entitled(room: Any, seat_id: str | None) -> set[str]:
     return {piece.component_id for piece in view.pieces if piece.component_id}
 
 
-@pytest.mark.parametrize(("slug", "people"), EXERCISES)
+@pytest.mark.parametrize(("kind", "slug", "people"), EXERCISES)
 async def test_no_message_carries_a_face_its_recipient_may_not_see(
-    slug: str, people: int
+    kind: str, slug: str, people: int
 ) -> None:
-    async with open_room(people) as (room, host, guests):
+    async with open_room(people, kind) as (room, host, guests):
         everyone = [host, *guests]
         entitled: dict[str, set[str]] = {c.seat_id or "": set() for c in everyone}
         every_component: set[str] = set()

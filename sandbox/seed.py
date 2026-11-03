@@ -11,8 +11,9 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from sandbox.games import GAMES, OPEN_ROOM_SLUG
+from sandbox.games import GAMES
 from sandbox.games.engine import build_activity_start
+from sandbox.games.room_types import offered_activities, room_types
 from sandbox.model import JoinActivity, Ok, OpenActivity, Reject
 from sandbox.web import rooms
 
@@ -47,7 +48,15 @@ class SeedError(Exception):
 def seed_demo(session: Session, slug: str, *, people: int | None = None) -> str:
     """Create the demo room for ``slug`` and return its room code."""
     game = GAMES.get(slug)
-    if game is None or slug == OPEN_ROOM_SLUG:
+    room_game = next(
+        (
+            each
+            for each in room_types(GAMES)
+            if any(a.game.slug == slug for a in offered_activities(GAMES, each))
+        ),
+        None,
+    )
+    if game is None or room_game is None:
         raise SeedError(f"There is no exercise called {slug!r}.")
     meta = game.definition.meta
     count = meta.players.min if people is None else people
@@ -59,7 +68,7 @@ def seed_demo(session: Session, slug: str, *, people: int | None = None) -> str:
 
     room, first = rooms.create_room(
         session,
-        game_slug=OPEN_ROOM_SLUG,
+        game_slug=room_game.slug,
         facilitator_cookie_id="demo-1",
         facilitator_name=DEMO_NAMES[0],
     )

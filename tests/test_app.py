@@ -118,11 +118,14 @@ def test_landing_page_offers_open_a_room() -> None:
 
     assert response.status_code == 200
     header = response.text.split("</header>", 1)[0]
-    assert 'href="/start">Open a room</a>' in header
+    assert '<summary class="button button--primary button--lg">Open a room' in header
+    for label in ("Value Cards", "Leadership and Knowledge in Popular Rule"):
+        assert f'type="submit">{label}</button>' in header
+        assert f">{label} room<" not in header
     assert 'href="/join">Join a room</a>' in header
 
 
-def test_exercise_page_offers_open_a_room_and_names_the_exercise() -> None:
+def test_exercise_page_opens_its_own_kind_of_room() -> None:
     client = TestClient(app)
 
     for exercise in EXERCISES:
@@ -130,9 +133,9 @@ def test_exercise_page_offers_open_a_room_and_names_the_exercise() -> None:
 
         assert response.status_code == 200
         run = response.text.split('id="run"', 1)[1].split("</section>", 1)[0]
-        assert 'href="/start">Open a room</a>' in run
+        assert 'action="/rooms"' in run
+        assert 'type="submit">Open a room</button>' in run
         assert 'href="/join">Join a room</a>' in run
-        assert f"choose {exercise.title} from the toolbar" in run
 
 
 def test_exercise_page_leads_with_the_premise_and_shows_the_overview() -> None:

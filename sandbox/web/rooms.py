@@ -27,6 +27,7 @@ from sandbox.db.snapshot import from_snapshot, to_snapshot
 from sandbox.games import GAMES, Game, playable_slugs
 from sandbox.games.engine import build_seat, build_table
 from sandbox.model import (
+    AssignSeat,
     Ok,
     Operation,
     OpOutcome,
@@ -34,6 +35,7 @@ from sandbox.model import (
     Seat,
     Table,
     TableRng,
+    TakeFacilitator,
     Transaction,
     facilitator_seat,
     run_op,
@@ -267,12 +269,13 @@ def _find_free_seat(table: Table) -> Seat | None:
 
 
 def _apply_and_log(
-    session: Session, room: Room, table: Table, seat_id: str, transaction: Transaction
+    session: Session, room: Room, table: Table, seat_id: str, transaction: Operation
 ) -> None:
-    """Apply a transaction the room service built, and log it as one event."""
+    """Apply an operation the room service built, and log it as one event."""
     outcome = run_op(table, seat_id, transaction)
     if not isinstance(outcome, Ok):
-        raise RuntimeError(f"{transaction.label} was refused: {outcome.reason}")
+        what = getattr(transaction, "label", type(transaction).__name__)
+        raise RuntimeError(f"{what} was refused: {outcome.reason}")
     append_event(session, room, actor_seat=seat_id, op=transaction)
 
 
@@ -325,6 +328,26 @@ def create_room(
 
     save_table_state(session, room, table)
     return room, facilitator
+
+
+def open_room(session: Session, *, game_slug: str) -> Room:
+    """Open a new room of the room type ``game_slug``, with nobody in it yet.
+
+    Its table is built the same way as ``create_room``'s, with the first
+    seat empty: whoever opened it joins it with the join form, as anyone
+    else does.
+    """
+    game = GAMES.get(game_slug)
+    if game is None or game.definition.room is None:
+        raise UnknownExerciseError(f"There is no kind of room called {game_slug!r}.")
+    room = Room(code=generate_room_code(session), game_slug=game_slug, config={})
+    session.add(room)
+    session.flush()
+    table = Table(rng=TableRng(seed=secrets.randbits(63)))
+    seat_id, transaction = build_table(game, table, participant_id=None)
+    _apply_and_log(session, room, table, seat_id, transaction)
+    save_table_state(session, room, table)
+    return room
 
 
 class FacilitatorTakenError(RoomError):
@@ -387,11 +410,24 @@ def join_room(
         _apply_and_log(session, room, table, seat_id, transaction)
         seat = table.seats[seat_id]
     if seat is not None:
-        seat.participant_id = participant.id
+        if seat.participant_id != participant.id:
+            # A free seat being filled: logged, so a replay seats them too.
+            _apply_and_log(
+                session,
+                room,
+                table,
+                seat.id,
+                AssignSeat(seat_id=seat.id, participant_id=participant.id),
+            )
         participant.seat_id = seat.id
         participant.is_observer = False
-        if as_facilitator:
-            seat.is_facilitator = True
+        if as_facilitator and not seat.is_facilitator:
+            # Logged, so the record and a replay know who facilitates.
+            take = TakeFacilitator()
+            taken = run_op(table, seat.id, take)
+            if not isinstance(taken, Ok):
+                raise FacilitatorTakenError(taken.reason)
+            append_event(session, room, actor_seat=seat.id, op=take)
         save_table_state(session, room, table)
 
     room.last_active_at = _now()
@@ -581,6 +617,7 @@ __all__ = [
     "DORMANT_AFTER",
     "PURGE_AFTER",
     "create_room",
+    "open_room",
     "delete_room_record",
     "game_for",
     "is_dormant",

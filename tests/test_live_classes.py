@@ -13,7 +13,6 @@ from sqlalchemy.orm import sessionmaker
 from test_live_macros import GameRoom
 
 from sandbox.db.engine import session_scope
-from sandbox.games import OPEN_ROOM_SLUG
 from sandbox.web import rooms
 from sandbox.web.live import LiveHub
 
@@ -22,14 +21,14 @@ HOST = "cookie-host"
 
 @asynccontextmanager
 async def open_room(
-    guests: int,
+    guests: int, kind: str = "test-room"
 ) -> AsyncIterator[tuple[GameRoom, Client, list[Client]]]:
     engine = make_test_engine()
     factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     with session_scope(factory) as session:
         room, _ = rooms.create_room(
             session,
-            game_slug=OPEN_ROOM_SLUG,
+            game_slug=kind,
             facilitator_cookie_id=HOST,
             facilitator_name="Ines",
         )
@@ -156,13 +155,13 @@ async def test_the_timer_reaches_every_screen_and_changes_nothing_on_the_table()
 async def test_pairing_is_for_scenario_two_and_its_outcome_is_the_facilitators() -> (
     None
 ):
-    async with open_room(2) as (room, host, guests):
+    async with open_room(2, "democracy-room") as (room, host, guests):
         await _act(
             room,
             host,
             {
                 "action": "start",
-                "slug": "democracy-simulation",
+                "slug": "scenario-2",
                 "tables": 2,
                 "options": {"city": "potamosia", "phase": "2"},
             },
@@ -213,13 +212,13 @@ async def test_pairing_is_for_scenario_two_and_its_outcome_is_the_facilitators()
 
 
 async def test_scenario_one_and_other_activities_refuse_pairing() -> None:
-    async with open_room(2) as (room, host, _guests):
+    async with open_room(2, "democracy-room") as (room, host, _guests):
         await _act(
             room,
             host,
             {
                 "action": "start",
-                "slug": "democracy-simulation",
+                "slug": "scenario-1",
                 "tables": 2,
                 "options": {"city": "potamosia", "phase": "1"},
             },
@@ -312,13 +311,13 @@ async def test_the_facilitator_moves_people_and_a_guest_cannot() -> None:
 
 
 async def test_players_at_a_paired_table_pick_its_choice_and_see_only_that() -> None:
-    async with open_room(4) as (room, host, guests):
+    async with open_room(4, "democracy-room") as (room, host, guests):
         await _act(
             room,
             host,
             {
                 "action": "start",
-                "slug": "democracy-simulation",
+                "slug": "scenario-2",
                 "tables": 2,
                 "options": {"city": "potamosia", "phase": "2"},
             },

@@ -1,4 +1,4 @@
-"""HTTP-level tests for /start, /join, and the /t/{code} table shell."""
+"""HTTP-level tests for opening a room, /join, and the /t/{code} table shell."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from collections.abc import Iterator
 
 import pytest
 from _db_support import make_test_engine
+from _room_support import start_room
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -37,18 +38,29 @@ def client() -> Iterator[TestClient]:
         app.dependency_overrides.pop(get_session, None)
 
 
-def test_start_form_renders(client: TestClient) -> None:
-    response = client.get("/start")
+def test_opening_a_room_sends_its_opener_to_the_join_form(client: TestClient) -> None:
+    response = client.post("/rooms", data={"kind": "value-cards-room"})
 
-    assert response.status_code == 200
-    assert "Open a room" in response.text
-    assert 'name="game_slug"' not in response.text
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/join?code=")
+    form = client.get(response.headers["location"]).text
+    code = response.headers["location"].removeprefix("/join?code=")
+    assert f'value="{code}"' in form
 
 
-def test_starting_with_no_game_opens_the_sandbox_with_no_facilitator(
+def test_each_exercise_page_opens_its_own_kind_of_room(client: TestClient) -> None:
+    for slug, kind in (
+        ("value-cards-trading", "value-cards-room"),
+        ("democracy-simulation", "democracy-room"),
+    ):
+        page = client.get(f"/exercises/{slug}").text
+        assert f'name="kind" value="{kind}"' in page
+
+
+def test_a_new_room_has_no_facilitator(
     client: TestClient,
 ) -> None:
-    response = client.post("/start", data={"display_name": "Ada"})
+    response = start_room(client, data={"display_name": "Ada"})
 
     assert response.status_code == 303
     page = client.get(response.headers["location"]).text
@@ -58,8 +70,8 @@ def test_starting_with_no_game_opens_the_sandbox_with_no_facilitator(
 def test_starting_a_room_redirects_to_the_table_and_sets_a_cookie(
     client: TestClient,
 ) -> None:
-    response = client.post(
-        "/start",
+    response = start_room(
+        client,
         data={
             "display_name": "Ada",
             "as_facilitator": "true",
@@ -73,15 +85,15 @@ def test_starting_a_room_redirects_to_the_table_and_sets_a_cookie(
 
 
 def test_starting_a_room_without_a_name_shows_an_error(client: TestClient) -> None:
-    response = client.post("/start", data={"display_name": "  "})
+    response = start_room(client, data={"display_name": "  "})
 
     assert response.status_code == 400
     assert "Enter a name" in response.text
 
 
 def test_the_facilitator_can_open_their_own_table(client: TestClient) -> None:
-    start = client.post(
-        "/start",
+    start = start_room(
+        client,
         data={
             "display_name": "Ada",
             "as_facilitator": "true",
@@ -97,8 +109,8 @@ def test_the_facilitator_can_open_their_own_table(client: TestClient) -> None:
 
 
 def test_visiting_a_table_before_joining_redirects_to_join(client: TestClient) -> None:
-    start = client.post(
-        "/start",
+    start = start_room(
+        client,
         data={
             "display_name": "Ada",
             "as_facilitator": "true",
@@ -124,8 +136,8 @@ def test_visiting_an_unknown_table_404s(client: TestClient) -> None:
 def test_joining_a_room_seats_the_participant_and_redirects(
     client: TestClient,
 ) -> None:
-    start = client.post(
-        "/start",
+    start = start_room(
+        client,
         data={
             "display_name": "Ada",
             "as_facilitator": "true",
@@ -157,7 +169,7 @@ def test_joining_an_unknown_code_shows_an_error(client: TestClient) -> None:
 def test_a_closed_room_says_it_is_closed_and_what_to_do(client: TestClient) -> None:
     from sandbox.web.rooms import close_room, get_room_by_code
 
-    response = client.post("/start", data={"display_name": "Ada"})
+    response = start_room(client, data={"display_name": "Ada"})
     code = response.headers["location"].removeprefix("/t/")
     session_gen = app.dependency_overrides[get_session]()
     session = next(session_gen)

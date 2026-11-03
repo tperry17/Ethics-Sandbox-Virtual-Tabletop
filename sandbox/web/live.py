@@ -44,7 +44,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from sandbox.db.engine import SessionLocal, session_scope
 from sandbox.db.models import Participant, Room
-from sandbox.games import GAMES, OPEN_ROOM_SLUG, Game
+from sandbox.games import GAMES, Game
 from sandbox.games.engine import (
     announcement,
     build_activity_start,
@@ -53,6 +53,7 @@ from sandbox.games.engine import (
     may_use_facilitator_button,
 )
 from sandbox.games.pairing import may_pair, pair_outcome, pairing_choices
+from sandbox.games.room_types import offered_activities, offered_activity
 from sandbox.model import (
     SYSTEM_SEAT,
     AcceptSwap,
@@ -426,6 +427,7 @@ class ActivityChoiceView(BaseModel):
     max_players: int
     duration_minutes: int
     options: list[ActivityOptionView] = Field(default_factory=list)
+    class_only: bool = False
 
 
 class StrokeView(BaseModel):
@@ -663,11 +665,15 @@ ACTIVITY_INTENT = "activity"
 CLASS_INTENT = "class"
 
 
-def chosen_options(game: Game, sent: object) -> dict[str, str] | str:
+def chosen_options(
+    game: Game, sent: object, fixed: dict[str, str] | None = None
+) -> dict[str, str] | str:
     """The options a person chose for ``game``, or a sentence saying what is wrong.
 
     An option left out takes its first choice; one the definition does not
-    offer, or a value it does not list, is refused.
+    offer, or a value it does not list, is refused. ``fixed`` are the
+    options the room has already settled (a scenario, say); they win over
+    anything sent.
     """
     given = sent if isinstance(sent, dict) else {}
     chosen = game.definition.default_options()
@@ -676,21 +682,23 @@ def chosen_options(game: Game, sent: object) -> dict[str, str] | str:
         if option is None or value not in {c.id for c in option.choices}:
             return "That choice is not one this activity offers."
         chosen[option_id] = value
+    chosen.update(fixed or {})
     return chosen
 
 
-def activity_choices() -> list[ActivityChoiceView]:
-    """The activities any room can start: every game but the open room itself.
+def activity_choices(room_game: Game | None) -> list[ActivityChoiceView]:
+    """The activities a room of ``room_game`` can start, and nothing else.
 
-    Whether a game is in the public catalog (``listed``) is a separate matter.
+    Each is one of the room type's own; options the room fixes are not
+    offered as choices.
     """
     return [
         ActivityChoiceView(
-            slug=game.slug,
-            title=game.title,
-            min_players=game.definition.meta.players.min,
-            max_players=game.definition.meta.players.max,
-            duration_minutes=game.definition.meta.duration_minutes,
+            slug=offered.id,
+            title=offered.title,
+            min_players=offered.game.definition.meta.players.min,
+            max_players=offered.game.definition.meta.players.max,
+            duration_minutes=offered.game.definition.meta.duration_minutes,
             options=[
                 ActivityOptionView(
                     id=option.id,
@@ -700,11 +708,12 @@ def activity_choices() -> list[ActivityChoiceView]:
                         for c in option.choices
                     ],
                 )
-                for option in game.definition.options
+                for option in offered.game.definition.options
+                if option.id not in offered.fixed
             ],
+            class_only=offered.class_only,
         )
-        for game in GAMES.values()
-        if game.slug != OPEN_ROOM_SLUG
+        for offered in offered_activities(GAMES, room_game)
     ]
 
 
@@ -1370,20 +1379,28 @@ class RoomRuntime:
         activity_id = payload.get("activity_id")
         operation: Operation
         if action == "open":
-            game = GAMES.get(str(payload.get("slug")))
-            if game is None or game.slug == OPEN_ROOM_SLUG:
+            offered = offered_activity(GAMES, self.game, payload.get("slug"))
+            if offered is None:
                 self._reject(
-                    connection, message.client_id, "There is no such activity."
+                    connection, message.client_id, "This room has no such activity."
                 )
                 return
+            if offered.class_only:
+                self._reject(
+                    connection,
+                    message.client_id,
+                    f"{offered.title} runs as a class: start a class instead.",
+                )
+                return
+            game = offered.game
             meta = game.definition.meta
-            chosen = chosen_options(game, payload.get("options"))
+            chosen = chosen_options(game, payload.get("options"), offered.fixed)
             if isinstance(chosen, str):
                 self._reject(connection, message.client_id, chosen)
                 return
             operation = OpenActivity(
                 kind=game.slug,
-                title=game.title,
+                title=offered.title,
                 min_players=meta.players.min,
                 max_players=meta.players.max,
                 options=tuple(chosen.items()),
@@ -1477,17 +1494,18 @@ class RoomRuntime:
         class_id = payload.get("class_id")
         operation: Operation
         if action == "start":
-            game = GAMES.get(str(payload.get("slug")))
+            offered = offered_activity(GAMES, self.game, payload.get("slug"))
             tables = payload.get("tables")
-            if game is None or game.slug == OPEN_ROOM_SLUG:
+            if offered is None:
                 self._reject(
-                    connection, message.client_id, "There is no such activity."
+                    connection, message.client_id, "This room has no such activity."
                 )
                 return
+            game = offered.game
             if not isinstance(tables, int) or isinstance(tables, bool):
                 self._reject(connection, message.client_id, "Choose how many tables.")
                 return
-            chosen = chosen_options(game, payload.get("options"))
+            chosen = chosen_options(game, payload.get("options"), offered.fixed)
             if isinstance(chosen, str):
                 self._reject(connection, message.client_id, chosen)
                 return
@@ -1499,7 +1517,7 @@ class RoomRuntime:
             meta = game.definition.meta
             operation = StartClass(
                 kind=game.slug,
-                title=game.title,
+                title=offered.title,
                 min_players=meta.players.min,
                 max_players=meta.players.max,
                 tables=tables,
@@ -2168,7 +2186,7 @@ class RoomRuntime:
             ),
             components=components,
             macros=self._macros_for(connection),
-            activity_choices=activity_choices(),
+            activity_choices=activity_choices(self.game),
             classes=self._class_views(connection.is_facilitator, connection.seat_id),
         )
         connection.last_seq_sent = self.seq

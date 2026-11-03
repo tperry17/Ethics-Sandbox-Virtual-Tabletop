@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page, type WebSocketRoute } from "@playwright/test";
+import { openFromLanding } from "./rooms";
 
 /**
  * A flaky network, a locked iPad, a refresh, two hands on one piece. The
@@ -52,9 +53,9 @@ async function openRoom(
 ): Promise<{ page: Page; code: string; wire: Wire }> {
   const page = await (await browser.newContext()).newPage();
   const wire = await watch(page);
-  await page.goto("/start");
+  await openFromLanding(page, "Test room");
   await page.getByLabel("Your name").fill(name);
-  await page.getByRole("button", { name: "Open a room" }).click();
+  await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
   await expect(page.locator(".tabletop__pieces-layer .piece").first()).toBeAttached();
   return { page, code: page.url().split("/t/")[1]!, wire };
@@ -178,9 +179,9 @@ test("a view kept in storage that cannot be read does not break the table", asyn
   const page = await context.newPage();
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/start");
+  await openFromLanding(page, "Test room");
   await page.getByLabel("Your name").fill("Ines");
-  await page.getByRole("button", { name: "Open a room" }).click();
+  await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
   await expect(page.locator(".tabletop__pieces-layer .piece").first()).toBeAttached();
   expect(errors).toEqual([]);

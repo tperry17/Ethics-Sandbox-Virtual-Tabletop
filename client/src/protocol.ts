@@ -210,6 +210,8 @@ export interface ActivityChoiceView {
   duration_minutes: number;
   /** Choices the person makes when starting it; the first is the default. */
   options?: ActivityOptionView[];
+  /** Offered only as a class: the room's toolbar does not start it alone. */
+  class_only?: boolean;
 }
 
 export interface ActivityOptionView {

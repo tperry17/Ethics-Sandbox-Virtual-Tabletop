@@ -6,6 +6,7 @@ from collections.abc import Iterator
 
 import pytest
 from _db_support import make_test_engine
+from _room_support import start_room
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -81,26 +82,27 @@ def test_nothing_but_images_is_served_from_content(
     assert client.get(path).status_code == 404
 
 
-def test_the_start_page_opens_a_room_and_offers_no_game(client: TestClient) -> None:
-    page = client.get("/start").text
-
-    assert "Pairs" not in page
-    assert 'name="game_slug"' not in page
-    assert client.get("/start?game=pairs").text == page
-
-
-def test_a_game_slug_sent_to_start_is_ignored_the_room_is_still_open(
-    client: TestClient,
-) -> None:
-    response = client.post(
-        "/start", data={"game_slug": "pairs", "display_name": "Ines"}
+def test_there_is_no_start_page(client: TestClient) -> None:
+    assert client.get("/start").status_code in (404, 405)
+    assert client.post("/start", data={"display_name": "Ines"}).status_code in (
+        404,
+        405,
     )
+
+
+def test_only_a_kind_of_room_can_be_opened(client: TestClient) -> None:
+    for kind in ("pairs", "value-cards-trading", "nothing-at-all"):
+        assert client.post("/rooms", data={"kind": kind}).status_code == 404
+
+
+def test_the_test_room_offers_only_its_own_activities(client: TestClient) -> None:
+    response = start_room(client, data={"display_name": "Ines"}, kind="test-room")
     assert response.status_code == 303
 
     table_page = client.get(response.headers["location"])
 
     assert table_page.status_code == 200
-    assert "<title>Open table ·" in table_page.text
+    assert "<title>Test room ·" in table_page.text
 
 
 def test_the_democracy_simulation_page_draws_its_table_from_its_definition(

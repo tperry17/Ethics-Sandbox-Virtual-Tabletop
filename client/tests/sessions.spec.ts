@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import { newRoom } from "./rooms";
 
 /**
  * Whole sessions, one per exercise, with several browsers in one room: a
@@ -28,13 +29,8 @@ async function open(browser: Browser, path: string, name: string): Promise<Perso
     server.onClose((code, reason) => route.close({ code, reason }));
   });
   await page.goto(path);
-  if (path === "/start") {
-    await page.getByLabel("Your name").fill(name);
-    await page.getByRole("button", { name: "Open a room" }).click();
-  } else {
-    await page.locator('input[name="display_name"]').fill(name);
-    await page.locator('form button[type="submit"]').click();
-  }
+  await page.locator('input[name="display_name"]').fill(name);
+  await page.locator('form button[type="submit"]').click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
   return {
     page,
@@ -55,7 +51,7 @@ test("Value Cards Trading: four browsers, a drop and a rejoin, and a macro mid-d
   browser,
 }) => {
   test.setTimeout(120_000);
-  const ines = await open(browser, "/start", "Ines");
+  const ines = await open(browser, await newRoom(browser, "Value Cards"), "Ines");
   const code = roomCode(ines.page);
   const tomas = await open(browser, `/join?code=${code}`, "Tomas");
   const wren = await open(browser, `/join?code=${code}`, "Wren");
@@ -111,20 +107,20 @@ test("Leadership and Knowledge in Popular Rule: a city of nine, a rejoin, and th
   browser,
 }) => {
   test.setTimeout(180_000);
-  const host = await open(browser, "/start", "Ines");
+  const host = await open(browser, await newRoom(browser, "Leadership and Knowledge in Popular Rule"), "Ines");
   const code = roomCode(host.page);
   const citizens: Person[] = [];
   for (let n = 1; n <= 9; n += 1) {
     citizens.push(await open(browser, `/join?code=${code}`, `Citizen ${n}`));
   }
 
-  await host.page.getByLabel("Activity to start").selectOption("democracy-simulation");
+  await host.page.getByLabel("Activity to start").selectOption("scenario-1");
   await host.page.getByRole("button", { name: "Start this activity" }).click();
   for (const citizen of citizens) {
     await citizen.page.getByRole("button", { name: "Join" }).click();
   }
   await host.page.getByRole("button", { name: "Begin now" }).click();
-  await expect(host.page.getByText(/Leadership and Knowledge in Popular Rule: running/)).toBeVisible();
+  await expect(host.page.getByText(/Scenario 1: Construction project: running/)).toBeVisible();
 
   await host.page.getByRole("button", { name: "Deal role cards" }).click();
   const mine = citizens[0]!.page.locator('.piece[data-zone-id*=":hand-seat-"]');

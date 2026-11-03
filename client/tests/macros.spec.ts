@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { openFromLanding } from "./rooms";
 
 /**
  * Activities started in an open room. Pairs is the reference game: two
@@ -7,9 +8,9 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 
 async function openRoom(browser: Browser, name: string): Promise<{ page: Page; code: string }> {
   const page = await (await browser.newContext()).newPage();
-  await page.goto("/start");
+  await openFromLanding(page, "Test room");
   await page.getByLabel("Your name").fill(name);
-  await page.getByRole("button", { name: "Open a room" }).click();
+  await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
   const code = page.url().split("/t/")[1]!;
   return { page, code };

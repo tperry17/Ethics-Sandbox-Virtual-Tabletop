@@ -27,8 +27,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from sandbox.content_loading import CONTENT_ROOT
 from sandbox.db import Room, init_db, session_scope
-from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, OPEN_ROOM_SLUG
+from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES
 from sandbox.games.loader import IMAGE_SUFFIXES, Card, Game
+from sandbox.games.room_types import room_for_exercise, room_types
 from sandbox.web.content import HELP_RECORDS, SITE_COPY
 from sandbox.web.debrief import router as debrief_router
 from sandbox.web.deps import get_session as get_session
@@ -44,13 +45,13 @@ from sandbox.web.rooms import (
     FacilitatorTakenError,
     RoomClosedError,
     RoomNotFoundError,
-    create_room,
     delete_room_record,
     get_participant,
     get_room_by_code,
     is_dormant,
     join_room,
     load_table,
+    open_room,
     purge_date,
     purge_expired,
 )
@@ -208,6 +209,11 @@ async def home(request: Request) -> HTMLResponse:
             "project_name": "Ethics Sandbox",
             "site_copy": SITE_COPY,
             "exercises": EXERCISES,
+            "room_kinds": [
+                {"slug": game.slug, "label": game.definition.room.label}
+                for game in room_types(GAMES)
+                if game.definition.room is not None
+            ],
             "canonical_url": _public_base(request) + "/",
             "og_image": _public_base(request) + "/static/og/default.png",
         },
@@ -235,6 +241,9 @@ async def exercise_detail(request: Request, slug: str) -> HTMLResponse:
         context={
             "exercise": exercise,
             "site_copy": SITE_COPY,
+            "room_kind": None
+            if (room_game := room_for_exercise(GAMES, slug)) is None
+            else room_game.slug,
             "canonical_url": f"{_public_base(request)}/exercises/{slug}",
             "og_image": f"{_public_base(request)}/static/og/{slug}.png",
             "preview": None if game is None else picture_of_table(game),
@@ -302,46 +311,26 @@ async def content_image(path: str) -> FileResponse:
     return FileResponse(file)
 
 
-@app.get("/start", response_class=HTMLResponse)
-async def start_form(request: Request) -> HTMLResponse:
-    """Render the form for opening a room."""
-    return templates.TemplateResponse(
-        request=request, name="start.html", context={"error": None}
-    )
-
-
-@app.post("/start", response_class=HTMLResponse)
-def start_room(
+@app.post("/rooms")
+def open_room_route(
     request: Request,
-    display_name: str = Form(...),
-    as_facilitator: bool = Form(False),
+    kind: str = Form(...),
     session: Session = Depends(get_session),
 ) -> Response:
-    """Open a room and seat its creator.
+    """Open a room of one kind, then send its opener to the join form.
 
-    Every room is the open sandbox; activities are started inside it. The
-    creator is a player unless they ticked "Join as facilitator".
+    Only the room types' own buttons post here (an exercise page's "Open a
+    room" and the landing page's menu); there is no page for it. Whoever
+    opened the room joins it like anyone else, with a display name.
     """
     cookie_id = _identify(request)
-
-    if not display_name.strip():
-        response: Response = templates.TemplateResponse(
-            request=request,
-            name="start.html",
-            status_code=400,
-            context={"error": "Enter a name to join with."},
-        )
-        set_participant_cookie(response, request, cookie_id)
-        return response
-
-    room, _creator = create_room(
-        session,
-        game_slug=OPEN_ROOM_SLUG,
-        facilitator_cookie_id=cookie_id,
-        facilitator_name=display_name,
-        as_facilitator=as_facilitator,
+    game = GAMES.get(kind)
+    if game is None or game.definition.room is None:
+        raise HTTPException(status_code=404, detail="There is no such kind of room.")
+    room = open_room(session, game_slug=game.slug)
+    response: Response = RedirectResponse(
+        url=f"/join?code={room.code}", status_code=303
     )
-    response = RedirectResponse(url=f"/t/{room.code}", status_code=303)
     set_participant_cookie(response, request, cookie_id)
     return response
 

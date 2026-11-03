@@ -88,6 +88,7 @@ def validate_games(
     report = Report()
     catalog = {row["slug"]: row for row in read_rows(EXERCISES_CSV)}
     slugs: dict[str, str] = {}
+    loaded: dict[str, Game] = {}
     for directory in game_directories(root):
         try:
             game = load_game(directory, content_root)
@@ -101,6 +102,7 @@ def validate_games(
                 f"{slugs[game.slug]}/."
             )
         slugs[game.slug] = directory.name
+        loaded[game.slug] = game
         listed = catalog.get(game.slug)
         if game.definition.meta.listed:
             if listed is None:
@@ -117,12 +119,61 @@ def validate_games(
             play_through(game)
         except GameDefinitionError as error:
             report.errors.append(f"{directory.name}: {error}")
+    report.errors.extend(_room_errors(loaded, catalog, whole_catalog=catalog_notes))
     for slug in sorted(set(catalog) - set(slugs)) if catalog_notes else ():
         report.notes.append(
             f"{slug} is in content/{EXERCISES_CSV} but has no game definition "
             "yet; its tables start empty."
         )
     return report
+
+
+def _room_errors(
+    games: dict[str, Game], catalog: dict[str, dict[str, str]], *, whole_catalog: bool
+) -> list[str]:
+    """What is wrong with the room types: their exercise and their activities.
+
+    Each room names a catalog exercise, and every activity it offers is a
+    game here with only real options fixed. With ``whole_catalog``, every
+    catalog exercise has exactly one room.
+    """
+    errors: list[str] = []
+    rooms_for: dict[str, list[str]] = {}
+    for game in games.values():
+        room = game.definition.room
+        if room is None:
+            continue
+        rooms_for.setdefault(room.exercise, []).append(game.slug)
+        if whole_catalog and room.exercise not in catalog:
+            errors.append(
+                f"{game.slug}: is the room for {room.exercise!r}, which is not "
+                f"in content/{EXERCISES_CSV}."
+            )
+        for activity in room.activities:
+            target = games.get(activity.game)
+            if target is None or target.definition.room is not None:
+                errors.append(
+                    f"{game.slug}: activity {activity.id!r} names {activity.game!r}, "
+                    "which is not an activity's game."
+                )
+                continue
+            for option_id, choice_id in activity.options.items():
+                option = next(
+                    (o for o in target.definition.options if o.id == option_id), None
+                )
+                if option is None or choice_id not in {c.id for c in option.choices}:
+                    errors.append(
+                        f"{game.slug}: activity {activity.id!r} fixes "
+                        f"{option_id}={choice_id}, which {activity.game!r} "
+                        "does not offer."
+                    )
+    for exercise, rooms in sorted(rooms_for.items()):
+        if len(rooms) > 1:
+            errors.append(f"{exercise} has more than one room: {sorted(rooms)}.")
+    if whole_catalog:
+        for slug in sorted(set(catalog) - set(rooms_for)):
+            errors.append(f"{slug} is in content/{EXERCISES_CSV} but has no room.")
+    return errors
 
 
 __all__ = ["Report", "play_through", "validate_games"]

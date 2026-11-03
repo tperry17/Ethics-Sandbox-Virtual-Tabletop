@@ -33,10 +33,12 @@ export function renderActivities(model: TableModel, send: SendActivity): HTMLEle
   root.setAttribute("role", "group");
   root.setAttribute("aria-label", "Activities");
 
-  if (model.activityChoices.length > 0) {
+  // An activity offered only as a class is started from the class controls.
+  const startable = model.activityChoices.filter((choice) => choice.class_only !== true);
+  if (startable.length > 0) {
     const select = document.createElement("select");
     select.setAttribute("aria-label", "Activity to start");
-    for (const choice of model.activityChoices) {
+    for (const choice of startable) {
       const option = document.createElement("option");
       option.value = choice.slug;
       option.textContent = `${choice.title} (${choice.min_players === choice.max_players ? choice.min_players : `${choice.min_players}–${choice.max_players}`} people)`;
@@ -46,7 +48,7 @@ export function renderActivities(model: TableModel, send: SendActivity): HTMLEle
     // it is the one selected; the server judges whatever is sent.
     const choiceBoxes = new Map<string, HTMLElement>();
     const picks = new Map<string, HTMLSelectElement>();
-    for (const choice of model.activityChoices) {
+    for (const choice of startable) {
       const box = document.createElement("span");
       box.className = "toolbar__options";
       for (const option of choice.options ?? []) {

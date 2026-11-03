@@ -85,7 +85,7 @@ def test_a_hook_game_registers_every_moment() -> None:
             lambda raw: raw.update(
                 macros=[m for m in raw["macros"] if m["id"] != "clear_ink"]
             ),
-            "every exercise needs these macros as well",
+            "this definition needs these macros as well",
         ),
         (
             lambda raw: raw["zones"][3].update(per_seat=False),
@@ -228,7 +228,7 @@ def test_every_fixture_game_is_valid() -> None:
     report = validate_games(FIXTURE_GAMES, FIXTURE_CONTENT, catalog_notes=False)
 
     assert report.errors == []
-    assert sorted(report.checked) == ["choosy", "hooked", "pairs"]
+    assert sorted(report.checked) == ["choosy", "hooked", "pairs", "test-room"]
 
 
 def test_pairs_is_not_part_of_the_product() -> None:

@@ -1,13 +1,19 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { newRoom, openFromLanding, type RoomKind } from "./rooms";
 
 /** Accessibility, touch and small screens. */
 
-async function openRoom(browser: Browser, name: string, options = {}): Promise<Page> {
+async function openRoom(
+  browser: Browser,
+  name: string,
+  options = {},
+  kind: RoomKind = "Test room",
+): Promise<Page> {
   const page = await (await browser.newContext(options)).newPage();
-  await page.goto("/start");
+  await openFromLanding(page, kind);
   await page.getByLabel("Your name").fill(name);
-  await page.getByRole("button", { name: "Open a room" }).click();
+  await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
   await expect(page.locator("html[data-table-client='ready']")).toHaveCount(1);
   return page;
@@ -22,7 +28,7 @@ async function violations(page: Page): Promise<string[]> {
   );
 }
 
-for (const path of ["/", "/help", "/join", "/health", "/start", "/exercises/value-cards-trading"]) {
+for (const path of ["/", "/help", "/join", "/health", "/exercises/value-cards-trading"]) {
   for (const scheme of ["light", "dark"] as const) {
     test(`axe finds nothing on ${path} (${scheme})`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
@@ -33,7 +39,7 @@ for (const path of ["/", "/help", "/join", "/health", "/start", "/exercises/valu
 }
 
 test("axe finds nothing on a table with an activity running", async ({ browser }) => {
-  const page = await openRoom(browser, "Ines");
+  const page = await openRoom(browser, "Ines", {}, "Value Cards");
   await expect(page.locator(".tabletop__pieces-layer")).toBeAttached();
   expect(await violations(page)).toEqual([]);
   await page.getByLabel("Activity to start").selectOption("value-cards-trading");
@@ -74,7 +80,7 @@ test("reduced motion removes transitions and animations", async ({ page }) => {
 test("pages work with text at 200 percent", async ({ page }) => {
   // 200% text zoom on a 1280 x 800 laptop is, to the layout, a 640 x 400 window.
   await page.setViewportSize({ width: 640, height: 400 });
-  for (const path of ["/", "/help", "/join", "/start", "/health"]) {
+  for (const path of ["/", "/help", "/join", "/health"]) {
     await page.goto(path);
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -143,7 +149,7 @@ async function startTrading(browser: Browser, touch: boolean) {
     await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
     return page;
   };
-  const ines = await person("/start", "Ines");
+  const ines = await person(await newRoom(browser, "Value Cards"), "Ines");
   const code = ines.url().split("/t/")[1]!;
   const tomas = await person(`/join?code=${code}`, "Tomas");
   const wren = await person(`/join?code=${code}`, "Wren");
@@ -222,7 +228,7 @@ test("a card goes out of the hand and back into it with the keyboard alone", asy
     await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
     return page;
   };
-  const host = await person("/start", "Ines");
+  const host = await person(await newRoom(browser, "Test room"), "Ines");
   const guest = await person(`/join?code=${host.url().split("/t/")[1]}`, "Tomas");
   await host.getByLabel("Activity to start").selectOption("pairs");
   await host.getByRole("button", { name: "Start this activity" }).click();

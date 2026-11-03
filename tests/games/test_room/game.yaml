@@ -1,0 +1,79 @@
+# A room for the test fixtures: it offers Pairs, Hooked and Choosy, so the
+# tests can start them the way a person would. Not part of the product.
+meta:
+  slug: test-room
+  title: Test room
+  players: {min: 1, max: 30}
+  duration_minutes: 30
+  facilitator: optional
+  listed: false
+
+room:
+  exercise: pairs
+  label: Test room
+  activities:
+    - {id: pairs, game: pairs}
+    - {id: hooked, game: hooked}
+    - {id: choosy, game: choosy}
+  pieces: [d6, cube-1, cube-2, cube-3, cube-4, cube-5, cube-6, meeple-1, meeple-2, meeple-3, meeple-4, meeple-5, meeple-6, token-1, token-2, token-3, token-4, token-5, token-6]
+
+components:
+  pieces:
+    - {id: d6, kind: die, title: Die, faces: ["1", "2", "3", "4", "5", "6"]}
+    - {id: cube-1, kind: cube, title: Cube, tint_index: 0}
+    - {id: cube-2, kind: cube, title: Cube, tint_index: 1}
+    - {id: cube-3, kind: cube, title: Cube, tint_index: 2}
+    - {id: cube-4, kind: cube, title: Cube, tint_index: 3}
+    - {id: cube-5, kind: cube, title: Cube, tint_index: 4}
+    - {id: cube-6, kind: cube, title: Cube, tint_index: 5}
+    - {id: meeple-1, kind: meeple, title: Meeple, tint_index: 0}
+    - {id: meeple-2, kind: meeple, title: Meeple, tint_index: 1}
+    - {id: meeple-3, kind: meeple, title: Meeple, tint_index: 2}
+    - {id: meeple-4, kind: meeple, title: Meeple, tint_index: 3}
+    - {id: meeple-5, kind: meeple, title: Meeple, tint_index: 4}
+    - {id: meeple-6, kind: meeple, title: Meeple, tint_index: 5}
+    - {id: token-1, kind: token, title: Token, tint_index: 0}
+    - {id: token-2, kind: token, title: Token, tint_index: 1}
+    - {id: token-3, kind: token, title: Token, tint_index: 2}
+    - {id: token-4, kind: token, title: Token, tint_index: 3}
+    - {id: token-5, kind: token, title: Token, tint_index: 4}
+    - {id: token-6, kind: token, title: Token, tint_index: 5}
+
+
+zones:
+  - id: table
+    kind: table
+    label: The table
+    rect: [0, 0, 1700, 900]
+    visibility: public
+    layout: free
+  - id: kit
+    kind: tray
+    label: Dice and markers
+    rect: [320, 40, 1340, 320]
+    visibility: public
+    layout: grid
+
+# Unlike a product room, this one lays some loose pieces out, so the tests
+# have something to drag without going through the Pieces menu.
+setup:
+  - {op: spawn, component: d6, zone: kit, count: 2}
+  - {op: spawn, component: cube-1, zone: kit, count: 3}
+  - {op: spawn, component: meeple-2, zone: kit, count: 3}
+  - {op: spawn, component: token-3, zone: kit, count: 3}
+
+macros:
+  - id: setup
+    steps:
+      - {op: reset_table}
+      - {op: setup}
+  - id: reset
+    steps:
+      - {op: reset_table}
+  - id: clear_ink
+    who: anyone
+    steps:
+      - {op: clear_ink}
+
+buttons:
+  source: exercises/test-room/buttons.csv

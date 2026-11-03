@@ -31,7 +31,17 @@
           <p>{{ site_copy.lede }}</p>
         </div>
         <div class="toolbar" role="group" aria-label="Start actions">
-          <a class="button button--primary button--lg" href="/start">{{ site_copy.open_room_label }}</a>
+          <details class="room-menu">
+            <summary class="button button--primary button--lg">{{ site_copy.open_room_label }}</summary>
+            <div class="room-menu__panel" role="group" aria-label="Kinds of room">
+              {% for kind in room_kinds %}
+              <form method="post" action="/rooms">
+                <input type="hidden" name="kind" value="{{ kind.slug }}">
+                <button class="button button--secondary button--md" type="submit">{{ kind.label }}</button>
+              </form>
+              {% endfor %}
+            </div>
+          </details>
           <a class="button button--secondary button--lg" href="/join">{{ site_copy.join_room_label }}</a>
         </div>
         <div class="prose site__lede">
