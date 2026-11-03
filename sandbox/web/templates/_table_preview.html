@@ -8,7 +8,11 @@
     {% for zone in preview.zones %}
     <g class="table-picture__zone table-picture__zone--{{ zone.visibility }} table-picture__zone--{{ zone.kind }}">
       <rect x="{{ zone.x }}" y="{{ zone.y }}" width="{{ zone.width }}" height="{{ zone.height }}" rx="12"></rect>
-      <text x="{{ zone.x + 14 }}" y="{{ zone.y + 30 }}">{{ zone.label }}</text>
+      {% if zone.kind != "table" %}
+      {# Labels are 36 units, shrunk to fit a narrow zone (about 0.6 em a character). #}
+      {% set label_size = [36, (zone.width - 36) / (0.6 * (zone.label | length))] | min %}
+      <text x="{{ zone.x + 18 }}" y="{{ zone.y + 10 + label_size }}" font-size="{{ '%.1f' | format(label_size) }}">{{ zone.label }}</text>
+      {% endif %}
     </g>
     {% endfor %}
     {% for piece in preview.pieces %}
@@ -16,7 +20,7 @@
        transform="rotate({{ piece.rotation }} {{ piece.x + piece.width / 2 }} {{ piece.y + piece.height / 2 }})">
       <rect x="{{ piece.x }}" y="{{ piece.y }}" width="{{ piece.width }}" height="{{ piece.height }}" rx="10"></rect>
       {% if piece.title is not none %}
-      <text x="{{ piece.x + 16 }}" y="{{ piece.y + 36 }}">{{ piece.title }}</text>
+      <text x="{{ piece.x + 16 }}" y="{{ piece.y + 48 }}">{{ piece.title }}</text>
       {% endif %}
     </g>
     {% endfor %}

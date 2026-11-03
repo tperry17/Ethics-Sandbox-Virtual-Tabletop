@@ -701,40 +701,38 @@
 .table-picture__svg {
   width: 100%;
   height: auto;
+  border: var(--line-hairline) solid var(--surface-border);
   border-radius: var(--radius-lg);
-  background: var(--table-felt);
-  box-shadow: var(--shadow-raised);
+  background: var(--surface-sunken);
 }
 
 .table-picture__zone rect {
   fill: var(--transparent);
-  stroke: var(--table-zone-outline);
+  stroke: var(--surface-border-strong);
   stroke-dasharray: 10 8;
   stroke-width: 3;
 }
 
 .table-picture__zone--private_to_owner rect {
-  fill: var(--table-zone-private);
+  fill: var(--surface-raised);
   stroke-dasharray: none;
 }
 
 .table-picture__zone--hidden rect {
-  fill: var(--table-felt-edge);
+  fill: var(--surface-border);
   stroke-dasharray: none;
 }
 
 .table-picture__zone--table rect {
-  stroke: var(--table-felt-edge);
+  stroke: var(--surface-border);
   stroke-dasharray: none;
 }
 
 .table-picture__zone text {
-  fill: var(--text-on-felt);
+  fill: var(--text-secondary);
   font-family: var(--font-ui);
-  font-size: 22px;
   font-weight: 600;
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
 }
 
 .table-picture__piece rect {
@@ -744,13 +742,14 @@
 }
 
 .table-picture__piece.is-back rect {
-  fill: var(--surface-sunken);
+  fill: var(--card-back);
+  stroke: var(--card-back-edge);
 }
 
 .table-picture__piece text {
   fill: var(--text-primary);
   font-family: var(--font-reading);
-  font-size: 22px;
+  font-size: 36px;
 }
 
 .table-picture__caption {
