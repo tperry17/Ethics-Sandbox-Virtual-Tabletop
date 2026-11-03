@@ -113,6 +113,7 @@ def test_landing_page_offers_open_a_room() -> None:
     assert response.status_code == 200
     header = response.text.split("</header>", 1)[0]
     assert 'href="/start">Open a room</a>' in header
+    assert 'href="/join">Join a room</a>' in header
 
 
 def test_exercise_page_offers_open_a_room_and_names_the_exercise() -> None:
@@ -124,4 +125,5 @@ def test_exercise_page_offers_open_a_room_and_names_the_exercise() -> None:
         assert response.status_code == 200
         run = response.text.split('id="run"', 1)[1].split("</section>", 1)[0]
         assert 'href="/start">Open a room</a>' in run
+        assert 'href="/join">Join a room</a>' in run
         assert f"choose {exercise.title} from the toolbar" in run
