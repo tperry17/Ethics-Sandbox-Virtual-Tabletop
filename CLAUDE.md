@@ -64,7 +64,7 @@ Do not substitute the stack.
 - `client/` — TypeScript table client built by Vite
 - `static/` — compiled client output, CSS, and fonts
 - `tests/` — automated tests
-- `docs/BUILD-PLAN.md` — the build plan, and where the build stands
+- `docs/BUILD-PLAN.md` — the build plan the project was built from; complete, kept as a record
 - `.github/workflows/ci.yml` — CI: Ruff (lint and format), mypy, pytest and the Playwright suite on every pull request and every push to `main`
 
 ## Identity without sign-in
@@ -298,7 +298,7 @@ after committing, and a live room's snapshots never overwrite it.
 - Every new dependency must be justified in one line in this file.
 - Commits must stay scoped to one prompt.
 - Name each branch for the work it contains (for example `claude/mac-lan-deploy-script`), not with a generated name; this is explicit permission to push to that branch instead of an assigned one.
-- Push every commit as soon as it is made, and keep every pushed branch in an open pull request against `main`. Open it with the first push, following `.github/pull_request_template.md` (summary, questions for the author, follow-up needed to activate the work, checks); when later commits change the picture, update its description. Keep the template consistent with the one in HolyTispoon/HEARsay-Mysteries-Commons-Comma: the shared sections are word for word the same, and this repo adds only the build-plan pointer and the Checks list.
+- Push every commit as soon as it is made, and keep every pushed branch in an open pull request against `main`. Open it with the first push, following `.github/pull_request_template.md` (summary, questions for the author, follow-up needed to activate the work, checks); when later commits change the picture, update its description. Keep the template consistent with the one in HolyTispoon/HEARsay-Mysteries-Commons-Comma: the shared sections are word for word the same, and this repo adds only the Checks list.
 - Watch every pull request you open or push to, from the first push until it
   is merged or closed: subscribe to its activity (in a Claude Code session,
   `subscribe_pr_activity`) and act on what arrives - fix failing checks and
@@ -310,16 +310,9 @@ after committing, and a live room's snapshots never overwrite it.
   assumption made where the request, the plan or the content was unclear,
   and anything the author should double-check, numbered. If there is
   genuinely nothing, it says "None" and why.
-- Claim a build-plan step before starting it, with
-  `scripts/claim-step.sh <number>` (see "Claiming a step" in
-  `docs/BUILD-PLAN.md`), and open a draft pull request for its branch at
-  once. A step whose branch already exists on GitHub, or that has an open
-  pull request, is taken: do not work on it, even if the status table on
-  `main` says otherwise. Work on a claimed step goes on the branch named for
-  it in the status table, which takes the place of a descriptive name.
-- `docs/BUILD-PLAN.md` is the build plan and its status. A pull request
-  that completes or advances a step updates the status in the same pull
-  request. Where the plan and this file disagree, this file wins.
+- The build plan (`docs/BUILD-PLAN.md`) is complete (the author,
+  2026-11-03). New work is asked for directly and tracked in pull requests,
+  not as plan steps; this file is the only statement of the rules.
 
 ## Dependency justifications
 
@@ -340,7 +333,7 @@ after committing, and a live room's snapshots never overwrite it.
 - Alembic manages the SQLAlchemy schema as versioned migrations, so production (Postgres) and local development (SQLite) are always brought to the same shape deliberately, never by `create_all` drift.
 - python-multipart is required by Starlette to parse the HTML form submissions, such as `/join` and an exercise page's "Open a room".
 - pytest-asyncio runs the realtime tests, which must await the room task itself rather than a synchronous stand-in for it.
-- PyYAML reads each exercise's `game.yaml`, the definition format the build plan specifies.
+- PyYAML reads each exercise's `game.yaml`, the definition format the games use.
 - types-PyYAML gives mypy strict the types for PyYAML.
 - anyio (already installed by Starlette, now imported directly) lets the `/join` route, which runs on a worker thread, tell a live room about a new seat before it answers.
 - @axe-core/playwright runs the axe accessibility engine from the Playwright suite, so every page and the table are checked for roles, labels and contrast on each pull request.

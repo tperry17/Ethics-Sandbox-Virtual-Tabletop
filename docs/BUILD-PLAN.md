@@ -1,15 +1,17 @@
 # The Ethics Sandbox — Build Plan
 
-This file is the build plan the project is being built from: a series of
+**The plan is complete** (the author, 2026-11-03). Every step is done, and
+it is no longer updated: new work is asked for directly and tracked in pull
+requests. It is kept as a record of how the project was built. CLAUDE.md
+states the rules.
+
+This file is the build plan the project was built from: a series of
 prompts, run in order, one branch and one pull request each. The top of the
-file says where the build stands; the prompts themselves follow, as written.
+file says how the build ended; the prompts themselves follow, as written.
 
 CLAUDE.md is the project constitution and wins wherever it and this plan
 disagree. Several things have changed since the plan was written (listed
 below); where a prompt still says otherwise, follow CLAUDE.md.
-
-Every pull request that completes or advances a step updates the status
-table below in the same pull request.
 
 ## Where we are
 
@@ -25,13 +27,9 @@ and comes first: Prompts 10, 11 and 12 start activities inside the rooms it
 builds. Prompt 10 has a paused draft, pull request #16; see its section. Prompt 14 does not depend on the games and can run alongside the
 others.
 
-Prompts 1–17 are done. **Prompt 18 (room types and the room redesign)** was
-added on 2026-11-03 at the author's direction. It replaces the open room
-Prompt 17 built with one room per exercise; CLAUDE.md's "Rooms and
-activities" already states the new rules.
-
-Before starting a step, claim it (see "Claiming a step"). A claimed step
-shows "Claimed" in this table on `main`.
+All seventeen prompts are done. After the last one, the author replaced the
+open room Prompt 17 built with one room per exercise (2026-11-03); that work
+is outside the plan, and CLAUDE.md's "Rooms and activities" states it.
 
 | # | Step | Status | Branch | Commit or PR |
 |---|------|--------|--------|--------------|
@@ -52,54 +50,6 @@ shows "Claimed" in this table on `main`.
 | 15 | Tests | Done | | PR #25 |
 | 17 | Open rooms and activities | Done | | PR #18 |
 | 16 | Launch pass | Done | | PR #26 |
-| 18 | Room types and the room redesign | In progress | `claude/room-types` | |
-
-### Claiming a step
-
-A step is claimed by the existence of its branch on GitHub. Each unfinished
-step has one fixed branch name in the table above, so two people (or two
-Claude sessions) starting the same step reach for the same branch, and
-GitHub accepts only the first push to it.
-
-To claim a step, run `scripts/claim-step.sh <number>` from a clean checkout.
-It:
-
-1. refuses if the step is Done, waiting on the author, or already Claimed
-   on `main`;
-2. refuses if the step's branch already exists on GitHub - someone has it;
-3. creates the branch from `origin/main`, marks the step "Claimed" in this
-   table, commits, and pushes without force. If someone else pushed the
-   branch first, the push is rejected and the claim fails;
-4. marks the step "Claimed" in this table on `main` too, with a one-line
-   commit pushed straight to `main`, so anyone reading the table there sees
-   the claim. If that push keeps failing, the claim still holds and the
-   script says to mark the row by hand.
-
-Then open a draft pull request for the branch at once, titled
-`Prompt <number>: <step>`, so the claim is visible to anyone looking at
-the pull requests. Do the work on that branch only.
-
-If the claim fails, the step is taken: do not work on it, and do not push
-to its branch. To give a claim up, close its pull request and delete its
-branch; the step is then free again.
-
-Without the script, the check is the same by hand: look at the step's row
-on `main`, for the step's branch (`git ls-remote --heads origin <branch>`)
-and for an open pull request naming the step. If any of them shows a claim,
-the step is taken.
-
-Work outside the numbered prompts, already merged:
-
-- `d491312` — editorial text moved out of Python into CSV files under
-  `content/`, edited as a spreadsheet.
-- `108a5cb` — landing page shows exercises before principles; new lede with
-  the R&D Studio attribution.
-- `a32c5d3` — an `image` column in `cards.csv` and `roles.csv`, so a card
-  or role can be an uploaded image.
-- `880b3d1` (PR #2) — `scripts/deploy.sh` serves the tabletop from a Mac on
-  the local network.
-- `c88eb82` (PR #3) — descriptive branch names and a pull request for every
-  pushed branch.
 
 ## Gaps in completed steps
 
@@ -158,13 +108,13 @@ Where these conflict with a prompt below, these win.
 - **"Start a table" is "Open a room".** Prompt 3 asks for a "Start a
   table" action on the landing page and on each exercise page. Both pages
   offer "Open a room"; the wording is in `content/site/site_copy.csv`.
-  Until Prompt 18 is built it goes to `/start` and opens the open room.
+  Until rooms belong to exercises it goes to `/start` and opens the open room.
 - **Room types** (the author, 2026-11-03; superseding the 2026-10-31 note
   above that a room is an open sandbox for every exercise). A room belongs
   to one exercise and is its sandbox, opened only from that exercise's
   page. `/start` goes. Each room offers its own exercise's activities and
   debrief. Dice, cubes, meeples and tokens are in a "Pieces" menu in every
-  room instead of on the table. Prompt 18 builds this.
+  room instead of on the table. This is built outside the plan.
 - **Call.** Section 0 says Zoom; CLAUDE.md says a separate video or phone
   call. Nothing depends on which.
 - **No principles of engagement.** The six principles that were on the
@@ -1694,50 +1644,6 @@ zones; the sandbox is unaffected. validate-games passes, and the live
 tests and the Playwright suite pass. Update this plan's status table.
 Commit.
 ```
-
-## 18. Room types and the room redesign
-
-**Status: In progress (branch `claude/room-types`).** Added on 2026-11-03
-at the author's direction, from their review of the room page on the
-design canvas. Read CLAUDE.md's "Rooms and activities" first: it states
-the rules this step builds.
-
-The author's decisions, 2026-11-03:
-
-- **One room per exercise.** A Value Cards room and a Democracy Simulation
-  room, each a sandbox with its own loose pieces and its own activities.
-  The open room (`sandbox/games/open_room/`) goes.
-- **Opened from the exercise page.** "Open a room" on an exercise page
-  opens that exercise's room directly. `/start` is removed: nothing is
-  started by typing an address. The landing page has no "Open a room"
-  of its own once this lands, since a room needs an exercise; it keeps
-  "Join a room".
-- **Activities per room.** Value Cards room: Value Cards Trading, and the
-  Value Cards debrief. Democracy Simulation room: Scenario 1
-  (Construction project), Scenario 2 (Going to war?), and the Democracy
-  Simulation debrief. The scenario stops being an option chosen when the
-  activity starts; each scenario is its own activity. The city stays a
-  choice.
-- **Scenario 2 runs as a class** in one room, one table per city. It is
-  best with two paired cities (Potamosia and Hudrosia); with one city,
-  the other is hypothetical. The group splits into breakout calls, one
-  per table, so each table has its own notes, votes and list of
-  participants.
-- **The Democracy room's table** holds the two cities' seals
-  (`content/exercises/democracy-simulation/images/`) and a general account
-  of each city, with nothing about either scenario.
-- **Pieces menu.** Dice, cubes, meeples and tokens are no longer laid out
-  on the table. Every room has a "Pieces" menu that adds one where the
-  person is looking.
-- **Meeples** use the author's outline (in the canvas thread; the path is
-  64 units wide, centred on 0,0).
-- **The room page is redesigned**: a slim top bar (room code, invite
-  link, who is here, Become facilitator, connection), a side panel
-  (activities, class, the table's buttons, links), the table filling the
-  rest on a light ground with a floating tool palette, and the hand docked
-  below. The drafts are on the author's design canvas, page "Room".
-
-Open questions are in this step's pull request.
 
 ---
 
