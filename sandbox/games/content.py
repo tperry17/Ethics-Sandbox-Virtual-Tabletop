@@ -37,6 +37,7 @@ def load_exercise(slug: str) -> Exercise:
         title=fields["title"],
         short_description=fields["short_description"],
         premise=fields["premise"],
+        overview=fields["overview"],
         group_size=fields["group_size"],
         running_time=fields["running_time"],
         facilitator=fields["facilitator"],

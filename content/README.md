@@ -22,8 +22,12 @@ quotes - most spreadsheet apps do this for you automatically when you save.
 
 `site/exercises.csv` - one row per exercise: title, blurb, premise, group
 size, running time, and the rest of the fields on its catalog and detail
-pages. Add a row here (with a new `slug`) and matching rows in the files
-below to add a new exercise to the site without touching any template.
+pages. The exercise page opens with the `premise`; `overview`, if filled
+in, is the paragraph under its "Premise" heading (describe the deck and how
+the exercise runs). The `facilitator` and `alongside` columns are no longer
+shown on the exercise page; the landing page still shows `facilitator`.
+Add a row here (with a new `slug`) and matching rows in the files below to
+add a new exercise to the site without touching any template.
 
 `site/exercise_learning_outcomes.csv` - what each exercise is designed to
 achieve: one row per outcome (`slug`, `id`, `title`, `text`). It is shown on
@@ -32,14 +36,16 @@ the exercise's page and is the set of outcome cards on its debrief table.
 `site/help_records.csv` - the Help page's notes on records: a heading and a
 paragraph per row.
 
+`site/exercise_preview_zones.csv`, `exercise_preview_cards.csv` - the table
+preview on the exercise detail page, one row per item, keyed by the same
+`slug` used in `exercises.csv`, used when an exercise has no game
+definition to draw from. The order rows appear in the file is the order
+they appear on the page.
+
 `site/exercise_session_shape.csv`, `exercise_tensions.csv`,
-`exercise_facilitator_notes.csv`, `exercise_preview_zones.csv`,
-`exercise_preview_cards.csv` - each holds the repeating list items for the
-exercise detail page (the numbered "what you'll be doing" steps, the
-tensions it surfaces, facilitator notes, and the table preview), one row
-per item, keyed by the same `slug` used in `exercises.csv`. To add, remove,
-or reorder an item, add, remove, or reorder its row - the order rows appear
-in the file is the order they appear on the page.
+`exercise_facilitator_notes.csv` - the session steps, tensions and
+facilitator notes, one row per item. They are still loaded but no longer
+shown on the exercise page (removed at the author's request, 2026-11-03).
 
 ## Exercise content
 

@@ -30,8 +30,14 @@ def test_exercise_detail_page_renders_each_exercise() -> None:
         assert response.status_code == 200
         assert exercise.title in response.text
         assert exercise.premise in response.text
-        for step in exercise.session_shape:
-            assert step in response.text
+        for removed in (
+            "How a session unfolds",
+            "Tensions worth sitting with",
+            "Facilitator’s notes",
+            '<span class="exercise-meta__label">Facilitator</span>',
+            '<span class="exercise-meta__label">Alongside</span>',
+        ):
+            assert removed not in response.text
 
 
 def test_exercise_detail_page_404s_for_unknown_slug() -> None:
@@ -127,3 +133,20 @@ def test_exercise_page_offers_open_a_room_and_names_the_exercise() -> None:
         assert 'href="/start">Open a room</a>' in run
         assert 'href="/join">Join a room</a>' in run
         assert f"choose {exercise.title} from the toolbar" in run
+
+
+def test_exercise_page_leads_with_the_premise_and_shows_the_overview() -> None:
+    client = TestClient(app)
+
+    for exercise in EXERCISES:
+        response = client.get(f"/exercises/{exercise.slug}")
+
+        header = response.text.split("<header", 1)[1].split("</header>", 1)[0]
+        assert exercise.premise in header
+        if exercise.overview:
+            premise = response.text.split('id="premise"', 1)[1].split("</section>", 1)[
+                0
+            ]
+            assert exercise.overview in premise
+        else:
+            assert 'id="premise"' not in response.text

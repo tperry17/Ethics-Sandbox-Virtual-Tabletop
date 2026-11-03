@@ -28,6 +28,7 @@ class Exercise:
     title: str
     short_description: str
     premise: str
+    overview: str
     group_size: str
     running_time: str
     facilitator: str
