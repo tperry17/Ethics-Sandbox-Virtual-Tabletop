@@ -6,28 +6,28 @@ The Ethics Sandbox is a virtual tabletop for structured exercises that teach eth
 
 Exercises are designed by the R&D Studio at the Edmond & Lily Safra Center for Ethics, Harvard University. This attribution belongs on the public landing page's lede (`content/site/site_copy.csv`, key `lede`) and should not be dropped by later copy changes.
 
-The Center's seal is used as the site icon (`static/icons/`) and, in white, on every card back. The brand style guide requires approval from the Center's communications and events team for any use of the logo; the author confirmed on 2026-10-15 that this use is approved, and on 2026-11-02 that the seal may appear on the social-preview images in `static/og/` (made by `scripts/make-og-images.mjs`). Any new use of the seal or logo needs its own approval. Colours follow the Center's brand style guide, with a pure-white page instead of its off-white.
+The Center's seal is used as the site icon (`static/icons/`) and, in white, on every card back. The brand style guide requires approval from the Center's communications and events team for any use of the logo; the author confirmed on 2026-10-15 that this use is approved, and on 2026-11-02 that the seal may appear on the social-preview images in `static/og/` (made by `scripts/make-og-images.mjs`), and on 2026-11-03 that it may appear on the card backs in design drafts of the site and table. Any new use of the seal or logo needs its own approval. Colours follow the Center's brand style guide, with a pure-white page instead of its off-white.
 
-The first two exercises are “Value Cards Trading” and “Democracy Simulation.” The platform must make a third exercise cheap to add.
+The first two exercises are “Value Cards Trading” and “Leadership and Knowledge in Popular Rule” (called the Democracy Simulation until 2026-11-03; its slug is still `democracy-simulation`). The platform must make a third exercise cheap to add.
 
 Facilitators—teachers, community organisers, and workshop leads—run groups on laptops and tablets. There is no sign-in: a room is a URL with a code, and a participant enters a display name to join the table.
 
 ## Rooms and activities
 
-A room belongs to one exercise, and it is that exercise's sandbox. Up to 30 people join it and use its table however they please: the free table and the exercise's own loose pieces. A Value Cards room holds the value cards; a Democracy Simulation room holds the two cities' seals and a general account of each city, with nothing about either scenario. Every room, whatever its exercise, has a "Pieces" menu that can be opened to add dice, cubes, meeples and tokens to the table; they are not laid out on it.
+A room belongs to one exercise, and it is that exercise's sandbox. Up to 30 people join it and use its table however they please: the free table and the exercise's own loose pieces. A Value Cards room holds the value cards; a Leadership and Knowledge in Popular Rule room holds the two cities' seals and a general account of each city, with nothing about either scenario. Every room, whatever its exercise, has a "Pieces" menu that can be opened to add dice, cubes, meeples and tokens to the table; they are not laid out on it.
 
 A room is opened only from its exercise's page, with "Open a room", which opens that exercise's room directly; whoever opened it is then asked for a display name, as anyone joining is. Nothing is started by typing an address: there is no `/start` page, and no room, activity or class is opened by a URL alone. People reach a room from its invite link or by entering its code with "Join a room".
 
 Each room offers its own exercise's activities, and its own debrief:
 
 - Value Cards room: Value Cards Trading, and the Value Cards debrief.
-- Democracy Simulation room: Scenario 1 (Construction project), Scenario 2 (Going to war?), and the Democracy Simulation debrief.
+- Leadership and Knowledge in Popular Rule room: Scenario 1 (Construction project), Scenario 2 (Going to war?), and its debrief.
 
 An activity is a guided exercise started inside a room: someone presses "Start <activity>", a sign-up opens for the activity's players (the facilitator may choose them instead), and the activity lays out its own zones for those seats and guides them through its steps. Everyone else keeps using the sandbox, and several activities, or several groups doing the same one, can run in a room at once. An activity's `players: {min, max}` is how many people it takes (three for Value Cards Trading), never the room's capacity.
 
 A class is an activity run as several tables at once. Someone presses "Start a class" instead of "Start the <activity>", chooses how many tables, and becomes the facilitator of all of them, as a non-playing admin: they sit at none. The facilitator can sort the room's people into the tables at random (shown first, adjustable by hand, then confirmed), begin the tables, run one timer and push one prompt to every table at once, and, for a game that declares `pairing`, pair two tables so their decisions are read together. The facilitator can move anyone to another table at any time, begun or not (at a begun table their cards go back face down into the decks they came from, which are shuffled, their other zones go, and they get fresh ones at the new table), and a person who arrives after the sort takes the table with the most room. Players at a paired table propose their table's choice and the facilitator confirms it; they see only their own table's. The class is a `ClassGroup` in `sandbox/model/classes.py`; its tables are ordinary activities.
 
-Scenario 2 of the Democracy Simulation always runs as a class, in one room, with one table per city. It is best with two paired cities; it can be run with one, and then the other city is hypothetical. On the call the group splits into breakout groups, one per table, so each table is self-contained: its own notes, its own votes, its own list of participants.
+Scenario 2 of Leadership and Knowledge in Popular Rule always runs as a class, in one room, with one table per city. It is best with two paired cities; it can be run with one, and then the other city is hypothetical. On the call the group splits into breakout groups, one per table, so each table is self-contained: its own notes, its own votes, its own list of participants.
 
 The facilitator is optional, an admin seat. Nobody is the facilitator by default, the room's creator included. Any participant may take the seat with a "Become facilitator" button, or choose it when joining; only one person holds it, and nothing in any activity requires it.
 
@@ -208,7 +208,7 @@ server do.
   row per macro: `id`, `label`, `hint`, `confirm` (asked first; give one to
   anything destructive) and `announce` (`{name}` and `{label}`).
 - `prompts` — `source:` a CSV with `id` and `text` columns.
-- `pairing` — optional: `source:` a CSV of `our_choice`, `their_choice` and `text`, and `when:` the options it applies to (Democracy Simulation scenario 2). A class may pair two of its tables; someone at a table proposes that table's choice, the facilitator confirms it (or sets it), and once both are confirmed the facilitator sees the matching row.
+- `pairing` — optional: `source:` a CSV of `our_choice`, `their_choice` and `text`, and `when:` the options it applies to (Leadership and Knowledge in Popular Rule, scenario 2). A class may pair two of its tables; someone at a table proposes that table's choice, the facilitator confirms it (or sets it), and once both are confirmed the facilitator sees the matching row.
 
 Steps are `{op: ..., ...}`: `setup` (run the setup steps here),
 `spawn_deck`, `spawn`, `shuffle`, `deal` and `draw` (`from`, `to`,
