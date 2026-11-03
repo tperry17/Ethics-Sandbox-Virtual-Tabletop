@@ -106,8 +106,10 @@ person did: no rule, no deck, and no face it was not given.
   the timer and prompt controls, and pairing. The timer and a pushed prompt
   are drawn by `table.ts` on every screen; reaching zero chimes once and
   changes nothing
-- `activities.ts` — the toolbar's activities: what can be started, who has
-  signed up, and the buttons that act on one
+- `activities.ts` — the side panel's activities: a card for each the room
+  can start, who has signed up, and the buttons that act on one
+- `pieces.ts` — the room's Pieces menu: the die and the player pieces in a
+  chosen colour, added where the person is looking
 - `announcer.ts` — the live region that says what happened, in words
 
 Pieces are DOM elements positioned with `translate3d` inside a single
@@ -208,7 +210,8 @@ server do.
   row per macro: `id`, `label`, `hint`, `confirm` (asked first; give one to
   anything destructive) and `announce` (`{name}` and `{label}`).
 - `prompts` — `source:` a CSV with `id` and `text` columns.
-- `pairing` — optional: `source:` a CSV of `our_choice`, `their_choice` and `text`, and `when:` the options it applies to (Leadership and Knowledge in Popular Rule, scenario 2). A class may pair two of its tables; someone at a table proposes that table's choice, the facilitator confirms it (or sets it), and once both are confirmed the facilitator sees the matching row.
+- `pairing` — optional: `source:` a CSV of `our_choice`, `their_choice` and `text`, and `when:` the options it applies to (Leadership and Knowledge in Popular Rule, scenario 2). A class may pair two of its tables, or one table with a hypothetical partner (`HYPOTHETICAL_TABLE`); someone at a table proposes that table's choice, the facilitator confirms it (or sets it, and alone sets a hypothetical partner's), and once both are confirmed the facilitator sees the matching row. While a hypothetical partner is undecided, the facilitator sees the row for each choice it could make.
+- `room` — only on a room type (`sandbox/games/value_cards_room/`, `democracy_room/`): `exercise` (the catalog slug whose page opens it), `label` (its button), `activities` (each an `id`, a `game`, optional `title`, `options` it fixes and `class_only`), `pieces` (the components of its Pieces menu) and `pieces_zone`. A room type needs only the `setup`, `reset` and `clear_ink` macros; `sandbox/games/room_types.py` reads it, and validation checks every catalog exercise has one room.
 
 Steps are `{op: ..., ...}`: `setup` (run the setup steps here),
 `spawn_deck`, `spawn`, `shuffle`, `deal` and `draw` (`from`, `to`,
