@@ -160,6 +160,10 @@ export interface ClassPairView {
   second_proposed?: string | null;
   /** What follows from the two decisions, once both are in. */
   outcome: string | null;
+  /** The partner is hypothetical: only the facilitator decides for it. */
+  hypothetical?: boolean;
+  /** With a hypothetical partner still undecided: what follows from each choice. */
+  outcomes?: { their_choice: string; text: string }[];
 }
 
 /** A class: one activity at several tables, run by the facilitator. */

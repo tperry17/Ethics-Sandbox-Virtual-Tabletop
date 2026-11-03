@@ -57,15 +57,22 @@ zones:
     rect: [0, 0, 1700, 900]
     visibility: public
     layout: free
-  - id: cities
+  - id: potamosia
     kind: tray
-    label: The two cities
-    rect: [40, 40, 720, 500]
+    label: Potamosia
+    rect: [40, 40, 360, 480]
     visibility: public
-    layout: spread
+    layout: stack
+  - id: hudrosia
+    kind: tray
+    label: Hudrosia
+    rect: [440, 40, 360, 480]
+    visibility: public
+    layout: stack
 
 setup:
-  - {op: spawn_deck, deck: cities, zone: cities}
+  - {op: spawn_deck, deck: cities, zone: potamosia, where: {key: potamosia}}
+  - {op: spawn_deck, deck: cities, zone: hudrosia, where: {key: hudrosia}}
 
 macros:
   - id: setup

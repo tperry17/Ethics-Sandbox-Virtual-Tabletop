@@ -211,6 +211,55 @@ async def test_pairing_is_for_scenario_two_and_its_outcome_is_the_facilitators()
         assert "not a choice" in host.socket.of_type("reject")[-1]["reason"]
 
 
+async def test_one_city_pairs_with_a_hypothetical_one_and_sees_every_result() -> None:
+    async with open_room(2, "democracy-room") as (room, host, guests):
+        await _act(
+            room,
+            host,
+            {
+                "action": "start",
+                "slug": "scenario-2",
+                "tables": 1,
+                "options": {"city": "potamosia"},
+            },
+        )
+        class_id = next(iter(room.runtime.table.classes))
+        (only,) = room.runtime.table.classes[class_id].tables
+        await _act(
+            room,
+            host,
+            {
+                "action": "pair",
+                "class_id": class_id,
+                "first": only,
+                "second": "hypothetical",
+            },
+        )
+        decide = {"action": "decision", "class_id": class_id}
+        await _act(room, host, {**decide, "first": only, "decision": "Attack"})
+        (view,) = _classes(host)
+        (pair,) = view["pairs"]
+        assert pair["hypothetical"] is True and pair["outcome"] is None
+        assert [o["their_choice"] for o in pair["outcomes"]] == view["pair_choices"]
+        assert len(pair["outcomes"]) == 3
+
+        # Only the facilitator decides for the hypothetical city.
+        await _act(
+            room, guests[0], {**decide, "first": "hypothetical", "decision": "Attack"}
+        )
+        assert (
+            "Only the facilitator" in guests[0].socket.of_type("reject")[-1]["reason"]
+        )
+
+        await _act(
+            room, host, {**decide, "first": "hypothetical", "decision": "Diplomacy"}
+        )
+        (view,) = _classes(host)
+        (pair,) = view["pairs"]
+        assert pair["outcome"].startswith("Catastrophic for the defender")
+        assert pair["outcomes"] == []
+
+
 async def test_scenario_one_and_other_activities_refuse_pairing() -> None:
     async with open_room(2, "democracy-room") as (room, host, _guests):
         await _act(

@@ -8,6 +8,7 @@ exercise by name.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from sandbox.games.definition import RoomActivity
@@ -25,9 +26,20 @@ class OfferedActivity:
     class_only: bool
 
 
-def room_types(games: dict[str, Game]) -> list[Game]:
-    """Every room type, in the order the games were loaded."""
-    return [game for game in games.values() if game.definition.room is not None]
+def room_types(games: dict[str, Game], order: Sequence[str] = ()) -> list[Game]:
+    """Every room type: those for the exercises in ``order`` first, in that order.
+
+    ``order`` is a list of exercise slugs (the catalog's); the rest follow in
+    the order the games were loaded.
+    """
+    rooms = [game for game in games.values() if game.definition.room is not None]
+    rank = {slug: index for index, slug in enumerate(order)}
+
+    def place(game: Game) -> int:
+        room = game.definition.room
+        return rank.get(room.exercise, len(rank)) if room is not None else len(rank)
+
+    return sorted(rooms, key=place)
 
 
 def room_for_exercise(games: dict[str, Game], exercise_slug: str) -> Game | None:

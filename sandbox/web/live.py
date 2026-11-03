@@ -55,6 +55,7 @@ from sandbox.games.engine import (
 from sandbox.games.pairing import may_pair, pair_outcome, pairing_choices
 from sandbox.games.room_types import offered_activities, offered_activity
 from sandbox.model import (
+    HYPOTHETICAL_TABLE,
     SYSTEM_SEAT,
     AcceptSwap,
     AddSeat,
@@ -313,8 +314,19 @@ class ActivityView(BaseModel):
     class_id: str = ""
 
 
+class ClassOutcomeView(BaseModel):
+    """What follows if the partner chose ``their_choice``."""
+
+    their_choice: str
+    text: str
+
+
 class ClassPairView(BaseModel):
-    """Two paired tables and, once both have decided, what follows."""
+    """Two paired tables and, once both have decided, what follows.
+
+    When ``second`` is a hypothetical table that nobody has decided for,
+    ``outcomes`` lists what follows from each choice it could have made.
+    """
 
     first: str
     second: str
@@ -323,6 +335,8 @@ class ClassPairView(BaseModel):
     first_proposed: str | None = None
     second_proposed: str | None = None
     outcome: str | None = None
+    hypothetical: bool = False
+    outcomes: list[ClassOutcomeView] = Field(default_factory=list)
 
 
 class ClassPromptChoiceView(BaseModel):
@@ -2095,6 +2109,19 @@ class RoomRuntime:
                                 pair_outcome(game, ours, theirs)
                                 if ours is not None and theirs is not None
                                 else None
+                            ),
+                            hypothetical=second == HYPOTHETICAL_TABLE,
+                            outcomes=(
+                                [
+                                    ClassOutcomeView(their_choice=choice, text=text)
+                                    for choice in pairing_choices(game, group.options)
+                                    if (text := pair_outcome(game, ours, choice))
+                                    is not None
+                                ]
+                                if second == HYPOTHETICAL_TABLE
+                                and ours is not None
+                                and theirs is None
+                                else []
                             ),
                         )
                     )

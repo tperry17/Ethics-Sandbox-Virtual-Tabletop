@@ -211,7 +211,7 @@ async def home(request: Request) -> HTMLResponse:
             "exercises": EXERCISES,
             "room_kinds": [
                 {"slug": game.slug, "label": game.definition.room.label}
-                for game in room_types(GAMES)
+                for game in room_types(GAMES, [e.slug for e in EXERCISES])
                 if game.definition.room is not None
             ],
             "canonical_url": _public_base(request) + "/",
