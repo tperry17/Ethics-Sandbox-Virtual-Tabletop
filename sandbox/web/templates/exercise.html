@@ -31,7 +31,7 @@
         <p class="eyebrow">Exercise</p>
         <h1>{{ exercise.title }}</h1>
         <div class="prose site__lede">
-          <p>{{ exercise.short_description }}</p>
+          <p>{{ exercise.premise }}</p>
         </div>
       </header>
 
@@ -45,32 +45,27 @@
             <span class="exercise-meta__label">Running time</span>
             <span class="exercise-meta__value">{{ exercise.running_time }}</span>
           </div>
-          <div class="exercise-meta__item">
-            <span class="exercise-meta__label">Facilitator</span>
-            <span class="exercise-meta__value">{{ exercise.facilitator }}</span>
-          </div>
-          <div class="exercise-meta__item">
-            <span class="exercise-meta__label">Alongside</span>
-            <span class="exercise-meta__value">{{ exercise.alongside }}</span>
-          </div>
         </div>
       </section>
 
+      <section class="site__section" id="run">
+        <div class="toolbar" role="group" aria-label="Start actions">
+          <a class="button button--primary button--lg" href="/start">{{ site_copy.open_room_label }}</a>
+          <a class="button button--secondary button--lg" href="/join">{{ site_copy.join_room_label }}</a>
+        </div>
+        <div class="prose">
+          <p>{{ site_copy.open_room_exercise | replace("{title}", exercise.title) }}</p>
+        </div>
+      </section>
+
+      {% if exercise.overview %}
       <section class="site__section" id="premise">
         {{ ui.section_rule("Premise") }}
         <div class="prose">
-          <p>{{ exercise.premise }}</p>
+          <p>{{ exercise.overview }}</p>
         </div>
       </section>
-
-      <section class="site__section" id="session-shape">
-        {{ ui.section_rule("How a session unfolds") }}
-        <ol class="reasoned-list">
-          {% for step in exercise.session_shape %}
-          <li>{{ step }}</li>
-          {% endfor %}
-        </ol>
-      </section>
+      {% endif %}
 
       {% if exercise.learning_outcomes %}
       <section class="site__section" id="learning-outcomes">
@@ -82,23 +77,6 @@
         </ol>
       </section>
       {% endif %}
-
-      <section class="site__section" id="tensions">
-        {{ ui.section_rule("Tensions worth sitting with") }}
-        <ul class="tension-list">
-          {% for tension in exercise.tensions %}
-          <li>{{ tension }}</li>
-          {% endfor %}
-        </ul>
-      </section>
-
-      <section class="site__section" id="facilitator-notes">
-        {% call ui.callout("Facilitator’s notes") %}
-        {% for note in exercise.facilitator_notes %}
-        <p>{{ note }}</p>
-        {% endfor %}
-        {% endcall %}
-      </section>
 
       <section class="site__section" id="preview">
         {{ ui.section_rule("How the table looks") }}

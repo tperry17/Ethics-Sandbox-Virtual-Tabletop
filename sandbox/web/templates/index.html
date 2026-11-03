@@ -24,11 +24,18 @@
   </head>
   <body>
     <main class="site">
-      <header class="site__header">
+      <header class="site__header site__header--wide">
         <p class="eyebrow">Ethics Sandbox</p>
         <h1>{{ project_name }}</h1>
         <div class="prose site__lede">
           <p>{{ site_copy.lede }}</p>
+        </div>
+        <div class="toolbar" role="group" aria-label="Start actions">
+          <a class="button button--primary button--lg" href="/start">{{ site_copy.open_room_label }}</a>
+          <a class="button button--secondary button--lg" href="/join">{{ site_copy.join_room_label }}</a>
+        </div>
+        <div class="prose site__lede">
+          <p>{{ site_copy.open_room_lede }}</p>
         </div>
       </header>
 
