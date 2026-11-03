@@ -149,6 +149,11 @@ Where these conflict with a prompt below, these win.
   one room, so Prompt 12 no longer needs several rooms. The facilitator is
   an optional admin seat that nobody holds by default. Prompt 17 builds
   this; CLAUDE.md's "Rooms and activities" is the rule.
+- **"Start a table" is "Open a room".** Prompt 3 asks for a "Start a
+  table" action on the landing page and on each exercise page. Because a
+  room is not created for an exercise, both pages offer "Open a room"
+  (to `/start`), and the exercise page says to choose the exercise from the
+  room's toolbar. The wording is in `content/site/site_copy.csv`.
 - **Call.** Section 0 says Zoom; CLAUDE.md says a separate video or phone
   call. Nothing depends on which.
 - **No principles of engagement.** The six principles that were on the

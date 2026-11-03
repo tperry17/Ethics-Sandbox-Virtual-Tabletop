@@ -1,2 +1,5 @@
 key,text
 lede,"A virtual tabletop for structured exercises for teaching ethics and practicing civil discourse skills. A small group joins by link, sits at a shared table, and works through the exercise while talking on a separate call. Exercises designed by the R&D Studio at the Edmond & Lily Safra Center for Ethics, Harvard University."
+open_room_label,Open a room
+open_room_lede,"Open a room, send its link to your group, and start an exercise from the room’s toolbar once everyone has joined."
+open_room_exercise,"To run it, open a room and send its link to your group. In the room, choose {title} from the toolbar’s activity list and press “Start this activity”. To run several tables at once, press “Start a class” instead."

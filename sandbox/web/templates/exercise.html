@@ -56,6 +56,15 @@
         </div>
       </section>
 
+      <section class="site__section" id="run">
+        <div class="prose">
+          <p>{{ site_copy.open_room_exercise | replace("{title}", exercise.title) }}</p>
+        </div>
+        <div class="toolbar" role="group" aria-label="Start actions">
+          <a class="button button--primary button--lg" href="/start">{{ site_copy.open_room_label }}</a>
+        </div>
+      </section>
+
       <section class="site__section" id="premise">
         {{ ui.section_rule("Premise") }}
         <div class="prose">

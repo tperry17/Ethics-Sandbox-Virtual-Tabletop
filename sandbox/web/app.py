@@ -234,6 +234,7 @@ async def exercise_detail(request: Request, slug: str) -> HTMLResponse:
         name="exercise.html",
         context={
             "exercise": exercise,
+            "site_copy": SITE_COPY,
             "canonical_url": f"{_public_base(request)}/exercises/{slug}",
             "og_image": f"{_public_base(request)}/static/og/{slug}.png",
             "preview": None if game is None else picture_of_table(game),

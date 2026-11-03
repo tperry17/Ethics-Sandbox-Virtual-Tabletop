@@ -105,3 +105,23 @@ def test_every_page_with_a_preview_names_an_image_that_exists() -> None:
         image = text.split('property="og:image" content="http://testserver')[1]
         image = image.split('"')[0]
         assert client.get(image).status_code == 200
+
+
+def test_landing_page_offers_open_a_room() -> None:
+    response = TestClient(app).get("/")
+
+    assert response.status_code == 200
+    header = response.text.split("</header>", 1)[0]
+    assert 'href="/start">Open a room</a>' in header
+
+
+def test_exercise_page_offers_open_a_room_and_names_the_exercise() -> None:
+    client = TestClient(app)
+
+    for exercise in EXERCISES:
+        response = client.get(f"/exercises/{exercise.slug}")
+
+        assert response.status_code == 200
+        run = response.text.split('id="run"', 1)[1].split("</section>", 1)[0]
+        assert 'href="/start">Open a room</a>' in run
+        assert f"choose {exercise.title} from the toolbar" in run
