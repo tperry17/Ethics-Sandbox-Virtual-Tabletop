@@ -309,7 +309,10 @@ after committing, and a live room's snapshots never overwrite it.
   (see `.github/pull_request_template.md`): every open question, every
   assumption made where the request, the plan or the content was unclear,
   and anything the author should double-check, numbered. If there is
-  genuinely nothing, it says "None" and why.
+  genuinely nothing, it says "None" and why. Every open question on any
+  pull request is also put to the author directly, numbered, in the
+  conversation they are working in (in a Claude Code session, the reply to
+  them), not only in the pull request.
 - The build plan (`docs/BUILD-PLAN.md`) is complete (the author,
   2026-11-03). New work is asked for directly and tracked in pull requests,
   not as plan steps; this file is the only statement of the rules.
