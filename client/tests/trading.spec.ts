@@ -20,8 +20,7 @@ test("an offer is made from the selected cards, answered, and ticks the checklis
   const tomas = await person(browser, `/join?code=${code}`, "Tomas");
   const wren = await person(browser, `/join?code=${code}`, "Wren");
 
-  await ines.getByLabel("Activity to start").selectOption("value-cards-trading");
-  await ines.getByRole("button", { name: "Start this activity" }).click();
+  await ines.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await tomas.getByRole("button", { name: "Join" }).click();
   await wren.getByRole("button", { name: "Join" }).click();
   await ines.getByRole("button", { name: "Deal 12 each" }).click();

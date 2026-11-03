@@ -33,7 +33,7 @@ export function renderPiecesMenu(
   root.className = "pieces-menu";
   root.open = wasOpen;
   const summary = document.createElement("summary");
-  summary.className = "button button--sm";
+  summary.className = "button button--secondary button--sm";
   summary.textContent = "Pieces";
   root.append(summary);
 

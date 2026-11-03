@@ -57,8 +57,7 @@ test("Value Cards Trading: four browsers, a drop and a rejoin, and a macro mid-d
   const wren = await open(browser, `/join?code=${code}`, "Wren");
   const bystander = await open(browser, `/join?code=${code}`, "Rowan");
 
-  await ines.page.getByLabel("Activity to start").selectOption("value-cards-trading");
-  await ines.page.getByRole("button", { name: "Start this activity" }).click();
+  await ines.page.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await tomas.page.getByRole("button", { name: "Join" }).click();
   await wren.page.getByRole("button", { name: "Join" }).click();
   await ines.page.getByRole("button", { name: "Deal 12 each" }).click();
@@ -114,8 +113,7 @@ test("Leadership and Knowledge in Popular Rule: a city of nine, a rejoin, and th
     citizens.push(await open(browser, `/join?code=${code}`, `Citizen ${n}`));
   }
 
-  await host.page.getByLabel("Activity to start").selectOption("scenario-1");
-  await host.page.getByRole("button", { name: "Start this activity" }).click();
+  await host.page.getByRole("button", { name: "Start Scenario 1: Construction project", exact: true }).click();
   for (const citizen of citizens) {
     await citizen.page.getByRole("button", { name: "Join" }).click();
   }

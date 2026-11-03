@@ -877,3 +877,206 @@
 @media (pointer: coarse) {
   .pieces-menu__swatch { width: 2.75rem; height: 2.75rem; }
 }
+
+/* -- the room page --------------------------------------------------------------
+ *
+ * A slim bar for the room itself (its code, the invite link, who is here),
+ * a side panel for what can be started and the table's buttons, and the
+ * table filling the rest, with your tools floating over it.
+ */
+
+.room {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  background: var(--surface-page);
+}
+
+.room__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-6);
+  padding: var(--space-3) var(--space-5);
+  border-block-end: var(--line-hairline) solid var(--surface-border);
+  background: var(--surface-raised);
+}
+
+.room__identity { display: grid; gap: 0.1rem; min-width: 0; }
+.room__identity .eyebrow { margin: 0; }
+.room__title {
+  margin: 0;
+  font-family: var(--font-reading);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+}
+
+.room__code-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.room__code-label { color: var(--text-muted); font-size: var(--text-sm); }
+.room__code-row .invite-link { max-width: 11rem; }
+
+.room__people {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+.room__count { color: var(--text-muted); font-size: var(--text-sm); }
+.room__actions { display: flex; gap: var(--space-2); }
+.room__actions:empty { display: none; }
+
+.room__body {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.room__panel {
+  display: flex;
+  flex: 0 0 21rem;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  max-width: 21rem;
+  overflow-y: auto;
+  padding: var(--space-5);
+  border-inline-end: var(--line-hairline) solid var(--surface-border);
+  background: var(--surface-page);
+}
+
+.room__panel > .toolbar {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-5);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* Outside the room's side panel (the table preview) a section stays a row. */
+.toolbar > .room-panel__section { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.toolbar > .room-panel__section > .room-panel__heading,
+.toolbar > .room-panel__section > .room-panel__intro { display: none; }
+.room-panel__buttons { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.room__panel .room-panel__section { display: grid; gap: var(--space-3); align-content: start; }
+.room__panel .room-panel__section > .room-panel__heading,
+.room__panel .room-panel__section > .room-panel__intro { display: block; }
+.room-panel__heading {
+  margin: 0;
+  color: var(--accent-rubric);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+.room-panel__intro {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-reading);
+  font-size: var(--text-sm);
+  line-height: var(--leading-reading);
+}
+.room-panel__class {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+.room__panel .room-panel__buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.room__panel .room-panel__buttons .button { justify-content: center; }
+
+.activity-cards { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.activity-card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--line-hairline) solid var(--surface-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.activity-card__title {
+  font-family: var(--font-reading);
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+}
+.activity-card__meta,
+.activity-card__note { color: var(--text-muted); font-size: var(--text-sm); }
+.activity-card__option { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
+.activity-card .button { justify-self: start; }
+
+.room__links {
+  display: grid;
+  gap: var(--space-2);
+  margin-block-start: auto;
+  padding-block-start: var(--space-4);
+  border-block-start: var(--line-hairline) solid var(--surface-border);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}
+.room__links a { color: var(--accent-rubric); }
+
+.room__record > summary { cursor: pointer; font-family: var(--font-ui); font-size: var(--text-sm); font-weight: 600; }
+.room__record[open] > summary { margin-block-end: var(--space-3); }
+
+.room__table {
+  display: flex;
+  flex: 999 1 40rem;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--table-felt);
+}
+.room__table > .tabletop--live {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  border: 0;
+  box-shadow: none;
+}
+.room__panel select { min-width: 0; max-width: 100%; }
+.room__panel input { max-width: 100%; }
+.room__panel .toolbar > *,
+.room__panel .toolbar__class-start > * { min-width: 0; max-width: 100%; }
+.activity-card,
+.room-panel__section { min-width: 0; }
+
+/* Your tools, floating over the table at the bottom. */
+.tabletop__palette {
+  position: absolute;
+  z-index: 3;
+  inset-block-end: calc(min(14rem, 30vh) + var(--space-4));
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: var(--line-hairline) solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raised);
+}
+.tabletop__palette:empty { display: none; }
+.tabletop__palette .tabletop__tools { display: flex; gap: var(--space-1); }
+.tabletop:not(:has(.hand-tray:not([hidden]))) .tabletop__palette { inset-block-end: var(--space-4); }
+
+@media (max-width: 48rem) {
+  .room { height: auto; min-height: 100vh; }
+  .room__body { flex-wrap: wrap; overflow: visible; }
+  .room__panel { flex-basis: 100%; max-width: none; overflow: visible; border-inline-end: 0; border-block-end: var(--line-hairline) solid var(--surface-border); }
+  .room__table > .tabletop--live { height: auto; min-height: 34rem; }
+  .room__people { margin-inline-start: 0; }
+}
+.room-panel__class > *,
+.room-panel__class .toolbar__classes,
+.room-panel__class .toolbar__class-start { min-width: 0; max-width: 100%; }
+.room-panel__class .toolbar__class-start > select { width: 100%; }

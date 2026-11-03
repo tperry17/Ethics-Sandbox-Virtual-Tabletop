@@ -142,8 +142,12 @@ export class InteractionController {
     });
     facilitator.hidden = true;
 
-    group.append(point, pen, clearMine, clearAll, facilitator);
+    group.append(point, pen, clearMine, clearAll);
     this.table.toolArea.prepend(group);
+    // "Become facilitator" belongs with the room, in its top bar, if the page has one.
+    const bar = document.getElementById("room-bar-actions");
+    if (bar !== null) bar.append(facilitator);
+    else group.append(facilitator);
     this.toolButtons = { point, pen };
     this.clearAllButton = clearAll;
     this.facilitatorButton = facilitator;

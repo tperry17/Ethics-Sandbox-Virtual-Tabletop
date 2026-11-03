@@ -51,6 +51,7 @@ from sandbox.web.rooms import (
     is_dormant,
     join_room,
     load_table,
+    max_seats,
     open_room,
     purge_date,
     purge_expired,
@@ -450,6 +451,7 @@ def table_shell(
             "invite_url": f"{_public_base(request)}/join?code={room.code}",
             "dormant": is_dormant(room),
             "purge_date": purge_date(room),
+            "max_seats": max_seats(room),
         },
     )
 

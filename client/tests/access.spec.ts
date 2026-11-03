@@ -42,8 +42,7 @@ test("axe finds nothing on a table with an activity running", async ({ browser }
   const page = await openRoom(browser, "Ines", {}, "Value Cards");
   await expect(page.locator(".tabletop__pieces-layer")).toBeAttached();
   expect(await violations(page)).toEqual([]);
-  await page.getByLabel("Activity to start").selectOption("value-cards-trading");
-  await page.getByRole("button", { name: "Start this activity" }).click();
+  await page.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await expect(page.getByText(/Value Cards Trading: /)).toBeVisible();
   expect(await violations(page)).toEqual([]);
 });
@@ -153,8 +152,7 @@ async function startTrading(browser: Browser, touch: boolean) {
   const code = ines.url().split("/t/")[1]!;
   const tomas = await person(`/join?code=${code}`, "Tomas");
   const wren = await person(`/join?code=${code}`, "Wren");
-  await ines.getByLabel("Activity to start").selectOption("value-cards-trading");
-  await ines.getByRole("button", { name: "Start this activity" }).click();
+  await ines.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await tomas.getByRole("button", { name: "Join" }).click();
   await wren.getByRole("button", { name: "Join" }).click();
   await ines.getByRole("button", { name: "Deal 12 each" }).click();
@@ -230,8 +228,7 @@ test("a card goes out of the hand and back into it with the keyboard alone", asy
   };
   const host = await person(await newRoom(browser, "Test room"), "Ines");
   const guest = await person(`/join?code=${host.url().split("/t/")[1]}`, "Tomas");
-  await host.getByLabel("Activity to start").selectOption("pairs");
-  await host.getByRole("button", { name: "Start this activity" }).click();
+  await host.getByRole("button", { name: "Start Pairs", exact: true }).click();
   await guest.getByRole("button", { name: "Join" }).click();
   await expect(host.getByText(/Pairs: running/)).toBeVisible();
   await host.getByRole("button", { name: "Deal three each" }).click();
@@ -260,15 +257,15 @@ test("a card goes out of the hand and back into it with the keyboard alone", asy
   await expect(hand).toHaveCount(3);
 });
 
-test("a chosen activity stays chosen while the toolbar redraws", async ({ browser }) => {
+test("a choice made for an activity stays chosen while the toolbar redraws", async ({ browser }) => {
   const host = await openRoom(browser, "Ines");
-  const select = host.getByLabel("Activity to start");
-  await select.selectOption("pairs");
+  const select = host.getByLabel("Choosy: Side");
+  await select.selectOption("south");
   // Someone arriving redraws everyone's toolbar.
   const guest = await (await browser.newContext()).newPage();
   await guest.goto(`/join?code=${host.url().split("/t/")[1]}`);
   await guest.locator('input[name="display_name"]').fill("Tomas");
   await guest.locator('form button[type="submit"]').click();
   await expect(host.locator(".tabletop__notices")).toContainText("Tomas has joined the table.");
-  await expect(select).toHaveValue("pairs");
+  await expect(select).toHaveValue("south");
 });

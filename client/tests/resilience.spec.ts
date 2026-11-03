@@ -140,8 +140,7 @@ test("thirty seconds offline recovers without a reload, and nothing is left hang
 test("a refresh keeps the seat, the hand and the view", async ({ browser }) => {
   const { page: host, code } = await openRoom(browser, "Ines");
   const guest = await join(browser, code, "Tomas");
-  await host.getByLabel("Activity to start").selectOption("pairs");
-  await host.getByRole("button", { name: "Start this activity" }).click();
+  await host.getByRole("button", { name: "Start Pairs", exact: true }).click();
   await guest.getByRole("button", { name: "Join" }).click();
   await expect(host.getByText(/Pairs: running/)).toBeVisible();
   await host.getByRole("button", { name: "Deal three each" }).click();

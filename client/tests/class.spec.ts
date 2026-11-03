@@ -37,7 +37,7 @@ test("a facilitator sorts a class into tables, begins them and times them", asyn
 
   await host.getByLabel("Activity for the class").selectOption("pairs");
   await host.getByLabel("Number of tables").fill("2");
-  await host.getByRole("button", { name: "Start a class" }).click();
+  await host.getByRole("button", { name: "Start a class", exact: true }).click();
   await expect(host.getByText("Class: Pairs, 2 tables")).toBeVisible();
   await expect(guests[0]!.getByText("Table 2: signing up, 0 of 2")).toBeVisible();
   // The facilitator is not offered a seat; a person is.
@@ -70,7 +70,7 @@ test("a facilitator sorts a class into tables, begins them and times them", asyn
   await expect(host.getByText("Not at a table:")).toHaveCount(0);
 
   await host.getByLabel("Minutes on the timer").fill("2");
-  await host.getByRole("button", { name: "Start timer for every table" }).click();
+  await host.getByRole("button", { name: "Start timer for every table", exact: true }).click();
   for (const page of [host, ...guests]) {
     await expect(page.getByRole("timer")).toHaveText(/^[12]:\d\d$/);
   }

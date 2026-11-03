@@ -31,8 +31,7 @@ async function startPairs(
 ): Promise<{ host: Page; guest: Page; code: string }> {
   const { page: host, code } = await openRoom(browser, "Ines");
   const guest = await join(browser, code, "Tomas");
-  await host.getByLabel("Activity to start").selectOption("pairs");
-  await host.getByRole("button", { name: "Start this activity" }).click();
+  await host.getByRole("button", { name: "Start Pairs", exact: true }).click();
   await guest.getByRole("button", { name: "Join" }).click();
   await expect(host.getByText(/Pairs: running/)).toBeVisible();
   await expect(guest.getByText(/Pairs: running/)).toBeVisible();
@@ -112,8 +111,7 @@ test("an open room starts an activity for those who sign up, and its buttons are
   const guest = await join(browser, code, "Tomas");
   const bystander = await join(browser, code, "Wren");
 
-  await host.getByLabel("Activity to start").selectOption("pairs");
-  await host.getByRole("button", { name: "Start this activity" }).click();
+  await host.getByRole("button", { name: "Start Pairs", exact: true }).click();
   await expect(host.getByText(/Pairs: signing up, 1 of 2/)).toBeVisible();
 
   await guest.getByRole("button", { name: "Join" }).click();

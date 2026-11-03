@@ -118,7 +118,7 @@ export class TableRenderer {
   private draftStroke: StrokeView | null = null;
   private trayInvited = false;
   private readonly controlsElement: HTMLElement;
-  private readonly toolGroup = element("div", "toolbar__group toolbar__group--tools");
+  private readonly toolGroup = element("div", "tabletop__palette");
   private readonly piecesSlot = element("div", "tabletop__pieces-slot");
   private piecesAdded = 0;
   private lastNotice = { text: "", at: 0 };
@@ -157,6 +157,8 @@ export class TableRenderer {
     this.world.append(this.zoneLayer, this.pieceLayer);
     this.controlsElement = this.controls();
     this.surface.append(this.world, this.canvas, this.controlsElement, this.status);
+    // Your tools float over the table, where your hand is.
+    this.surface.append(this.toolGroup);
     this.surface.append(this.notices, this.banner);
 
     this.tray = element("div", "hand-tray");
@@ -748,7 +750,6 @@ export class TableRenderer {
    * page with no toolbar gets them among the camera controls instead.
    */
   get toolArea(): HTMLElement {
-    if (this.options.toolbar === null) return this.controlsElement;
     return this.toolGroup;
   }
 
@@ -782,9 +783,6 @@ export class TableRenderer {
         "Macro buttons for this exercise appear here once it defines them.";
       toolbar.append(empty);
     }
-    for (const macro of this.model.macros) {
-      toolbar.append(this.macroButton(macro));
-    }
     const activities = renderActivities(this.model, (payload) =>
       this.intents.send("activity", payload),
     );
@@ -795,12 +793,16 @@ export class TableRenderer {
       (payload) => this.intents.send("activity", payload),
       () => this.renderToolbar(),
     );
-    if (classes !== null) toolbar.append(classes);
+    if (classes !== null) toolbar.append(panelSection("Run a class", classes, "room-panel__class"));
+    if (this.model.macros.length > 0) {
+      const buttons = element("div", "room-panel__buttons");
+      for (const macro of this.model.macros) buttons.append(this.macroButton(macro));
+      toolbar.append(panelSection("The table", buttons));
+    }
     const trades = renderTrades(this.model, () => this.selection, (opType, payload) =>
       this.intents.send(opType, payload),
     );
-    if (trades !== null) toolbar.append(trades);
-    toolbar.append(this.toolGroup);
+    if (trades !== null) toolbar.append(panelSection("Trades", trades));
     restoreControls(toolbar, kept);
   }
 
@@ -1215,6 +1217,15 @@ function controlKey(control: Element, counts: Map<string, number>): string | nul
   return `${base}#${seen}`;
 }
 
+/** One headed section of the room's side panel. */
+function panelSection(title: string, body: HTMLElement, extra = ""): HTMLElement {
+  const section = element("section", `room-panel__section ${extra}`.trim());
+  const heading = element("h2", "room-panel__heading");
+  heading.textContent = title;
+  section.append(heading, body);
+  return section;
+}
+
 function rememberControls(toolbar: HTMLElement): Map<string, KeptControl> {
   const kept = new Map<string, KeptControl>();
   const counts = new Map<string, number>();
@@ -1239,11 +1250,7 @@ function restoreControls(toolbar: HTMLElement, kept: Map<string, KeptControl>): 
     if (before === undefined) continue;
     if (control.value !== before.value) {
       control.value = before.value;
-      // Only the activity picker has a listener that must catch up (which
-      // options to show); no other control is told, so none acts on its own.
-      if (control.getAttribute("aria-label") === "Activity to start") {
-        control.dispatchEvent(new Event("change", { bubbles: true }));
-      }
+      // No control is told it changed, so none acts on its own.
     }
     if (before.focused) control.focus({ preventScroll: true });
   }
