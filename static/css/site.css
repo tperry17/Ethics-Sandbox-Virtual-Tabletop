@@ -14,6 +14,12 @@
   gap: var(--space-4);
 }
 
+/* The landing page's header runs the full width of the page. */
+.site__header--wide,
+.site__header--wide .prose {
+  max-width: none;
+}
+
 .site__lede { color: var(--text-secondary); }
 
 .site__section {
