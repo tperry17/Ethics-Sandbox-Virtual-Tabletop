@@ -12,6 +12,7 @@
 
 import type {
   ActivityChoiceView,
+  PieceMenuView,
   ActivityView,
   ClassSortMessage,
   ClassView,
@@ -107,6 +108,7 @@ export class TableModel {
   macros: MacroView[] = [];
   activities = new Map<string, ActivityView>();
   activityChoices: ActivityChoiceView[] = [];
+  piecesMenu: PieceMenuView[] = [];
   classes: ClassView[] = [];
   /** When each class's timer runs out, on this browser's clock, in ms. */
   classTimerEnds = new Map<string, number>();
@@ -166,6 +168,7 @@ export class TableModel {
       (message.view_table.swapped ?? []).map((pair) => [...pair].sort().join("|")),
     );
     this.activityChoices = (message.activity_choices ?? []).map((choice) => ({ ...choice }));
+    this.piecesMenu = (message.pieces_menu ?? []).map((entry) => ({ ...entry }));
     this.classes = (message.classes ?? []).map((group) => ({ ...group }));
     this.classTimerEnds = new Map(
       this.classes

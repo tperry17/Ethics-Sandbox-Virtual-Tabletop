@@ -206,6 +206,15 @@ export interface OfferView {
 }
 
 /** An activity this room can start. */
+/** One piece the room's Pieces menu adds. */
+export interface PieceMenuView {
+  component_id: string;
+  kind: PieceKind;
+  title: string;
+  /** A seat colour, for a player piece; none for a die. */
+  tint_index?: number | null;
+}
+
 export interface ActivityChoiceView {
   slug: string;
   title: string;
@@ -267,6 +276,7 @@ export interface SnapshotMessage {
   components: ComponentView[];
   macros: MacroView[];
   activity_choices?: ActivityChoiceView[];
+  pieces_menu?: PieceMenuView[];
   classes?: ClassView[];
 }
 

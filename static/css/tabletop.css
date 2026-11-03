@@ -137,10 +137,12 @@
 
 .piece--meeple {
   width: 4rem;
-  height: 5.5rem;
+  height: 3.75rem;
   background: var(--seat-tint, var(--seat-2));
   color: var(--seat-label, var(--seat-ink));
-  clip-path: polygon(34% 28%, 25% 18%, 28% 7%, 39% 0, 61% 0, 72% 7%, 75% 18%, 66% 28%, 96% 45%, 85% 62%, 69% 53%, 75% 100%, 25% 100%, 31% 53%, 15% 62%, 4% 45%);
+  /* The author's meeple outline (2026-11-03), 64 by 60 units. */
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-32 -30 64 60'%3E%3Cpath d='M 0 -29.62 C -3.98 -29.62 -6.83 -27.5 -8.5 -24.86 C -9.96 -22.51 -10.58 -19.75 -10.7 -17.34 C -15.22 -15.13 -20.2 -12.87 -24.22 -10.58 C -26.34 -9.4 -28.17 -8.17 -29.56 -6.87 C -30.95 -5.55 -31.97 -4.08 -31.97 -2.35 C -31.97 -1.62 -31.61 -1.02 -31.19 -0.58 C -30.78 -0.13 -30.32 0.2 -29.76 0.51 C -28.63 1.18 -27.24 1.69 -25.73 2.15 C -23.44 2.84 -20.88 3.36 -18.67 3.56 C -20.88 7.36 -23.82 10.86 -26.39 14.23 C -29.38 18.09 -31.97 21.8 -31.97 25.95 C -31.97 26.52 -31.97 26.96 -31.93 27.44 C -31.88 27.91 -31.73 28.5 -31.28 28.94 C -30.8 29.39 -30.25 29.52 -29.76 29.56 C -29.31 29.64 -28.84 29.62 -28.25 29.62 L -11.82 29.62 C -10.62 29.62 -9.76 29.69 -8.85 29.11 C -7.94 28.53 -7.63 27.74 -6.98 26.57 L -6.96 26.55 L -6.95 26.51 S -5.51 23.58 -3.82 20.73 C -2.95 19.28 -2.04 17.84 -1.22 16.81 C -0.81 16.3 -0.45 15.91 -0.16 15.67 C -0.09 15.6 -0.06 15.6 0 15.56 C 0.06 15.6 0.09 15.6 0.17 15.67 C 0.42 15.91 0.82 16.3 1.22 16.81 C 2.04 17.84 2.96 19.28 3.82 20.73 C 5.52 23.58 6.95 26.51 6.95 26.51 L 6.97 26.55 L 6.98 26.57 C 7.63 27.74 7.94 28.53 8.84 29.11 C 9.72 29.69 10.59 29.62 11.78 29.62 L 28.3 29.62 C 28.88 29.62 29.34 29.64 29.79 29.56 C 30.28 29.52 30.82 29.39 31.29 28.93 C 31.75 28.48 31.89 27.91 31.93 27.44 C 31.98 26.96 31.98 26.52 31.98 25.95 C 31.98 21.8 29.39 18.09 26.4 14.23 C 23.82 10.86 20.88 7.36 18.67 3.56 C 20.88 3.36 23.45 2.84 25.73 2.15 C 27.23 1.69 28.63 1.18 29.76 0.51 C 30.32 0.2 30.79 -0.13 31.2 -0.58 C 31.62 -1.01 31.98 -1.6 31.98 -2.35 C 31.98 -4.08 30.95 -5.53 29.56 -6.86 C 28.18 -8.17 26.34 -9.39 24.22 -10.57 C 20.21 -12.87 15.23 -15.13 10.71 -17.34 C 10.59 -19.75 9.97 -22.49 8.5 -24.86 C 6.83 -27.5 3.98 -29.62 0 -29.62 Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-32 -30 64 60'%3E%3Cpath d='M 0 -29.62 C -3.98 -29.62 -6.83 -27.5 -8.5 -24.86 C -9.96 -22.51 -10.58 -19.75 -10.7 -17.34 C -15.22 -15.13 -20.2 -12.87 -24.22 -10.58 C -26.34 -9.4 -28.17 -8.17 -29.56 -6.87 C -30.95 -5.55 -31.97 -4.08 -31.97 -2.35 C -31.97 -1.62 -31.61 -1.02 -31.19 -0.58 C -30.78 -0.13 -30.32 0.2 -29.76 0.51 C -28.63 1.18 -27.24 1.69 -25.73 2.15 C -23.44 2.84 -20.88 3.36 -18.67 3.56 C -20.88 7.36 -23.82 10.86 -26.39 14.23 C -29.38 18.09 -31.97 21.8 -31.97 25.95 C -31.97 26.52 -31.97 26.96 -31.93 27.44 C -31.88 27.91 -31.73 28.5 -31.28 28.94 C -30.8 29.39 -30.25 29.52 -29.76 29.56 C -29.31 29.64 -28.84 29.62 -28.25 29.62 L -11.82 29.62 C -10.62 29.62 -9.76 29.69 -8.85 29.11 C -7.94 28.53 -7.63 27.74 -6.98 26.57 L -6.96 26.55 L -6.95 26.51 S -5.51 23.58 -3.82 20.73 C -2.95 19.28 -2.04 17.84 -1.22 16.81 C -0.81 16.3 -0.45 15.91 -0.16 15.67 C -0.09 15.6 -0.06 15.6 0 15.56 C 0.06 15.6 0.09 15.6 0.17 15.67 C 0.42 15.91 0.82 16.3 1.22 16.81 C 2.04 17.84 2.96 19.28 3.82 20.73 C 5.52 23.58 6.95 26.51 6.95 26.51 L 6.97 26.55 L 6.98 26.57 C 7.63 27.74 7.94 28.53 8.84 29.11 C 9.72 29.69 10.59 29.62 11.78 29.62 L 28.3 29.62 C 28.88 29.62 29.34 29.64 29.79 29.56 C 30.28 29.52 30.82 29.39 31.29 28.93 C 31.75 28.48 31.89 27.91 31.93 27.44 C 31.98 26.96 31.98 26.52 31.98 25.95 C 31.98 21.8 29.39 18.09 26.4 14.23 C 23.82 10.86 20.88 7.36 18.67 3.56 C 20.88 3.36 23.45 2.84 25.73 2.15 C 27.23 1.69 28.63 1.18 29.76 0.51 C 30.32 0.2 30.79 -0.13 31.2 -0.58 C 31.62 -1.01 31.98 -1.6 31.98 -2.35 C 31.98 -4.08 30.95 -5.53 29.56 -6.86 C 28.18 -8.17 26.34 -9.39 24.22 -10.57 C 20.21 -12.87 15.23 -15.13 10.71 -17.34 C 10.59 -19.75 9.97 -22.49 8.5 -24.86 C 6.83 -27.5 3.98 -29.62 0 -29.62 Z'/%3E%3C/svg%3E") center / contain no-repeat;
   filter: drop-shadow(0 0.3rem 0.25rem var(--shadow-color-strong));
 }
 
@@ -833,4 +835,45 @@
 @media (pointer: coarse) {
   .tabletop__controls input,
   .toolbar input { scroll-margin-block: 40vh; }
+}
+
+/* The Pieces menu, among the camera controls. */
+.tabletop__pieces-slot:empty { display: none; }
+.pieces-menu { position: relative; }
+.pieces-menu > summary { list-style: none; cursor: pointer; }
+.pieces-menu > summary::-webkit-details-marker { display: none; }
+.pieces-menu[open] > summary { background: var(--text-primary); color: var(--surface-page); }
+.pieces-menu__panel {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  display: grid;
+  gap: var(--space-2);
+  width: 16rem;
+  padding: var(--space-3);
+  border: var(--line-hairline) solid var(--surface-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-raised);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}
+.pieces-menu__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.pieces-menu__heading { margin: var(--space-2) 0 0; font-weight: 600; color: var(--text-secondary); }
+.pieces-menu__swatches { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.pieces-menu__swatch {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: var(--line-strong) solid var(--surface-raised);
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: 0 0 0 var(--line-hairline) var(--surface-border-strong);
+  cursor: pointer;
+}
+.pieces-menu__swatch[aria-pressed="true"] { border-color: var(--text-primary); }
+@media (pointer: coarse) {
+  .pieces-menu__swatch { width: 2.75rem; height: 2.75rem; }
 }

@@ -410,13 +410,14 @@ class RoomSpec(_Strict):
 
     ``exercise`` is the catalog slug whose page opens this room;
     ``activities`` are all the room offers, and ``pieces`` are the
-    components its "Pieces" menu adds to the table.
+    components its "Pieces" menu adds to the table, into ``pieces_zone``.
     """
 
     exercise: Identifier
     label: str = Field(min_length=1)
     activities: tuple[RoomActivity, ...] = Field(min_length=1)
     pieces: tuple[Identifier, ...] = ()
+    pieces_zone: Identifier = "table"
 
 
 class GameDefinition(_Strict):
@@ -463,9 +464,16 @@ class GameDefinition(_Strict):
             repeated = duplicates([activity.id for activity in self.room.activities])
             if repeated:
                 raise ValueError(f"room activity ids used more than once: {repeated}")
-            unknown = sorted(set(self.room.pieces) - set(component_ids))
+            unknown = sorted(
+                set(self.room.pieces) - {piece.id for piece in self.components.pieces}
+            )
             if unknown:
-                raise ValueError(f"the room's pieces are not components: {unknown}")
+                raise ValueError(f"the room's pieces are not pieces: {unknown}")
+            if self.room.pieces and self.zone_spec(self.room.pieces_zone) is None:
+                raise ValueError(
+                    f"the room's pieces go into {self.room.pieces_zone!r}, "
+                    "which is not one of its zones"
+                )
         missing = [
             macro_id
             for macro_id in (ROOM_MACROS if self.room else STANDARD_MACROS)

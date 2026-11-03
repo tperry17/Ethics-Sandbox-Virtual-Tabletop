@@ -25,7 +25,7 @@ const DEFAULT_SIZE: Record<PieceKind, [number, number]> = {
   card: [208, 288],
   die: [72, 72],
   cube: [56, 56],
-  meeple: [64, 88],
+  meeple: [64, 60],
   token: [64, 64],
   note: [160, 128],
   marker: [36, 36],
@@ -39,6 +39,9 @@ export function pieceSize(
   const [defaultWidth, defaultHeight] = DEFAULT_SIZE[piece.kind] ?? DEFAULT_SIZE.token;
   return [component?.width ?? defaultWidth, component?.height ?? defaultHeight];
 }
+
+/** Pieces drawn as a plain shape, with no title printed on them. */
+const PLAIN_KINDS = new Set<PieceKind>(["cube", "meeple", "token"]);
 
 export function seatTintClass(tintIndex: number): string {
   return `seat-${(((tintIndex % 6) + 6) % 6) + 1}`;
@@ -173,12 +176,19 @@ export class PieceNode {
     this.element.style.height = `${height}px`;
   }
 
-  setClasses(piece: LocalPiece, holder: SeatView | undefined, extra: string): void {
+  setClasses(
+    piece: LocalPiece,
+    holder: SeatView | undefined,
+    extra: string,
+    ownTint: number | null = null,
+  ): void {
     const classes = ["piece", "piece--placed", `piece--${piece.kind}`];
     if (piece.component_id === null) classes.push("is-face-down");
     if (piece.held_by !== null) classes.push("is-held", "is-lifted");
     if (piece.locked) classes.push("is-locked");
-    if (holder !== undefined) classes.push(seatTintClass(holder.tint_index));
+    // A piece of its own colour keeps it; otherwise it takes its holder's.
+    if (ownTint !== null) classes.push(seatTintClass(ownTint));
+    else if (holder !== undefined) classes.push(seatTintClass(holder.tint_index));
     if (extra) classes.push(extra);
     const signature = classes.join(" ");
     if (signature === this.classSignature) return;
@@ -227,7 +237,11 @@ export class PieceNode {
       "aria-label",
       component?.title ?? label ?? `A ${piece.kind}`,
     );
-    if (component !== undefined) appendFace(this.body, component);
+    // A player piece says what it is in its label, not on itself; a token
+    // shows only what is written on it.
+    if (component !== undefined && !PLAIN_KINDS.has(piece.kind)) {
+      appendFace(this.body, component);
+    }
     if (piece.text !== undefined && piece.text !== null) {
       this.body.append(span("piece__text", piece.text));
     }

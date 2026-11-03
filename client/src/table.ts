@@ -35,6 +35,7 @@ import type {
 } from "./protocol.js";
 import { RevealLayer } from "./reveal.js";
 import { ViewportController } from "./viewport-input.js";
+import { renderPiecesMenu } from "./pieces.js";
 import { type Bounds, type Viewport, screenToWorld, unionBounds } from "./viewport.js";
 
 /** Where a card's centre sits in the tray, so its top edge starts at the top. */
@@ -118,6 +119,8 @@ export class TableRenderer {
   private trayInvited = false;
   private readonly controlsElement: HTMLElement;
   private readonly toolGroup = element("div", "toolbar__group toolbar__group--tools");
+  private readonly piecesSlot = element("div", "tabletop__pieces-slot");
+  private piecesAdded = 0;
   private lastNotice = { text: "", at: 0 };
 
   private diff: Diff = emptyDiff();
@@ -643,7 +646,9 @@ export class TableRenderer {
     if (this.rollingBack.has(id)) extra.push("is-rolling-back");
     if (this.overrides.get(id)?.lifted === true) extra.push("is-dragging");
     if (truth.revealed_by !== null && truth.revealed_to.length > 0) extra.push("is-shown");
-    node.setClasses(piece, holder, extra.join(" "));
+    const component =
+      piece.component_id === null ? undefined : this.model.components.get(piece.component_id);
+    node.setClasses(piece, holder, extra.join(" "), component?.tint_index ?? null);
     node.setHolder(holder);
     const name = this.pieceLabel(id);
     const held =
@@ -729,6 +734,7 @@ export class TableRenderer {
   private controls(): HTMLElement {
     const controls = element("div", "tabletop__controls");
     controls.append(
+      this.piecesSlot,
       button("Fit table", () => this.controller.fit(true)),
       button("Zoom out", () => this.controller.zoomBy(1 / 1.2), "−"),
       button("Zoom in", () => this.controller.zoomBy(1.2), "+"),
@@ -746,7 +752,26 @@ export class TableRenderer {
     return this.toolGroup;
   }
 
+  /** The room's Pieces menu, among the camera controls; redrawn with the toolbar. */
+  private renderPiecesMenu(): void {
+    const wasOpen = this.piecesSlot.querySelector("details")?.open ?? false;
+    const menu = renderPiecesMenu(
+      this.model.piecesMenu,
+      (componentId) => {
+        // Where the person is looking: the middle of the visible table.
+        const box = this.surface.getBoundingClientRect();
+        const [x, y] = this.clientToWorld(box.left + box.width / 2, box.top + box.height / 2);
+        // Several added in a row fan out a little, rather than hiding each other.
+        const step = (this.piecesAdded++ % 6) * 60;
+        this.intents.send("add_piece", { component_id: componentId, x: x + step, y: y + step / 3 });
+      },
+      wasOpen,
+    );
+    this.piecesSlot.replaceChildren(...(menu === null ? [] : [menu]));
+  }
+
   private renderToolbar(): void {
+    this.renderPiecesMenu();
     const toolbar = this.options.toolbar;
     if (toolbar === null) return;
     const kept = rememberControls(toolbar);

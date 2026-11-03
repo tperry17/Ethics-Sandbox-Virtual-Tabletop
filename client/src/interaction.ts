@@ -651,20 +651,21 @@ export class InteractionController {
     if (pieceId === undefined) return;
     event.preventDefault();
     const piece = this.model.pieces.get(pieceId);
-    if (piece?.kind === "note") {
-      this.write(pieceId);
+    if (piece?.kind === "note" || piece?.kind === "token") {
+      this.write(pieceId, piece.kind);
       return;
     }
     this.flip(this.targetsFor(pieceId));
   };
 
-  /** Ask what to write on a note. The server judges whether it may be written. */
-  private write(pieceId: string): void {
+  /** Ask what to write on a note or a token. The server judges whether it may be. */
+  private write(pieceId: string, kind: "note" | "token" = "note"): void {
     const current = this.model.pieces.get(pieceId)?.text ?? "";
-    const text = window.prompt("Write on this note:", current);
+    const question = kind === "token" ? "One word or number for this token:" : "Write on this note:";
+    const text = window.prompt(question, current);
     if (text === null) return;
     this.table.intents.send("set_text", { piece_id: pieceId, text }, this.settles(pieceId));
-    this.table.announcer.announce("Note written on.");
+    this.table.announcer.announce(kind === "token" ? "Token written on." : "Note written on.");
   }
 
   private onContextMenu = (event: MouseEvent): void => {

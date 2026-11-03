@@ -48,6 +48,7 @@ from sandbox.games import GAMES, Game
 from sandbox.games.engine import (
     announcement,
     build_activity_start,
+    build_add_piece,
     build_macro,
     build_seat_move,
     may_use_facilitator_button,
@@ -432,6 +433,15 @@ class ActivityOptionView(BaseModel):
     choices: list[ActivityOptionChoiceView]
 
 
+class PieceMenuView(BaseModel):
+    """One piece the room's Pieces menu adds: what it is, and its colour."""
+
+    component_id: str
+    kind: str
+    title: str
+    tint_index: int | None = None
+
+
 class ActivityChoiceView(BaseModel):
     """An activity this room can start: what it is called and how many it takes."""
 
@@ -519,6 +529,7 @@ class SnapshotMessage(BaseModel):
     components: list[ComponentView] = Field(default_factory=list)
     macros: list[MacroView] = Field(default_factory=list)
     activity_choices: list[ActivityChoiceView] = Field(default_factory=list)
+    pieces_menu: list[PieceMenuView] = Field(default_factory=list)
     classes: list[ClassView] = Field(default_factory=list)
 
 
@@ -677,6 +688,26 @@ ACTIVITY_INTENT = "activity"
 
 # The intent that starts and runs a class: several tables of one activity.
 CLASS_INTENT = "class"
+
+# The intent that adds a piece from the room's Pieces menu.
+ADD_PIECE_INTENT = "add_piece"
+
+
+def pieces_menu(room_game: Game | None) -> list[PieceMenuView]:
+    """What the room's Pieces menu offers, in the order its definition lists."""
+    if room_game is None or room_game.definition.room is None:
+        return []
+    specs = {piece.id: piece for piece in room_game.definition.components.pieces}
+    return [
+        PieceMenuView(
+            component_id=spec.id,
+            kind=spec.kind.value,
+            title=spec.title or spec.kind.value.capitalize(),
+            tint_index=spec.tint_index,
+        )
+        for component_id in room_game.definition.room.pieces
+        if (spec := specs.get(component_id)) is not None
+    ]
 
 
 def chosen_options(
@@ -1330,6 +1361,9 @@ class RoomRuntime:
         if message.op_type == CLASS_INTENT:
             self._on_class(connection, seat_id, message)
             return
+        if message.op_type == ADD_PIECE_INTENT:
+            self._on_add_piece(connection, seat_id, message)
+            return
         try:
             operation = decode_intent(message.op_type, message.payload)
         except IntentError as error:
@@ -1790,6 +1824,33 @@ class RoomRuntime:
         if text:
             self._notice(text)
 
+    def _on_add_piece(
+        self, connection: Connection, seat_id: str, message: IntentMessage
+    ) -> None:
+        """A piece from the Pieces menu, put down where the person is looking."""
+        payload = message.payload
+        component_id = payload.get("component_id")
+        x, y = payload.get("x"), payload.get("y")
+        if (
+            self.game is None
+            or not isinstance(component_id, str)
+            or not all(
+                isinstance(v, (int, float)) and not isinstance(v, bool) for v in (x, y)
+            )
+        ):
+            self._reject(connection, message.client_id, "Choose a piece to add.")
+            return
+        assert isinstance(x, (int, float)) and isinstance(y, (int, float))
+        built = build_add_piece(self.game, self.table, component_id, float(x), float(y))
+        if not isinstance(built, Transaction):
+            self._reject(connection, message.client_id, built.reason)
+            return
+        outcome = self._apply(seat_id, built, log=True)
+        if not isinstance(outcome, Ok):
+            self._reject(connection, message.client_id, outcome.reason)
+            return
+        connection.send(AckMessage(client_id=message.client_id))
+
     def _on_menu_request(
         self, connection: Connection, message: MenuRequestMessage
     ) -> None:
@@ -2214,6 +2275,7 @@ class RoomRuntime:
             components=components,
             macros=self._macros_for(connection),
             activity_choices=activity_choices(self.game),
+            pieces_menu=pieces_menu(self.game),
             classes=self._class_views(connection.is_facilitator, connection.seat_id),
         )
         connection.last_seq_sent = self.seq
@@ -2507,6 +2569,7 @@ __all__ = [
     "IntentMessage",
     "GeometryView",
     "LiveHub",
+    "ADD_PIECE_INTENT",
     "MACRO_INTENT",
     "MacroView",
     "MenuItemView",
