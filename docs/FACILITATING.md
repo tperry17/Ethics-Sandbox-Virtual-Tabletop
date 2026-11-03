@@ -47,7 +47,7 @@ plus the debrief.
 3. Compare final hands and talk about what was kept, refused or assumed.
 4. Open the debrief from the facilitator's view.
 
-## Democracy Simulation
+## Leadership and Knowledge in Popular Rule
 
 Nine to twenty people per city; several cities can run at once. About 45
 minutes plus the debrief.

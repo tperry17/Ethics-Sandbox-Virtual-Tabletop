@@ -107,7 +107,7 @@ test("Value Cards Trading: four browsers, a drop and a rejoin, and a macro mid-d
   await expect(ines.page.locator("[data-status='connected']")).toBeVisible();
 });
 
-test("Democracy Simulation: a city of nine, a rejoin, and the role cards stay private", async ({
+test("Leadership and Knowledge in Popular Rule: a city of nine, a rejoin, and the role cards stay private", async ({
   browser,
 }) => {
   test.setTimeout(180_000);
@@ -124,7 +124,7 @@ test("Democracy Simulation: a city of nine, a rejoin, and the role cards stay pr
     await citizen.page.getByRole("button", { name: "Join" }).click();
   }
   await host.page.getByRole("button", { name: "Begin now" }).click();
-  await expect(host.page.getByText(/Democracy Simulation: running/)).toBeVisible();
+  await expect(host.page.getByText(/Leadership and Knowledge in Popular Rule: running/)).toBeVisible();
 
   await host.page.getByRole("button", { name: "Deal role cards" }).click();
   const mine = citizens[0]!.page.locator('.piece[data-zone-id*=":hand-seat-"]');

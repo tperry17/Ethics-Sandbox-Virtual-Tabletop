@@ -150,3 +150,24 @@ def test_exercise_page_leads_with_the_premise_and_shows_the_overview() -> None:
             assert exercise.overview in premise
         else:
             assert 'id="premise"' not in response.text
+
+
+def test_every_page_is_reachable_by_a_link() -> None:
+    client = TestClient(app)
+
+    landing = client.get("/").text
+    for href in ('href="/help"', 'href="/styleguide"', 'href="/health"'):
+        assert href in landing
+    assert 'href="/table-preview"' in client.get("/styleguide").text
+    for exercise in EXERCISES:
+        page = client.get(f"/exercises/{exercise.slug}").text
+        assert f'href="/games/{exercise.slug}/preview"' in page
+        assert f'href="/exercises/{exercise.slug}/deck"' in page
+        assert client.get(f"/exercises/{exercise.slug}/deck").status_code == 200
+
+
+def test_the_overview_sits_under_its_own_heading() -> None:
+    page = TestClient(app).get("/exercises/value-cards-trading").text
+
+    assert 'aria-label="The deck and the exercise"' in page
+    assert 'aria-label="Premise"' not in page

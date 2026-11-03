@@ -1,1 +1,4 @@
-"""Democracy Simulation debrief: its learning outcomes and questions, shared."""
+"""Leadership and Knowledge in Popular Rule debrief.
+
+Its learning outcomes and questions, shared.
+"""

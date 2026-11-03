@@ -23,11 +23,10 @@ quotes - most spreadsheet apps do this for you automatically when you save.
 `site/exercises.csv` - one row per exercise: title, blurb, premise, group
 size, running time, and the rest of the fields on its catalog and detail
 pages. The exercise page opens with the `premise`; `overview`, if filled
-in, is the paragraph under its "Premise" heading (describe the deck and how
-the exercise runs). The `facilitator` and `alongside` columns are no longer
-shown on the exercise page; the landing page still shows `facilitator`.
-Add a row here (with a new `slug`) and matching rows in the files below to
-add a new exercise to the site without touching any template.
+in, is a section under the heading in `overview_heading` (or "Premise" if
+that is blank). `facilitator` is shown on the landing page's cards. Add a
+row here (with a new `slug`) and matching rows in the files below to add a
+new exercise to the site without touching any template.
 
 `site/exercise_learning_outcomes.csv` - what each exercise is designed to
 achieve: one row per outcome (`slug`, `id`, `title`, `text`). It is shown on
@@ -42,11 +41,6 @@ preview on the exercise detail page, one row per item, keyed by the same
 definition to draw from. The order rows appear in the file is the order
 they appear on the page.
 
-`site/exercise_session_shape.csv`, `exercise_tensions.csv`,
-`exercise_facilitator_notes.csv` - the session steps, tensions and
-facilitator notes, one row per item. They are still loaded but no longer
-shown on the exercise page (removed at the author's request, 2026-11-03).
-
 ## Exercise content
 
 Each exercise's game content - its deck, its roles, its facilitation
@@ -54,8 +48,8 @@ prompts, and what its buttons say - lives under `exercises/<exercise>/`,
 and the exercise's game definition (`sandbox/games/<exercise>/game.yaml`)
 names the files it reads.
 
-Both exercises' definitions read these files. The Democracy Simulation
-does not read its sheets directly: `role_cards.csv`, `moderator_cards.csv`,
+Both exercises' definitions read these files. Leadership and Knowledge
+in Popular Rule does not read its sheets directly: `role_cards.csv`, `moderator_cards.csv`,
 `sheet_cards.csv` and `invitation_cards.csv` are composed from `roles.csv`,
 `jobs.csv`, `features.csv`, `elite_sheets.csv` and `invitations.csv`, because
 a card's back is made of several of them. **After editing any of those five,
@@ -64,8 +58,8 @@ the four files it writes; a test fails until you do. `outcomes.csv` (the nine
 outcomes of Scenario 2's war table) is kept for the class page, and
 `prompts.csv` holds the debrief questions, each under its learning outcome.
 
-The Democracy Simulation's three files come from the author's "role
-cards" Google Sheet. `roles.csv` has one row per card (80 in all: cards
+Leadership and Knowledge in Popular Rule's three files come from the
+author's "role cards" Google Sheet. `roles.csv` has one row per card (80 in all: cards
 1-20 for each city and phase), with yes/no columns for whether the holder
 lives by the river, has heard the rumour, or sits on the council.
 `jobs.csv` holds the knowledge and interest text for each job in each

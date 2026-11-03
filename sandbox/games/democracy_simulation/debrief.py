@@ -1,4 +1,4 @@
-"""The Democracy Simulation's debrief, read from the log.
+"""Leadership and Knowledge in Popular Rule's debrief, read from the log.
 
 For one city: a timeline (the moderators, each proposal as written with who
 wrote it and its edits, when it was put to the vote and what happened),

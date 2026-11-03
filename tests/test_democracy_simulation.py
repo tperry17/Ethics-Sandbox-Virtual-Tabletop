@@ -1,4 +1,7 @@
-"""The Democracy Simulation: dealing, the co-Chairs, and counting a vote."""
+"""Leadership and Knowledge in Popular Rule.
+
+Dealing, the co-Chairs, and counting a vote.
+"""
 
 from __future__ import annotations
 
