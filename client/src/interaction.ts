@@ -93,6 +93,8 @@ export class InteractionController {
   private hovered: string | null = null;
   private readonly hint: HTMLElement;
   private hintTimer: number | null = null;
+  /** A close look is open because Space is held down; letting go closes it. */
+  private spaceLook = false;
 
   constructor(private readonly table: TableRenderer) {
     this.hint = document.createElement("div");
@@ -115,6 +117,9 @@ export class InteractionController {
     root.addEventListener("pointerleave", this.onPointerLeave);
     root.append(this.hint);
     window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keyup", this.onKeyUp);
+    // A look held open by Space ends if the window loses the key-up.
+    window.addEventListener("blur", this.endSpaceLook);
     document.addEventListener("pointerdown", this.onDocumentPointerDown, true);
     this.table.listener = {
       onOwnPeek: (pieceId) => this.onOwnPeek(pieceId),
@@ -579,6 +584,7 @@ export class InteractionController {
   }
 
   private closePeek(): void {
+    this.spaceLook = false;
     const pieceId = this.table.reveals.peekingAt;
     this.table.reveals.closePeek();
     if (pieceId !== null) this.table.pieceElement(pieceId)?.focus({ preventScroll: true });
@@ -623,7 +629,7 @@ export class InteractionController {
     // Which keys are worth mentioning, from what is drawn: whether the server
     // allows any of them is still the server's to say when one is pressed.
     const keys: Array<[string, string]> = [];
-    if (piece.component_id !== null) keys.push(["Space", "enlarge"]);
+    if (piece.component_id !== null) keys.push(["Space", "hold to enlarge"]);
     keys.push(["F", "turn over"]);
     if (this.model.zones.get(piece.zone_id)?.kind === "deck") keys.push(["S", "shuffle"]);
     if (piece.locked) keys.push(["U", "unlock"]);
@@ -915,9 +921,9 @@ export class InteractionController {
       this.flip(ids);
       return;
     }
-    if (event.key === " ") {
-      // Select, as a click does: Space picks this piece alone, Shift-Space
-      // adds it to (or takes it from) the selection. Offers use the selection.
+    if (event.key === "x" || event.key === "X") {
+      // Select, as a click does: X picks this piece alone, Shift-X adds it
+      // to (or takes it from) the selection. Offers use the selection.
       event.preventDefault();
       this.click(pieceId, event.shiftKey);
       const count = this.table.selected.size;
@@ -948,6 +954,16 @@ export class InteractionController {
     }
   };
 
+  private onKeyUp = (event: KeyboardEvent): void => {
+    if (event.key === " ") this.endSpaceLook();
+  };
+
+  private endSpaceLook = (): void => {
+    if (!this.spaceLook) return;
+    this.spaceLook = false;
+    if (this.table.reveals.peekingAt !== null) this.closePeek();
+  };
+
   /**
    * F, L, U, S and Space: the keys that act on the piece under the pointer
    * first, then on the focused piece, then on the selection. True if the key
@@ -955,9 +971,9 @@ export class InteractionController {
    */
   private shortcut(event: KeyboardEvent, target: HTMLElement): boolean {
     this.hideHint();
-    if (event.key === " " && this.table.reveals.peekingAt !== null) {
+    if (event.key === " " && this.spaceLook) {
+      // Space is being held: the look stays open until it is let go.
       event.preventDefault();
-      this.closePeek();
       return true;
     }
     // The single-letter keys act on the piece under the pointer first, then
@@ -981,10 +997,11 @@ export class InteractionController {
       this.shuffle(subject);
       return true;
     }
-    if (event.key === " " && !event.shiftKey && hovered !== null && this.openPeek(hovered)) {
-      // A close look at the card under the pointer; Space again, or Escape, puts it away.
+    if (event.key === " " && subject !== null && this.openPeek(subject)) {
+      // A close look at the card, for as long as Space is held down.
       event.preventDefault();
-      this.table.intents.send("peek", { piece_id: hovered });
+      this.spaceLook = true;
+      this.table.intents.send("peek", { piece_id: subject });
       return true;
     }
     return false;

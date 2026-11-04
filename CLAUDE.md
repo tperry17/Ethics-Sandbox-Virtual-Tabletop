@@ -146,9 +146,13 @@ The context menu is a `menu_request` answered by a `menu` message built by
 `sandbox/model/actions.py`, which offers every plausible operation and
 keeps those whose own `validate` accepts them. A card in a deck zone also
 offers "Shuffle the deck" and "Deal to everyone…": 1, 3 or 5 cards each,
-or as many as go round, face up, to the hand of every seated player who is
-not the facilitator, in seat order - the activity's hands for a deck in an
-activity, the room's own hands otherwise. Faces a patch newly entitles
+or as many as go round, face up, into the private hand of every seated
+player who is not the facilitator, in seat order, so each sees only their
+own. A deck on the room's table deals to the room's hands; a deck in an
+activity deals to that activity's private hands, or, if it has none, to
+its players' hands in the room. Every room type has a private, per-seat
+hand (validation checks it). Value Cards Trading lays each player's cards
+out in the open on the board (`seat_area` zones), not in a hand. Faces a patch newly entitles
 a viewer to travel with that patch as `components`, to that viewer only.
 
 Reveals are read from state (`revealed_to`, `revealed_by`), not from
@@ -159,7 +163,7 @@ when they leave the table. Who is showing what to whom is public; the face
 is not.
 
 Keyboard: Tab reaches every piece; arrow keys move by a 20-unit step (Shift
-for five); Space selects (Shift-Space adds to the selection; on a touch
+for five); X selects (Shift-X adds to the selection; on a touch
 screen, tapping a piece toggles it); Enter turns over; R and Shift-R rotate; M, the context-menu key
 or Shift-F10 open the menu; P points; Escape clears. With nothing focused,
 R and Enter act on the selection.
@@ -167,9 +171,9 @@ R and Enter act on the selection.
 F turns over, L locks, U unlocks and S shuffles the deck a card lies in.
 These four act on the piece under the mouse pointer first, then on the
 focused piece, then (F, L, U) on the selection; with the pointer on a piece
-they work even while focus is on a button elsewhere. Space on the card
-under the pointer opens a close look at it (Space again, or Escape, closes
-it); with no card under the pointer, Space selects as above. Resting the
+they work even while focus is on a button elsewhere. Holding Space shows
+a close look at the card under the pointer (or the focused one) for as long
+as it is held; letting go closes it. Space never selects. Resting the
 pointer on a card or tile shows a hint naming these keys. S asks the
 server for the piece's menu and sends its "Shuffle the deck" entry, so the
 client never decides what may be shuffled.

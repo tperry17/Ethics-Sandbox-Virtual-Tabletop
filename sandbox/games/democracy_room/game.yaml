@@ -71,6 +71,14 @@ zones:
     rect: [440, 40, 360, 640]
     visibility: public
     layout: stack
+  - id: hand                      # every room has a private hand for each seat
+    kind: hand
+    label: Hand
+    rect: [40, 940, 1200, 220]
+    visibility: private_to_owner
+    layout: fan
+    per_seat: true
+    step: [0, 240]
 
 setup:
   - {op: spawn_deck, deck: cities, zone: potamosia, where: {key: potamosia}}

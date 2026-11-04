@@ -44,7 +44,8 @@ test("a player deals, and each person sees only their own cards", async ({ brows
   // The hand is docked below the table before any card arrives, and is not
   // drawn on the table as well.
   await expect(host.locator(".hand-tray__empty")).toBeVisible();
-  await expect(host.locator(".tabletop__zones .zone--private")).toBeHidden();
+  // The room's own hand and the activity's are both docked, never drawn.
+  await expect(host.locator(".tabletop__zones .zone--private:visible")).toHaveCount(0);
 
   const deal = host.getByRole("button", { name: "Deal three each" });
   await expect(deal).toBeVisible();

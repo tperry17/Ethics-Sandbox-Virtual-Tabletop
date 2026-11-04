@@ -14,19 +14,19 @@
       "visibility": "hidden"
     },
     "activity-1:hand-seat-1": {
-      "kind": "hand",
+      "kind": "seat_area",
       "owner_seat": "seat-1",
       "pieces": {},
       "visibility": "public"
     },
     "activity-1:hand-seat-2": {
-      "kind": "hand",
+      "kind": "seat_area",
       "owner_seat": "seat-2",
       "pieces": {},
       "visibility": "public"
     },
     "activity-1:hand-seat-3": {
-      "kind": "hand",
+      "kind": "seat_area",
       "owner_seat": "seat-3",
       "pieces": {},
       "visibility": "public"

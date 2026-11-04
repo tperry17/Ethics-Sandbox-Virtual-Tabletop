@@ -172,9 +172,9 @@ test("a trade is offered and answered with the keyboard alone", async ({ browser
   await expect(mine).toHaveCount(12);
 
   await mine.first().focus();
-  await ines.keyboard.press("Space");
+  await ines.keyboard.press("x");
   await theirs.first().focus();
-  await ines.keyboard.press("Shift+Space");
+  await ines.keyboard.press("Shift+X");
   await expect(ines.locator("[data-announcer]")).toContainText("2 selected");
 
   await ines.getByRole("button", { name: "Offer a trade" }).focus();

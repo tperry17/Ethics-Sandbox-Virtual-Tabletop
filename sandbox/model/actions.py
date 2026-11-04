@@ -29,7 +29,7 @@ from sandbox.model.ops import (
     Shuffle,
     Unlock,
 )
-from sandbox.model.types import PieceKind, ZoneKind
+from sandbox.model.types import PieceKind, Visibility, ZoneKind
 from sandbox.model.visibility import entitled_to_face
 
 
@@ -62,28 +62,36 @@ DEAL_COUNTS = (1, 3, 5)
 
 
 def _players_hands(table: Table, deck: Zone) -> list[str]:
-    """The hands a deck deals to: one per player, in seat order.
+    """The private hands a deck deals to: one per player, in seat order.
 
-    A deck that belongs to an activity deals to that activity's hands; one
-    on the room's own table deals to the room's hands, not to any activity's.
-    A hand counts when someone is sitting in its seat and that someone is
-    not the facilitator, who does not play.
+    Only a private hand counts, so what each player is dealt is theirs alone.
+    A deck on the room's own table deals to the room's hands. A deck that
+    belongs to an activity deals to that activity's private hands if it has
+    them, and otherwise to its players' hands in the room. A hand counts
+    when someone is sitting in its seat and that someone is not the
+    facilitator, who does not play.
     """
-    own = next((a.zones for a in table.activities.values() if deck.id in a.zones), None)
+    activity = next((a for a in table.activities.values() if deck.id in a.zones), None)
     in_activities = {z for a in table.activities.values() for z in a.zones}
+    hands = [
+        zone
+        for zone in table.zones.values()
+        if zone.kind is ZoneKind.HAND
+        and zone.visibility is Visibility.PRIVATE_TO_OWNER
+        and zone.owner_seat is not None
+        and (seat := table.seats.get(zone.owner_seat)) is not None
+        and seat.participant_id is not None
+        and not seat.is_facilitator
+    ]
+    room_hands = [zone for zone in hands if zone.id not in in_activities]
+    if activity is None:
+        chosen = room_hands
+    else:
+        own = [zone for zone in hands if zone.id in activity.zones]
+        chosen = own or [z for z in room_hands if z.owner_seat in activity.seats]
     order = list(table.seats)
-    hands = []
-    for zone in table.zones.values():
-        if zone.kind is not ZoneKind.HAND or zone.owner_seat is None:
-            continue
-        if (zone.id not in own) if own is not None else (zone.id in in_activities):
-            continue
-        seat = table.seats.get(zone.owner_seat)
-        if seat is None or seat.participant_id is None or seat.is_facilitator:
-            continue
-        hands.append(zone)
-    hands.sort(key=lambda zone: order.index(zone.owner_seat or ""))
-    return [zone.id for zone in hands]
+    chosen.sort(key=lambda zone: order.index(zone.owner_seat or ""))
+    return [zone.id for zone in chosen]
 
 
 def _deck_entries(table: Table, piece: Piece) -> list[MenuEntry]:

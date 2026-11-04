@@ -32,7 +32,7 @@ test("an offer is made from the selected cards, answered, and ticks the checklis
 
   // Offering with nothing selected says what to select.
   await ines.getByRole("button", { name: "Offer a trade" }).click();
-  await expect(ines.getByText(/Select cards in your hand/)).toBeVisible();
+  await expect(ines.getByText(/Select cards of your own/)).toBeVisible();
 
   await mine.first().click();
   await theirs.first().click({ modifiers: ["Shift"] });

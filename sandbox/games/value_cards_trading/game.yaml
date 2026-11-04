@@ -38,10 +38,10 @@ zones:
     visibility: hidden
     layout: stack
   - id: hand
-    kind: hand
-    label: Hand
+    kind: seat_area               # each player's cards lie open on the board, not in a hand
+    label: Cards on the table
     rect: [40, 400, 1600, 230]
-    visibility: public            # hands are open within the trio
+    visibility: public            # open within the trio
     owner_moves_only: true        # but only the owner arranges them
     layout: spread
     per_seat: true

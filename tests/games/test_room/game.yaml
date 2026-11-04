@@ -53,6 +53,14 @@ zones:
     rect: [320, 40, 1340, 320]
     visibility: public
     layout: grid
+  - id: hand
+    kind: hand
+    label: Hand
+    rect: [40, 940, 1200, 220]
+    visibility: private_to_owner
+    layout: fan
+    per_seat: true
+    step: [0, 240]
 
 # Unlike a product room, this one lays some loose pieces out, so the tests
 # have something to drag without going through the Pieces menu.

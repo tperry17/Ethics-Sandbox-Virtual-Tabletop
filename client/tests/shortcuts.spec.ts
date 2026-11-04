@@ -42,13 +42,18 @@ test("hovering a card says what the keys do; Space enlarges it and F turns it ov
   await expect(card.locator(".piece__title")).toBeVisible();
 
   await card.hover();
-  await expect(page.locator(".piece-hint")).toContainText("Space enlarge");
+  await expect(page.locator(".piece-hint")).toContainText("Space hold to enlarge");
   await expect(page.locator(".piece-hint")).toContainText("F turn over");
 
-  await page.keyboard.press("Space");
+  // The close look lasts exactly as long as Space is held.
+  await page.keyboard.down(" ");
   await expect(page.locator(".peek .piece--enlarged")).toBeVisible();
-  await page.keyboard.press("Space");
+  await page.waitForTimeout(300);
+  await expect(page.locator(".peek .piece--enlarged")).toBeVisible();
+  await page.keyboard.up(" ");
   await expect(page.locator(".peek")).toBeHidden();
+  // Space does not select.
+  await expect(page.locator(".is-selected")).toHaveCount(0);
 
   await card.hover();
   await page.keyboard.press("f");

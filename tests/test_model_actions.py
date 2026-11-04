@@ -149,6 +149,35 @@ def test_a_deck_in_an_activity_deals_to_that_activitys_hands_only() -> None:
     assert deal.operation.to_zones == (HAND_B,)
 
 
+def test_a_deck_in_an_activity_without_hands_deals_to_its_players_room_hands() -> None:
+    table = _seated(build_sample_table(deck_size=6))
+    table.activities["activity-1"] = Activity(
+        id="activity-1",
+        kind="trading",
+        title="Trading",
+        min_players=1,
+        max_players=2,
+        seats=(SEAT_A,),
+        status="running",
+        zones=(DECK,),
+    )
+
+    deal = {e.key: e for e in piece_actions(table, "card-0", SEAT_A)}["deal:1"]
+
+    assert isinstance(deal.operation, Deal)
+    assert deal.operation.to_zones == (HAND_A,)
+
+
+def test_an_open_hand_is_never_dealt_to() -> None:
+    table = _seated(build_sample_table(deck_size=6))
+    table.zones[HAND_B].visibility = Visibility.PUBLIC
+
+    deal = {e.key: e for e in piece_actions(table, "card-0", SEAT_A)}["deal:1"]
+
+    assert isinstance(deal.operation, Deal)
+    assert deal.operation.to_zones == (HAND_A,)
+
+
 def test_a_card_outside_a_deck_offers_neither_shuffle_nor_deal() -> None:
     table = _seated(build_sample_table(deck_size=1))
     table.pieces["card-0"].zone_id = PUBLIC_TABLE
