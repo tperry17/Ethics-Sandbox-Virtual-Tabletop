@@ -132,6 +132,16 @@
         </ul>
       </section>
       {% endif %}
+
+      {% if free_writing %}
+      <section class="site__section">
+        {{ ui.section_rule("Free writing shared with the table") }}
+        <p class="prose field__hint">Writing people in this room shared that answers no particular question.</p>
+        <ul class="prose">
+          {% for r in free_writing %}<li>{{ r.name }}: {{ r.body }}</li>{% endfor %}
+        </ul>
+      </section>
+      {% endif %}
     </main>
   </body>
 </html>

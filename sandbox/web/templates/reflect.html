@@ -17,9 +17,8 @@
       <header class="site__header">
         <p class="eyebrow">Reflection</p>
         <h1>Write something down</h1>
-        <div class="prose site__lede"><p>What you write here is private to you. An answer to a debrief
-        question can be shared with the table if you tick the box. The table carries on without you;
-        close this page whenever you like.</p></div>
+        <div class="prose site__lede"><p>What you write here is private to you unless you tick the box to
+        share it with the table. The table carries on without you; close this page whenever you like.</p></div>
       </header>
       {% if saved %}<p class="prose" role="status">Saved.</p>{% endif %}
 
@@ -48,16 +47,25 @@
         <form method="post" action="/t/{{ room.code }}/reflect">
           <input type="hidden" name="scope_prompt" value="free/">
           <label class="field"><span class="field__label">Anything you want to note</span>
-            <span class="field__hint">Thoughts, questions, things to come back to. Only you see these.</span>
+            <span class="field__hint">Thoughts, questions, things to come back to.</span>
             <textarea name="body" rows="8" required></textarea></label>
+          <label class="field__check"><input type="checkbox" name="share" value="true"> Share this with the table</label>
           {{ ui.button("Save", variant="primary", size="md", type="submit") }}
         </form>
       </section>
 
+      {% if shared_free %}
+      <section class="site__section">
+        {{ ui.section_rule("Shared by others") }}
+        <p class="prose field__hint">Free writing other people in this room chose to share.</p>
+        <ul class="prose">{% for r in shared_free %}<li>{{ r.name }}: {{ r.body }}</li>{% endfor %}</ul>
+      </section>
+      {% endif %}
+
       {% if mine %}
       <section class="site__section">
         {{ ui.section_rule("What you have written") }}
-        <ul class="prose">{% for item in mine %}<li>{{ item.body }} ({% if item.free %}free writing{% elif item.shared %}shared{% else %}private{% endif %})</li>{% endfor %}</ul>
+        <ul class="prose">{% for item in mine %}<li>{{ item.body }} ({% if item.free %}free writing, {% endif %}{{ "shared" if item.shared else "private" }})</li>{% endfor %}</ul>
       </section>
       {% endif %}
     </main>

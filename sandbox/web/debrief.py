@@ -249,7 +249,7 @@ def _page(
         raise HTTPException(
             status_code=403, detail="The facilitator has not opened this debrief."
         )
-    reflections = [row for row in _shared_reflections(who, key)]
+    reflections = _shared_reflections(who, key)
     return templates.TemplateResponse(
         request=request,
         name="debrief.html",
@@ -266,12 +266,17 @@ def _page(
             "outcomes": _outcome_titles(kind),
             "notes": notes_for(who.log, key) if who.is_facilitator else [],
             "reflections": reflections,
+            "free_writing": _shared_reflections(who, FREE_WRITING),
         },
     )
 
 
 def _shared_reflections(who: Viewer, key: str) -> list[dict[str, str]]:
-    """What people chose to share with the table, with their names."""
+    """What people chose to share with the table, with their names.
+
+    ``key`` is a debrief's activity or class, or ``FREE_WRITING`` for the
+    free writing shared with the whole room.
+    """
     session = Session.object_session(who.room)
     if session is None:
         return []
@@ -294,6 +299,7 @@ def _shared_reflections(who: Viewer, key: str) -> list[dict[str, str]]:
                     "prompt": game_prompts.get(prompt_id, prompt_id),
                     "body": row.body,
                     "name": writers.get(row.participant_id, ""),
+                    "participant_id": row.participant_id,
                 }
             )
     return found
@@ -601,6 +607,11 @@ def reflect_page(
         context={
             "room": who.room,
             "groups": question_sets(who.log),
+            "shared_free": [
+                row
+                for row in _shared_reflections(who, FREE_WRITING)
+                if row["participant_id"] != who.participant.id
+            ],
             "mine": [
                 {
                     "body": r.body,
@@ -622,14 +633,14 @@ def reflect_save(
     who: Viewer = Depends(viewer),
     session: Session = Depends(get_session),
 ) -> Response:
-    """Keep an answer, private unless its writer shares it with the table.
+    """Keep what someone wrote, private unless they share it with the table.
 
-    Free writing is always private: it answers no question, so there is no
-    debrief for it to be shared on.
+    A shared answer shows on its activity's debrief; shared free writing,
+    which answers no question, shows apart from the answers, on the
+    reflection page and on every debrief in the room.
     """
-    free = scope_prompt.partition("/")[0] == FREE_WRITING
-    if free:
-        scope_prompt, share = f"{FREE_WRITING}/", False
+    if scope_prompt.partition("/")[0] == FREE_WRITING:
+        scope_prompt = f"{FREE_WRITING}/"
     if body.strip():
         session.add(
             Reflection(

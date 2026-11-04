@@ -22,7 +22,12 @@ test("a reflection can be written before any activity, and no debrief link leads
   await page.getByLabel("Anything you want to note").fill("Something to come back to.");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
-  await expect(page.getByText("Something to come back to. (free writing)")).toBeVisible();
+  await expect(page.getByText("Something to come back to. (free writing, private)")).toBeVisible();
+
+  await page.getByLabel("Anything you want to note").fill("For everyone to read.");
+  await page.getByLabel("Share this with the table").check();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("For everyone to read. (free writing, shared)")).toBeVisible();
 });
 
 test("once an activity with questions is played, the panel offers to respond to them", async ({

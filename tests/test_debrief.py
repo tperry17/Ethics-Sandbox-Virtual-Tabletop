@@ -307,27 +307,55 @@ def test_a_reflection_is_private_unless_shared(
     assert "kept to myself" not in played.get("Cy", f"/t/{played.code}/reflect").text
 
 
-def test_free_writing_is_open_before_any_activity_and_stays_private(
+def test_free_writing_is_open_before_any_activity_and_private_by_default(
     factory: sessionmaker[Session],
 ) -> None:
     played = Played(factory, ["Ada", "Bea"])
 
-    page = played.get("Bea", f"/t/{played.code}/reflect").text
+    reflect = f"/t/{played.code}/reflect"
+    page = played.get("Bea", reflect).text
     assert "Free writing" in page
     assert "Debrief questions" not in page
-    played.clients["Bea"].post(
-        f"/t/{played.code}/reflect",
-        # Even asked to share it, a note to no question is kept private.
-        data={"body": "a thought of my own", "share": "true"},
-    )
+    played.clients["Bea"].post(reflect, data={"body": "a thought of my own"})
 
-    reflect = f"/t/{played.code}/reflect"
     assert "a thought of my own" in played.get("Bea", reflect).text
     assert "a thought of my own" not in played.get("Ada", reflect).text
     with played.factory() as session:
         kept = session.query(Reflection).one()
         assert kept.visibility == "private"
         assert kept.prompt_key == "free/"
+
+
+def test_shared_free_writing_shows_apart_from_the_answers(
+    factory: sessionmaker[Session],
+) -> None:
+    played, aid = _value_cards(factory)
+    reflect = f"/t/{played.code}/reflect"
+    played.clients["Bea"].post(
+        reflect, data={"body": "open to everyone", "share": "true"}
+    )
+    played.clients["Cy"].post(
+        reflect,
+        data={
+            "scope_prompt": f"{aid}/debrief-01",
+            "body": "an answer",
+            "share": "true",
+        },
+    )
+    played.clients["Ada"].post(
+        f"/t/{played.code}/debrief/{aid}/open",
+        data={"opened": "true", "is_class": "false"},
+    )
+
+    others = played.get("Di", reflect).text
+    assert "Bea: open to everyone" in others
+    # An answer to a question belongs to its debrief, not the reflection page.
+    assert "an answer" not in others
+    debrief = played.get("Di", f"/t/{played.code}/debrief/{aid}").text
+    answers, _, free = debrief.partition("Free writing shared with the table")
+    assert "Cy: an answer" in answers
+    assert "open to everyone" not in answers
+    assert "Bea: open to everyone" in free
 
 
 def test_the_debrief_questions_are_offered_once_not_once_per_activity(

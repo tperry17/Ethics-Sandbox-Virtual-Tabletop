@@ -31,10 +31,13 @@ Scenario 2 of Leadership and Knowledge in Popular Rule always runs as a class, i
 
 Every room's side panel has "Write a reflection": a private page
 (`/t/{code}/reflect`, `sandbox/web/debrief.py`) with free writing that is
-always open and kept private, and the debrief questions once an activity
-that has a debrief page has been played - each activity's questions once,
-never again for a debrief activity that reads the same ones. An answer may
-be shared, and then shows on that activity's debrief. "Respond to debrief
+always open, and the debrief questions once an activity that has a debrief
+page has been played - each activity's questions once, never again for a
+debrief activity that reads the same ones (a debrief activity still shows
+them as cards on its table). Anything written there is private unless its
+writer shares it: a shared answer shows on that activity's debrief, and
+shared free writing shows apart from the answers, on the reflection page
+and on every debrief in the room. "Respond to debrief
 questions" and the link to a debrief appear in the panel only once there is
 something behind them; the page asks `/t/{code}/links` which.
 
