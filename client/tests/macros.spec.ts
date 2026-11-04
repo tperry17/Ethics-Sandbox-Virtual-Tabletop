@@ -41,9 +41,15 @@ async function startPairs(
 test("a player deals, and each person sees only their own cards", async ({ browser }) => {
   const { host, guest } = await startPairs(browser);
 
+  // The hand is docked below the table before any card arrives, and is not
+  // drawn on the table as well.
+  await expect(host.locator(".hand-tray__empty")).toBeVisible();
+  await expect(host.locator(".tabletop__zones .zone--private")).toBeHidden();
+
   const deal = host.getByRole("button", { name: "Deal three each" });
   await expect(deal).toBeVisible();
   await deal.click();
+  await expect(host.locator(".hand-tray__empty")).toBeHidden();
 
   const hostCards = host.locator(".hand-tray__fan .piece .piece__title");
   const guestCards = guest.locator(".hand-tray__fan .piece .piece__title");

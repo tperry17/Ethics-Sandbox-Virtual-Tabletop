@@ -94,6 +94,7 @@ export class TableRenderer {
   private readonly tray: HTMLElement;
   private readonly trayFan: HTMLElement;
   private readonly trayLabel: HTMLElement;
+  private readonly trayEmpty: HTMLElement;
   private readonly status: HTMLElement;
   private readonly banner: HTMLElement;
   private readonly timerText: HTMLElement;
@@ -116,7 +117,6 @@ export class TableRenderer {
   private selection = new Set<string>();
   private stackTarget: string | null = null;
   private draftStroke: StrokeView | null = null;
-  private trayInvited = false;
   private readonly controlsElement: HTMLElement;
   private readonly toolGroup = element("div", "tabletop__palette");
   private readonly piecesSlot = element("div", "tabletop__pieces-slot");
@@ -163,9 +163,19 @@ export class TableRenderer {
 
     this.tray = element("div", "hand-tray");
     this.tray.hidden = true;
+    // Docked below the table, for anyone who has a private hand: it is
+    // there before the first card arrives, so there is always somewhere to
+    // drop one.
+    const trayHead = element("div", "hand-tray__head");
     this.trayLabel = element("p", "hand-tray__label");
+    trayHead.append(this.trayLabel, element("p", "hand-tray__note", "Only you see these faces"));
+    this.trayEmpty = element(
+      "p",
+      "hand-tray__empty",
+      "Cards dealt to you land here. Drag a card here to take it into your hand.",
+    );
     this.trayFan = element("div", "hand-tray__fan");
-    this.tray.append(this.trayLabel, this.trayFan);
+    this.tray.append(trayHead, this.trayEmpty, this.trayFan);
 
     this.intents = new IntentTracker(options.link, (reason) =>
       this.notice(reason, "warning"),
@@ -521,6 +531,9 @@ export class TableRenderer {
     if (id === this.dropTargetZone) classes.push("is-drop-target");
     const className = classes.join(" ");
     if (node.className !== className) node.className = className;
+    // Your own private hand is drawn in the tray docked below the table.
+    const docked = this.isInMyHand(id);
+    if (node.hidden !== docked) node.hidden = docked;
 
     const label = node.firstElementChild;
     const text = this.zoneLabel(zone.label, zone.owner_seat);
@@ -688,17 +701,18 @@ export class TableRenderer {
       .sort((a, b) => a.z - b.z)
       .map((piece) => piece.id);
 
-    this.tray.hidden = ids.length === 0 && !this.trayInvited;
-    if (ids.length === 0) {
-      this.trayLabel.textContent = this.trayInvited ? "Drop here to take it into your hand" : "";
-      return;
-    }
-
     const zone = [...this.model.zones.values()].find(
       (candidate) => this.isInMyHand(candidate.id),
     );
+    this.tray.hidden = zone === undefined && ids.length === 0;
+    this.trayEmpty.hidden = ids.length > 0;
+    const name = zone?.label ?? "Your hand";
+    if (ids.length === 0) {
+      this.trayLabel.textContent = name;
+      return;
+    }
     const noun = ids.length === 1 ? "piece" : "pieces";
-    this.trayLabel.textContent = `${zone?.label ?? "Your hand"} · ${ids.length} ${noun}`;
+    this.trayLabel.textContent = `${name} · ${ids.length} ${noun}`;
 
     const widest = Math.max(
       ...ids.map((id) => {
@@ -948,14 +962,6 @@ export class TableRenderer {
     this.tray.classList.toggle("is-drop-target", on);
   }
 
-  /** Show the tray even when the hand is empty, so there is somewhere to drop. */
-  inviteTray(on: boolean): void {
-    if (on === this.trayInvited) return;
-    this.trayInvited = on && this.myHandZoneId() !== null;
-    this.trayDirty = true;
-    this.schedule();
-  }
-
   setDraftStroke(stroke: StrokeView | null): void {
     this.draftStroke = stroke === null ? null : { ...stroke, points: [...stroke.points] };
     this.canvasDirty = true;
@@ -1137,15 +1143,13 @@ export class TableRenderer {
   /**
    * The part of the surface the table gets to use.
    *
-   * The hand tray covers the bottom edge, so fitting the table to the whole
-   * surface would tuck the near edge of it underneath your own hand.
+   * The hand tray is docked below the surface, not over it, so the whole
+   * surface is the table's.
    */
   private surfaceSize(): { width: number; height: number } {
-    const height = this.surface.clientHeight || 600;
-    const trayHeight = this.tray.hidden ? 0 : this.tray.clientHeight;
     return {
       width: this.surface.clientWidth || 960,
-      height: Math.max(height - trayHeight, 240),
+      height: Math.max(this.surface.clientHeight || 600, 240),
     };
   }
 
@@ -1266,9 +1270,10 @@ function pointInPolygon(x: number, y: number, points: Array<[number, number]>): 
   return inside;
 }
 
-function element(tag: string, className: string): HTMLElement {
+function element(tag: string, className: string, text?: string): HTMLElement {
   const node = document.createElement(tag);
   node.className = className;
+  if (text !== undefined) node.textContent = text;
   return node;
 }
 

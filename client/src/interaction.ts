@@ -374,7 +374,6 @@ export class InteractionController {
     }
     this.gesture = { kind: "drag", pointerId: press.pointerId, pieces };
     this.table.interacting = true;
-    this.table.inviteTray(true);
     this.continueDrag(pieces, event);
   }
 
@@ -489,7 +488,6 @@ export class InteractionController {
     this.table.setDropTarget(null);
     this.table.setStackTarget(null);
     this.table.setTrayTarget(false);
-    this.table.inviteTray(false);
     this.table.interacting = false;
   }
 

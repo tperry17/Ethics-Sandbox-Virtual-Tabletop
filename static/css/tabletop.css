@@ -64,7 +64,13 @@
 .piece--card[data-group="sidebar"] { border: var(--line-strong) solid var(--card-frame-sidebar); }
 .piece--card .piece__foot { display: flex; align-items: center; justify-content: space-between; align-self: end; gap: var(--space-2); }
 .piece--card .piece__badge { width: 1.4rem; height: 1.4rem; object-fit: contain; }
-.piece--card .piece__image { min-height: 0; max-width: 100%; object-fit: contain; }
+/* A card's picture takes the same share of every card of its size, however
+   long the words below it, so every card in a deck shows it at one size. */
+.piece--card { container-type: size; }
+/* Rows: the rubric, the picture, the title, the words, the foot. The words
+   take what is left, so the picture sits at the same height on every card. */
+.piece--card:has(.piece__image) { grid-template-rows: auto auto auto 1fr auto; }
+.piece--card .piece__image { grid-row: auto; flex: none; inline-size: 100%; block-size: 30cqh; min-height: 0; object-fit: contain; }
 
 .piece--card.is-face-down {
   place-items: center;
@@ -286,12 +292,14 @@
  *
  * Pieces are DOM elements inside a single transformed world layer, so card
  * text stays real text at any zoom. One canvas sits above them for ink and
- * pointers. The hand tray sits outside the world transform: your own hand
- * does not move when the table does.
+ * pointers. The hand tray sits outside the world transform, docked below the
+ * table: your own hand does not move when the table does.
  */
 
 .tabletop--live {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   overflow: hidden;
   padding: 0;
   position: relative;
@@ -300,8 +308,9 @@
 }
 
 .tabletop__viewport {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
   cursor: default;
 }
@@ -331,6 +340,7 @@
   pointer-events: none;
 }
 
+.tabletop__zones .zone[hidden] { display: none; }
 .tabletop__zones .zone {
   position: absolute;
   inset-block-start: 0;
@@ -446,37 +456,63 @@
 .toast--compact[data-level="warning"] { border-color: var(--accent-rubric); }
 
 .hand-tray {
-  position: absolute;
-  z-index: 2;
-  inset-block-end: 0;
-  inset-inline: 0;
+  position: relative;
+  flex: none;
   block-size: min(14rem, 30vh);
   overflow: hidden;
-  border-block-start: var(--line-hairline) solid var(--table-zone-outline);
-  background: var(--table-felt-edge);
+  border-block-start: var(--line-hairline) solid var(--surface-border);
+  background: var(--surface-page);
 }
 
-.hand-tray__label {
+.hand-tray__head {
   position: absolute;
   z-index: 1;
   inset-block-start: var(--space-2);
   inset-inline-start: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+.hand-tray__label {
   margin: 0;
-  color: var(--text-on-felt);
+  color: var(--accent-rubric);
   font-family: var(--font-ui);
   font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: var(--tracking-label);
-  opacity: 0.8;
   text-transform: uppercase;
 }
+
+.hand-tray__note {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+}
+
+.hand-tray__empty {
+  position: absolute;
+  inset: calc(var(--space-2) + 1.5rem) var(--space-4) var(--space-4);
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0 var(--space-4);
+  border: var(--line-strong) dashed var(--surface-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font-family: var(--font-reading);
+}
+.hand-tray__empty[hidden] { display: none; }
 
 /* `zoom` rather than a transform, so the fan's own coordinate space - which
    the layout arithmetic measures - stays in piece units while the whole
    hand is drawn small enough to sit in the tray. */
 .hand-tray__fan {
   position: relative;
-  zoom: 0.72;
+  zoom: 0.62;
   block-size: 100%;
   inline-size: 100%;
 }
@@ -1054,7 +1090,7 @@
 .tabletop__palette {
   position: absolute;
   z-index: 3;
-  inset-block-end: calc(min(14rem, 30vh) + var(--space-4));
+  inset-block-end: var(--space-4);
   inset-inline-start: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -1067,7 +1103,6 @@
 }
 .tabletop__palette:empty { display: none; }
 .tabletop__palette .tabletop__tools { display: flex; gap: var(--space-1); }
-.tabletop:not(:has(.hand-tray:not([hidden]))) .tabletop__palette { inset-block-end: var(--space-4); }
 
 @media (max-width: 48rem) {
   .room { height: auto; min-height: 100vh; }

@@ -119,8 +119,10 @@ records what changed, and one animation frame later only those nodes are
 rewritten. Z-order is the model's — the zone's place in the server's list,
 then the piece's `z` within that zone — and never DOM insertion order.
 Another person's piece interpolates over 120 ms; the piece under your own
-hand never does. Your own private zone is drawn in a hand tray outside the
-world transform, so it stays put when the table moves.
+hand never does. Your own private zone is drawn in a hand tray docked below
+the table, outside the world transform, so it stays put when the table moves;
+it is there whenever you have a private hand, empty or not. A card's picture
+takes the same share of every card, so a deck shows its pictures at one size.
 
 `/table-preview` replays the recorded session with no room behind it, and
 `?pieces=300&measure=1` is the frame-rate harness.
