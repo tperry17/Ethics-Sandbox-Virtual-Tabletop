@@ -397,16 +397,43 @@ def test_set_prop_merges_into_existing_props() -> None:
 # -- locking, grouping -----------------------------------------------------------
 
 
-def test_only_the_facilitator_may_lock_or_unlock() -> None:
+def test_anyone_who_could_move_a_piece_may_lock_and_unlock_it() -> None:
     table = build_sample_table(deck_size=1)
+    table.pieces["card-0"].zone_id = PUBLIC_TABLE
 
-    assert isinstance(run_op(table, SEAT_A, Lock(piece_id="card-0")), Reject)
-    assert isinstance(run_op(table, FACILITATOR, Lock(piece_id="card-0")), Ok)
+    assert isinstance(run_op(table, SEAT_A, Lock(piece_id="card-0")), Ok)
     assert table.pieces["card-0"].locked is True
-
-    assert isinstance(run_op(table, SEAT_A, Unlock(piece_id="card-0")), Reject)
-    assert isinstance(run_op(table, FACILITATOR, Unlock(piece_id="card-0")), Ok)
+    # Locked, it does not move for a participant...
+    assert isinstance(run_op(table, SEAT_B, Grab(piece_id="card-0")), Reject)
+    # ...but whoever could move it but for the lock may unlock it.
+    assert isinstance(run_op(table, SEAT_B, Unlock(piece_id="card-0")), Ok)
     assert table.pieces["card-0"].locked is False
+    assert isinstance(run_op(table, FACILITATOR, Lock(piece_id="card-0")), Ok)
+    assert isinstance(run_op(table, FACILITATOR, Unlock(piece_id="card-0")), Ok)
+
+
+def test_nobody_but_the_facilitator_locks_what_is_out_of_their_reach() -> None:
+    table = build_sample_table(deck_size=2)
+    table.pieces["card-0"].zone_id = HAND_A
+    table.pieces["card-1"].zone_id = PUBLIC_TABLE
+    table.pieces["card-1"].held_by = SEAT_A
+
+    assert isinstance(run_op(table, SEAT_B, Lock(piece_id="card-0")), Reject)
+    assert isinstance(run_op(table, SEAT_B, Lock(piece_id="card-1")), Reject)
+    assert isinstance(run_op(table, SEAT_A, Lock(piece_id="card-0")), Ok)
+    assert isinstance(run_op(table, SEAT_B, Unlock(piece_id="card-0")), Reject)
+    assert isinstance(run_op(table, FACILITATOR, Unlock(piece_id="card-0")), Ok)
+
+
+def test_a_deal_may_turn_each_card_face_up_as_it_goes() -> None:
+    table = build_sample_table(deck_size=4)
+
+    deal = Deal(from_zone=DECK, to_zones=(HAND_A, HAND_B), count_each=2, face_up=True)
+    assert isinstance(run_op(table, SEAT_A, deal), Ok)
+    for hand in (HAND_A, HAND_B):
+        dealt = table.pieces_in_zone(hand)
+        assert len(dealt) == 2
+        assert all(piece.face_up for piece in dealt)
 
 
 def test_group_tags_every_named_piece_with_the_same_group_id() -> None:

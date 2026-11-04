@@ -15,7 +15,8 @@ export type PieceKind =
   | "token"
   | "note"
   | "marker"
-  | "board";
+  | "board"
+  | "tile";
 
 export type ZoneKind =
   | "table"

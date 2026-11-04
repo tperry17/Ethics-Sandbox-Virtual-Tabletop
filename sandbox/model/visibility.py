@@ -139,7 +139,8 @@ def entitled_to_face(
 
     A deliberate reveal (``piece.revealed_to``) always wins. Otherwise a
     face-down piece shows its face to no one at all - there is nothing to be
-    entitled to until it is turned over - and a hidden zone (a deck) shows
+    entitled to until it is turned over - except a tile, whose two sides are
+    both public; and a hidden zone (a deck) shows
     its pieces' faces to no one, ever, regardless of ``face_up``: that flag
     is not to be trusted for a piece nobody has looked at yet.
 
@@ -151,7 +152,8 @@ def entitled_to_face(
         return True
     if zone.visibility is Visibility.HIDDEN:
         return False
-    if not piece.face_up:
+    # A tile's back is as public as its front: turning it over hides nothing.
+    if not piece.face_up and piece.kind is not PieceKind.TILE:
         return False
     if zone.visibility is Visibility.PUBLIC:
         return True

@@ -22,6 +22,8 @@ room:
 components:
   decks:
     - id: cities
+      kind: tile                 # both sides public: the account, and the seal and name
+      locked: true               # laid out in place; unlock from the menu, or with U
       source: exercises/democracy-simulation/cities.csv
       key: key
       title: name

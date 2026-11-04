@@ -97,7 +97,17 @@ def _draw_op(data: st.DataObject, table: Table) -> tuple[str, Operation]:
             piece_ids=(new_op_id(),),
         )
 
+    def spawn_tile() -> Operation:
+        return Spawn(
+            component_id="prop-tile",
+            kind=PieceKind.TILE,
+            zone_id=zone_id,
+            count=1,
+            piece_ids=(new_op_id(),),
+        )
+
     choices: list[Callable[[], Operation]] = [
+        spawn_tile,
         lambda: Grab(piece_id=piece_id),
         lambda: Release(piece_id=piece_id),
         lambda: Move(piece_id=piece_id, x=coord, y=other_coord),
@@ -149,7 +159,8 @@ def _should_see_face(table: Table, piece_id: str, viewer_seat: str | None) -> bo
     public: entitled viewer sees a face-up piece's face. private_to_owner:
     only the owning seat, and only if face-up. facilitator_only: the owner
     or the facilitator, only if face-up. hidden: nobody, ever. A deliberate
-    reveal in ``revealed_to`` always wins over all of the above.
+    reveal in ``revealed_to`` always wins over all of the above. A tile has
+    two public sides, so "if face-up" does not apply to one.
     """
     piece = table.pieces[piece_id]
     if viewer_seat is not None and viewer_seat in piece.revealed_to:
@@ -157,7 +168,7 @@ def _should_see_face(table: Table, piece_id: str, viewer_seat: str | None) -> bo
     zone = table.zones.get(piece.zone_id)
     if zone is None or zone.visibility is Visibility.HIDDEN:
         return False
-    if not piece.face_up:
+    if not piece.face_up and piece.kind is not PieceKind.TILE:
         return False
     if zone.visibility is Visibility.PUBLIC:
         return True

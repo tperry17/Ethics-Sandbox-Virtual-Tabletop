@@ -30,6 +30,7 @@ const DEFAULT_SIZE: Record<PieceKind, [number, number]> = {
   note: [160, 128],
   marker: [36, 36],
   board: [480, 320],
+  tile: [300, 400],
 };
 
 export function pieceSize(
@@ -184,6 +185,7 @@ export class PieceNode {
   ): void {
     const classes = ["piece", "piece--placed", `piece--${piece.kind}`];
     if (piece.component_id === null) classes.push("is-face-down");
+    if (tileBack(piece)) classes.push("is-back");
     if (piece.held_by !== null) classes.push("is-held", "is-lifted");
     if (piece.locked) classes.push("is-locked");
     // A piece of its own colour keeps it; otherwise it takes its holder's.
@@ -203,6 +205,10 @@ export class PieceNode {
    * component at all, so there is nothing here to withhold: the back is
    * drawn because nothing else was sent. The back is the same for every
    * piece of a kind - a back that varied would leak what varies.
+   *
+   * A tile is the exception the server makes, not this client: both its
+   * sides are public, so it arrives with its component either way up, and
+   * its back is drawn from it - the picture and the title alone.
    */
   setFace(
     piece: LocalPiece,
@@ -213,7 +219,7 @@ export class PieceNode {
       piece.component_id === null
         ? `back:${piece.kind}`
         : [
-            "face",
+            tileBack(piece) ? "tile-back" : "face",
             piece.component_id,
             component?.title ?? "",
             component?.body ?? "",
@@ -237,6 +243,10 @@ export class PieceNode {
       "aria-label",
       component?.title ?? label ?? `A ${piece.kind}`,
     );
+    if (tileBack(piece)) {
+      if (component !== undefined) appendTileBack(this.body, component);
+      return;
+    }
     // A player piece says what it is in its label, not on itself; a token
     // shows only what is written on it.
     if (component !== undefined && !PLAIN_KINDS.has(piece.kind)) {
@@ -283,6 +293,24 @@ export class PieceNode {
   remove(): void {
     this.element.remove();
   }
+}
+
+/** Whether this is a tile lying on its back, which is drawn from its own component. */
+function tileBack(piece: LocalPiece): boolean {
+  return piece.kind === "tile" && piece.component_id !== null && !piece.face_up;
+}
+
+/** A tile's back: its picture and its title, nothing more. */
+function appendTileBack(container: HTMLElement, component: ComponentView): void {
+  if (component.image !== null) {
+    const image = document.createElement("img");
+    image.className = "piece__image";
+    image.src = component.image;
+    image.alt = "";
+    image.draggable = false;
+    container.append(image);
+  }
+  if (component.title !== null) container.append(span("piece__title", component.title));
 }
 
 /** A component's face - image, title, body, folio - appended to `container`. */
