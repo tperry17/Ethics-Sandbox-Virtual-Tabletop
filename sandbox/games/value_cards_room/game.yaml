@@ -15,7 +15,7 @@ room:
   label: Value Cards
   activities:
     - {id: value-cards-trading, game: value-cards-trading}
-    - {id: value-cards-debrief, game: value-cards-debrief}
+    - {id: value-cards-debrief, game: value-cards-debrief, debrief: true}
   pieces: [d6, cube-1, cube-2, cube-3, cube-4, cube-5, cube-6, meeple-1, meeple-2, meeple-3, meeple-4, meeple-5, meeple-6, token-1, token-2, token-3, token-4, token-5, token-6]
 
 components:

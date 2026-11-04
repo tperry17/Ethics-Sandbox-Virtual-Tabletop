@@ -24,6 +24,7 @@ class OfferedActivity:
     game: Game
     fixed: dict[str, str]
     class_only: bool
+    debrief: bool
 
 
 def room_types(games: dict[str, Game], order: Sequence[str] = ()) -> list[Game]:
@@ -65,6 +66,7 @@ def _resolve(games: dict[str, Game], activity: RoomActivity) -> OfferedActivity 
         game=game,
         fixed=dict(activity.options),
         class_only=activity.class_only,
+        debrief=activity.debrief,
     )
 
 

@@ -225,6 +225,8 @@ export interface ActivityChoiceView {
   options?: ActivityOptionView[];
   /** Offered only as a class: the room's toolbar does not start it alone. */
   class_only?: boolean;
+  /** Listed under the room's "Debrief" heading, below the activities. */
+  debrief?: boolean;
 }
 
 export interface ActivityOptionView {

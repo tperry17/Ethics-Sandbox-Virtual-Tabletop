@@ -396,6 +396,8 @@ class RoomActivity(_Strict):
     ``id`` is what the room's toolbar sends to start it. ``options`` fixes
     choices of the game's own options (a scenario, say); the rest are still
     chosen when it starts. ``class_only`` offers it only as a class.
+    ``debrief`` lists it under the room's own "Debrief" heading, below the
+    activities.
     """
 
     id: Identifier
@@ -403,6 +405,7 @@ class RoomActivity(_Strict):
     title: str | None = None
     options: dict[str, str] = Field(default_factory=dict)
     class_only: bool = False
+    debrief: bool = False
 
 
 class RoomSpec(_Strict):

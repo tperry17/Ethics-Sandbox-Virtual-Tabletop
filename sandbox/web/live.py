@@ -452,6 +452,7 @@ class ActivityChoiceView(BaseModel):
     duration_minutes: int
     options: list[ActivityOptionView] = Field(default_factory=list)
     class_only: bool = False
+    debrief: bool = False
 
 
 class StrokeView(BaseModel):
@@ -757,6 +758,7 @@ def activity_choices(room_game: Game | None) -> list[ActivityChoiceView]:
                 if option.id not in offered.fixed
             ],
             class_only=offered.class_only,
+            debrief=offered.debrief,
         )
         for offered in offered_activities(GAMES, room_game)
     ]

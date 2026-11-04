@@ -16,7 +16,7 @@ room:
   activities:
     - {id: scenario-1, game: democracy-simulation, title: "Scenario 1: Construction project", options: {phase: "1"}}
     - {id: scenario-2, game: democracy-simulation, title: "Scenario 2: Going to war?", options: {phase: "2"}, class_only: true}
-    - {id: democracy-debrief, game: democracy-debrief}
+    - {id: democracy-debrief, game: democracy-debrief, debrief: true}
   pieces: [d6, cube-1, cube-2, cube-3, cube-4, cube-5, cube-6, meeple-1, meeple-2, meeple-3, meeple-4, meeple-5, meeple-6, token-1, token-2, token-3, token-4, token-5, token-6]
 
 components:

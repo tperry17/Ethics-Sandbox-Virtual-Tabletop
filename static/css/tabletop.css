@@ -1032,6 +1032,7 @@
 .room__panel .room-panel__buttons .button { justify-content: center; }
 
 .activity-cards { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.activity-cards + .room-panel__heading { margin-block-start: var(--space-5); }
 .activity-card {
   display: grid;
   gap: var(--space-2);

@@ -297,6 +297,14 @@ def test_each_room_offers_its_own_activities_and_its_own_debrief() -> None:
     scenario_2 = activity_choices(GAMES["democracy-room"])[1]
     assert scenario_2.class_only
     assert [option.id for option in scenario_2.options] == ["city"]
+    debriefs = {
+        kind: [c.slug for c in activity_choices(GAMES[kind]) if c.debrief]
+        for kind in ("value-cards-room", "democracy-room")
+    }
+    assert debriefs == {
+        "value-cards-room": ["value-cards-debrief"],
+        "democracy-room": ["democracy-debrief"],
+    }
 
 
 def test_the_help_page_explains_records_and_the_landing_page_links_to_it() -> None:

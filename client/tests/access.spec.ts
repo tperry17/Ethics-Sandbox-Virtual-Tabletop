@@ -41,6 +41,12 @@ for (const path of ["/", "/help", "/join", "/health", "/exercises/value-cards-tr
 test("axe finds nothing on a table with an activity running", async ({ browser }) => {
   const page = await openRoom(browser, "Ines", {}, "Value Cards");
   await expect(page.locator(".tabletop__pieces-layer")).toBeAttached();
+  // The debrief has its own heading, below the activities.
+  const debrief = page.getByRole("heading", { name: "Debrief", exact: true });
+  await expect(debrief).toBeVisible();
+  await expect(
+    page.locator(".room-panel__heading + .activity-cards .activity-card__title"),
+  ).toHaveText("Value Cards Trading debrief");
   expect(await violations(page)).toEqual([]);
   await page.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await expect(page.getByText(/Value Cards Trading: /)).toBeVisible();

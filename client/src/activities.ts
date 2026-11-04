@@ -4,7 +4,7 @@
  * pressed; whether it may happen, and who may press what, is the server's.
  */
 
-import type { ActivityView } from "./protocol.js";
+import type { ActivityChoiceView, ActivityView } from "./protocol.js";
 import type { TableModel } from "./model.js";
 
 export type SendActivity = (payload: Record<string, unknown>) => void;
@@ -24,6 +24,70 @@ function names(model: TableModel, activity: ActivityView): string {
     .join(", ");
 }
 
+function panelHeading(text: string): HTMLElement {
+  const heading = document.createElement("h2");
+  heading.className = "room-panel__heading";
+  heading.textContent = text;
+  return heading;
+}
+
+/** A card for each choice, with its own options and a Start button. */
+function activityCards(choices: ActivityChoiceView[], send: SendActivity): HTMLElement {
+  const list = document.createElement("ul");
+  list.className = "activity-cards";
+  for (const choice of choices) {
+    const card = document.createElement("li");
+    card.className = "activity-card";
+    card.dataset.activity = choice.slug;
+    const title = document.createElement("span");
+    title.className = "activity-card__title";
+    title.textContent = choice.title;
+    const meta = document.createElement("span");
+    meta.className = "activity-card__meta";
+    const people =
+      choice.min_players === choice.max_players
+        ? `${choice.min_players}`
+        : `${choice.min_players}–${choice.max_players}`;
+    meta.textContent = `${people} people · about ${choice.duration_minutes} minutes`;
+    card.append(title, meta);
+    const picks = new Map<string, HTMLSelectElement>();
+    for (const option of choice.options ?? []) {
+      const label = document.createElement("label");
+      label.className = "activity-card__option";
+      label.textContent = `${option.label} `;
+      const pick = document.createElement("select");
+      pick.dataset.option = option.id;
+      pick.setAttribute("aria-label", `${choice.title}: ${option.label}`);
+      for (const entry of option.choices) {
+        const item = document.createElement("option");
+        item.value = entry.id;
+        item.textContent = entry.label;
+        pick.append(item);
+      }
+      picks.set(option.id, pick);
+      label.append(pick);
+      card.append(label);
+    }
+    if (choice.class_only === true) {
+      const note = document.createElement("span");
+      note.className = "activity-card__note";
+      note.textContent = "Runs as a class: start it under “Run a class”.";
+      card.append(note);
+    } else {
+      const start = button("Start", () => {
+        const options: Record<string, string> = {};
+        for (const [id, pick] of picks) options[id] = pick.value;
+        send({ action: "open", slug: choice.slug, options });
+      });
+      start.classList.add("button--primary");
+      start.setAttribute("aria-label", `Start ${choice.title}`);
+      card.append(start);
+    }
+    list.append(card);
+  }
+  return list;
+}
+
 /** The activities section of the toolbar, or null when there is nothing to show. */
 export function renderActivities(model: TableModel, send: SendActivity): HTMLElement | null {
   const mine = model.seatId;
@@ -34,69 +98,20 @@ export function renderActivities(model: TableModel, send: SendActivity): HTMLEle
   root.setAttribute("aria-label", "Activities");
 
   // Each activity the room offers, as a card with its own choices and a
-  // Start button. One offered only as a class is started from the class
-  // controls, so its card says so instead. The server judges what is sent.
-  if (model.activityChoices.length > 0) {
-    const heading = document.createElement("h2");
-    heading.className = "room-panel__heading";
-    heading.textContent = "Start an activity";
+  // Start button; its debriefs follow under their own heading. One offered
+  // only as a class is started from the class controls, so its card says so
+  // instead. The server judges what is sent.
+  const activities = model.activityChoices.filter((choice) => choice.debrief !== true);
+  const debriefs = model.activityChoices.filter((choice) => choice.debrief === true);
+  if (activities.length > 0) {
     const intro = document.createElement("p");
     intro.className = "room-panel__intro";
     intro.textContent =
       "An activity opens a sign-up for its players. Everyone else keeps using the table.";
-    const list = document.createElement("ul");
-    list.className = "activity-cards";
-    for (const choice of model.activityChoices) {
-      const card = document.createElement("li");
-      card.className = "activity-card";
-      card.dataset.activity = choice.slug;
-      const title = document.createElement("span");
-      title.className = "activity-card__title";
-      title.textContent = choice.title;
-      const meta = document.createElement("span");
-      meta.className = "activity-card__meta";
-      const people =
-        choice.min_players === choice.max_players
-          ? `${choice.min_players}`
-          : `${choice.min_players}–${choice.max_players}`;
-      meta.textContent = `${people} people · about ${choice.duration_minutes} minutes`;
-      card.append(title, meta);
-      const picks = new Map<string, HTMLSelectElement>();
-      for (const option of choice.options ?? []) {
-        const label = document.createElement("label");
-        label.className = "activity-card__option";
-        label.textContent = `${option.label} `;
-        const pick = document.createElement("select");
-        pick.dataset.option = option.id;
-        pick.setAttribute("aria-label", `${choice.title}: ${option.label}`);
-        for (const entry of option.choices) {
-          const item = document.createElement("option");
-          item.value = entry.id;
-          item.textContent = entry.label;
-          pick.append(item);
-        }
-        picks.set(option.id, pick);
-        label.append(pick);
-        card.append(label);
-      }
-      if (choice.class_only === true) {
-        const note = document.createElement("span");
-        note.className = "activity-card__note";
-        note.textContent = "Runs as a class: start it under “Run a class”.";
-        card.append(note);
-      } else {
-        const start = button("Start", () => {
-          const options: Record<string, string> = {};
-          for (const [id, pick] of picks) options[id] = pick.value;
-          send({ action: "open", slug: choice.slug, options });
-        });
-        start.classList.add("button--primary");
-        start.setAttribute("aria-label", `Start ${choice.title}`);
-        card.append(start);
-      }
-      list.append(card);
-    }
-    root.append(heading, intro, list);
+    root.append(panelHeading("Start an activity"), intro, activityCards(activities, send));
+  }
+  if (debriefs.length > 0) {
+    root.append(panelHeading("Debrief"), activityCards(debriefs, send));
   }
 
   for (const activity of model.activities.values()) {
