@@ -17,12 +17,15 @@
       <header class="site__header">
         <p class="eyebrow">Reflection</p>
         <h1>Write something down</h1>
-        <div class="prose site__lede"><p>What you write here is private to you unless you tick the box to
-        share it with the table. The table carries on without you; close this page whenever you like.</p></div>
+        <div class="prose site__lede"><p>What you write here is private to you. An answer to a debrief
+        question can be shared with the table if you tick the box. The table carries on without you;
+        close this page whenever you like.</p></div>
       </header>
-      {% if saved %}<p class="prose">Saved.</p>{% endif %}
-      <section class="site__section">
-        {% if groups %}
+      {% if saved %}<p class="prose" role="status">Saved.</p>{% endif %}
+
+      {% if groups %}
+      <section class="site__section" id="questions">
+        {{ ui.section_rule("Debrief questions") }}
         <form method="post" action="/t/{{ room.code }}/reflect">
           <label class="field"><span class="field__label">Which question</span>
             <select name="scope_prompt">
@@ -35,16 +38,26 @@
           </label>
           <label class="field"><span class="field__label">Your answer</span><textarea name="body" rows="6" required></textarea></label>
           <label class="field__check"><input type="checkbox" name="share" value="true"> Share this answer with the table</label>
+          {{ ui.button("Save answer", variant="primary", size="md", type="submit") }}
+        </form>
+      </section>
+      {% endif %}
+
+      <section class="site__section" id="free">
+        {{ ui.section_rule("Free writing") }}
+        <form method="post" action="/t/{{ room.code }}/reflect">
+          <input type="hidden" name="scope_prompt" value="free/">
+          <label class="field"><span class="field__label">Anything you want to note</span>
+            <span class="field__hint">Thoughts, questions, things to come back to. Only you see these.</span>
+            <textarea name="body" rows="8" required></textarea></label>
           {{ ui.button("Save", variant="primary", size="md", type="submit") }}
         </form>
-        {% else %}
-        <p class="prose">There are no questions to answer yet. They appear once an activity with questions has been started.</p>
-        {% endif %}
       </section>
+
       {% if mine %}
       <section class="site__section">
         {{ ui.section_rule("What you have written") }}
-        <ul class="prose">{% for item in mine %}<li>{{ item.body }} ({{ "shared" if item.shared else "private" }})</li>{% endfor %}</ul>
+        <ul class="prose">{% for item in mine %}<li>{{ item.body }} ({% if item.free %}free writing{% elif item.shared %}shared{% else %}private{% endif %})</li>{% endfor %}</ul>
       </section>
       {% endif %}
     </main>

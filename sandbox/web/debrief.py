@@ -16,18 +16,19 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from sandbox.db.models import Participant, Reflection, Room
+from sandbox.db.models import Event, Participant, Reflection, Room
 from sandbox.games import GAMES
 from sandbox.games.content import load_exercise
 from sandbox.games.debrief import (
@@ -52,6 +53,11 @@ templates = Jinja2Templates(directory=PROJECT_ROOT / "sandbox" / "web" / "templa
 router = APIRouter()
 
 OBSERVATION = "observation"
+
+# The scope a reflection written to no particular question is kept under. An
+# activity's id is ``activity-N`` and a class's ``class-N``, so this is never
+# one of theirs, and it is never shown on any debrief.
+FREE_WRITING = "free"
 
 
 class RoomLog:
@@ -293,23 +299,23 @@ def _shared_reflections(who: Viewer, key: str) -> list[dict[str, str]]:
     return found
 
 
-@router.get("/t/{code}/debrief", response_class=HTMLResponse)
-def debrief_index(request: Request, who: Viewer = Depends(viewer)) -> Response:
-    """The room's activities and classes that have a debrief."""
-    log = who.log
+def debrief_rows(log: RoomLog, room: Room) -> list[dict[str, Any]]:
+    """Every debrief in the room: its title, where it is, and whether it is open."""
     rows: list[dict[str, Any]] = []
     for activity_id in log.activity_ids():
         found = log.activity(activity_id)
         if found is None or found[0].kind not in ACTIVITY_DEBRIEFS:
             continue
         activity = found[0]
-        if activity.class_id:
+        # A class's tables are listed under it; a sign-up not yet begun has
+        # nothing to debrief.
+        if activity.class_id or activity.status == "signup":
             continue
         rows.append(
             {
                 "title": activity.title,
-                "href": f"/t/{who.room.code}/debrief/{activity_id}",
-                "open": bool(settings_for(who.room, activity_id).get("open")),
+                "href": f"/t/{room.code}/debrief/{activity_id}",
+                "open": bool(settings_for(room, activity_id).get("open")),
             }
         )
     for class_id in log.class_ids():
@@ -320,8 +326,8 @@ def debrief_index(request: Request, who: Viewer = Depends(viewer)) -> Response:
         rows.append(
             {
                 "title": f"{group.title} (a class of {len(group.tables)} tables)",
-                "href": f"/t/{who.room.code}/class/{class_id}/debrief",
-                "open": bool(settings_for(who.room, class_id).get("open")),
+                "href": f"/t/{room.code}/class/{class_id}/debrief",
+                "open": bool(settings_for(room, class_id).get("open")),
             }
         )
         for table_id in group.tables:
@@ -330,10 +336,17 @@ def debrief_index(request: Request, who: Viewer = Depends(viewer)) -> Response:
                 rows.append(
                     {
                         "title": f"  {inner[0].title}",
-                        "href": f"/t/{who.room.code}/debrief/{table_id}",
-                        "open": bool(settings_for(who.room, table_id).get("open")),
+                        "href": f"/t/{room.code}/debrief/{table_id}",
+                        "open": bool(settings_for(room, table_id).get("open")),
                     }
                 )
+    return rows
+
+
+@router.get("/t/{code}/debrief", response_class=HTMLResponse)
+def debrief_index(request: Request, who: Viewer = Depends(viewer)) -> Response:
+    """The room's activities and classes that have a debrief."""
+    rows = debrief_rows(who.log, who.room)
     if not who.is_facilitator:
         rows = [row for row in rows if row["open"]]
     return templates.TemplateResponse(
@@ -525,20 +538,37 @@ def replay_frame(
 # -- reflection ----------------------------------------------------------------------
 
 
-def _reflection_prompts(who: Viewer) -> list[dict[str, Any]]:
-    """The prompts of every activity in the room that has some, by activity."""
+def question_sets(log: RoomLog) -> list[dict[str, Any]]:
+    """The debrief questions people may answer, once per activity played.
+
+    Only an activity whose answers have a debrief to appear on offers its
+    questions: a debrief activity at the table that reads the same questions
+    (Value Cards Trading's, say) does not offer them a second time. An
+    activity still taking sign-ups has not been played, so it offers none.
+    """
     groups: list[dict[str, Any]] = []
-    for activity_id in who.log.activity_ids():
-        found = who.log.activity(activity_id)
+    seen: dict[str, int] = {}
+    for activity_id in log.activity_ids():
+        found = log.activity(activity_id)
         if found is None:
             continue
-        game = GAMES.get(found[0].kind)
-        if game is None or not game.prompts:
+        activity = found[0]
+        game = GAMES.get(activity.kind)
+        if (
+            game is None
+            or not game.prompts
+            or activity.kind not in ACTIVITY_DEBRIEFS
+            or activity.status == "signup"
+        ):
             continue
+        title = _title(activity)
+        seen[title] = seen.get(title, 0) + 1
+        if seen[title] > 1:
+            title = f"{title} ({seen[title]})"
         groups.append(
             {
                 "scope": activity_id,
-                "title": _title(found[0]),
+                "title": title,
                 "prompts": [(p.id, p.text) for p in game.prompts],
             }
         )
@@ -552,7 +582,11 @@ def reflect_page(
     who: Viewer = Depends(viewer),
     session: Session = Depends(get_session),
 ) -> Response:
-    """A private place to answer a prompt. It never blocks the table."""
+    """A private place to write, and to answer the debrief questions.
+
+    Free writing is always open; the questions appear once an activity that
+    has them has been played. It never blocks the table.
+    """
     mine = session.execute(
         select(Reflection)
         .where(
@@ -566,9 +600,14 @@ def reflect_page(
         name="reflect.html",
         context={
             "room": who.room,
-            "groups": _reflection_prompts(who),
+            "groups": question_sets(who.log),
             "mine": [
-                {"body": r.body, "shared": r.visibility == "shared"} for r in mine
+                {
+                    "body": r.body,
+                    "shared": r.visibility == "shared",
+                    "free": r.prompt_key.partition("/")[0] == FREE_WRITING,
+                }
+                for r in mine
             ],
             "saved": saved,
         },
@@ -577,13 +616,20 @@ def reflect_page(
 
 @router.post("/t/{code}/reflect")
 def reflect_save(
-    scope_prompt: str = Form(...),
     body: str = Form(...),
+    scope_prompt: str = Form(FREE_WRITING),
     share: bool = Form(False),
     who: Viewer = Depends(viewer),
     session: Session = Depends(get_session),
 ) -> Response:
-    """Keep an answer, private unless its writer shares it with the table."""
+    """Keep an answer, private unless its writer shares it with the table.
+
+    Free writing is always private: it answers no question, so there is no
+    debrief for it to be shared on.
+    """
+    free = scope_prompt.partition("/")[0] == FREE_WRITING
+    if free:
+        scope_prompt, share = f"{FREE_WRITING}/", False
     if body.strip():
         session.add(
             Reflection(
@@ -598,3 +644,79 @@ def reflect_save(
     return RedirectResponse(
         url=f"/t/{who.room.code}/reflect?saved=true", status_code=303
     )
+
+
+# -- what the side panel offers ------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _LinkFacts:
+    """What the room's side panel needs to know, read from its log."""
+
+    has_questions: bool
+    debriefs: tuple[tuple[str, bool], ...]
+    """Each debrief's address, and whether it is open."""
+    facilitator_seats: frozenset[str]
+
+
+# Reading a room's log replays it, so what it says is kept until the log or
+# the debrief settings change: a table polling for its links costs a count.
+_LINK_FACTS: dict[str, tuple[tuple[int, str], _LinkFacts]] = {}
+
+
+def _link_facts(session: Session, room: Room) -> _LinkFacts:
+    last = session.scalar(select(func.max(Event.seq)).where(Event.room_id == room.id))
+    stamp = (int(last or 0), json.dumps(room.config.get("debrief"), sort_keys=True))
+    cached = _LINK_FACTS.get(room.id)
+    if cached is not None and cached[0] == stamp:
+        return cached[1]
+    log = RoomLog(session, room)
+    facts = _LinkFacts(
+        has_questions=bool(question_sets(log)),
+        debriefs=tuple((r["href"], bool(r["open"])) for r in debrief_rows(log, room)),
+        facilitator_seats=frozenset(
+            seat.id for seat in log.final.seats.values() if seat.is_facilitator
+        ),
+    )
+    _LINK_FACTS[room.id] = (stamp, facts)
+    return facts
+
+
+@router.get("/t/{code}/links")
+def room_links(
+    request: Request, code: str, session: Session = Depends(get_session)
+) -> Response:
+    """Which of the room's debrief links are worth showing to this person now.
+
+    The answer is links, not rules: the page shows what it is sent.
+    """
+    room = get_room_by_code(session, code)
+    if room is None:
+        raise HTTPException(status_code=404, detail="No such room.")
+    cookie_id = read_participant_cookie(request)
+    participant = get_participant(session, room.id, cookie_id) if cookie_id else None
+    if participant is None:
+        raise HTTPException(status_code=403, detail="Join the room first.")
+    facts = _link_facts(session, room)
+    facilitating = participant.seat_id in facts.facilitator_seats
+    links: list[dict[str, str]] = []
+    if facts.has_questions:
+        links.append(
+            {
+                "id": "questions",
+                "label": "Respond to debrief questions",
+                "href": f"/t/{room.code}/reflect#questions",
+            }
+        )
+    shown = [href for href, opened in facts.debriefs if facilitating or opened]
+    if shown:
+        label = "Review the debriefs" if facilitating else "Read the debrief"
+        if not facilitating and len(shown) > 1:
+            label = "Read the debriefs"
+        href = (
+            shown[0]
+            if len(shown) == 1 and not facilitating
+            else f"/t/{room.code}/debrief"
+        )
+        links.append({"id": "debrief", "label": label, "href": href})
+    return JSONResponse({"links": links})

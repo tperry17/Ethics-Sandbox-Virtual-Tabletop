@@ -16,7 +16,7 @@ from _room_support import start_room
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
-from sandbox.db.models import Participant, Room
+from sandbox.db.models import Participant, Reflection, Room
 from sandbox.db.snapshot import to_snapshot
 from sandbox.games import GAMES
 from sandbox.games.engine import build_activity_start, build_macro
@@ -305,6 +305,81 @@ def test_a_reflection_is_private_unless_shared(
     assert "kept to myself" not in facilitator
     assert "kept to myself" in played.get("Bea", f"/t/{played.code}/reflect").text
     assert "kept to myself" not in played.get("Cy", f"/t/{played.code}/reflect").text
+
+
+def test_free_writing_is_open_before_any_activity_and_stays_private(
+    factory: sessionmaker[Session],
+) -> None:
+    played = Played(factory, ["Ada", "Bea"])
+
+    page = played.get("Bea", f"/t/{played.code}/reflect").text
+    assert "Free writing" in page
+    assert "Debrief questions" not in page
+    played.clients["Bea"].post(
+        f"/t/{played.code}/reflect",
+        # Even asked to share it, a note to no question is kept private.
+        data={"body": "a thought of my own", "share": "true"},
+    )
+
+    reflect = f"/t/{played.code}/reflect"
+    assert "a thought of my own" in played.get("Bea", reflect).text
+    assert "a thought of my own" not in played.get("Ada", reflect).text
+    with played.factory() as session:
+        kept = session.query(Reflection).one()
+        assert kept.visibility == "private"
+        assert kept.prompt_key == "free/"
+
+
+def test_the_debrief_questions_are_offered_once_not_once_per_activity(
+    factory: sessionmaker[Session],
+) -> None:
+    played, aid = _value_cards(factory)
+    # The debrief activity reads the same questions; it does not offer them again.
+    played.start("value-cards-debrief", "seat-1", ["seat-1"])
+
+    page = played.get("Bea", f"/t/{played.code}/reflect").text
+
+    question = GAMES["value-cards-trading"].prompts[0].text
+    assert page.count(question) == 1
+    assert f'value="{aid}/{GAMES["value-cards-trading"].prompts[0].id}"' in page
+
+
+def _links(played: Played, name: str) -> dict[str, dict[str, str]]:
+    response = played.get(name, f"/t/{played.code}/links")
+    assert response.status_code == 200
+    return {link["id"]: link for link in response.json()["links"]}
+
+
+def test_the_side_panel_offers_debrief_links_only_once_they_lead_somewhere(
+    factory: sessionmaker[Session],
+) -> None:
+    empty = Played(factory, ["Ada", "Bea"])
+    assert _links(empty, "Bea") == {}
+    assert _links(empty, "Ada") == {}
+
+    played, aid = _value_cards(factory)
+    bea, ada = _links(played, "Bea"), _links(played, "Ada")
+    assert bea["questions"]["label"] == "Respond to debrief questions"
+    assert bea["questions"]["href"].endswith("/reflect#questions")
+    # Nothing to read until the facilitator opens it, who can review it now.
+    assert "debrief" not in bea
+    assert ada["debrief"]["label"] == "Review the debriefs"
+
+    played.clients["Ada"].post(
+        f"/t/{played.code}/debrief/{aid}/open",
+        data={"opened": "true", "is_class": "false"},
+    )
+    opened = _links(played, "Bea")["debrief"]
+    assert opened["label"] == "Read the debrief"
+    assert opened["href"] == f"/t/{played.code}/debrief/{aid}"
+
+
+def test_links_are_for_people_in_the_room(factory: sessionmaker[Session]) -> None:
+    played = Played(factory, ["Ada"])
+    stranger = TestClient(app, follow_redirects=False)
+
+    assert stranger.get(f"/t/{played.code}/links").status_code == 403
+    assert stranger.get("/t/NOROOM/links").status_code == 404
 
 
 # -- the class debrief and the replay page -------------------------------------------

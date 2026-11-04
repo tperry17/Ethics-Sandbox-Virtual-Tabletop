@@ -29,6 +29,15 @@ A class is an activity run as several tables at once. Someone presses "Start a c
 
 Scenario 2 of Leadership and Knowledge in Popular Rule always runs as a class, in one room, with one table per city. It is best with two paired cities; it can be run with one, and then the other city is hypothetical: the facilitator may choose its decision, and if nobody does, the facilitator sees all three possible results. On the call the group splits into breakout groups, one per table, so each table is self-contained: its own notes, its own votes, its own list of participants.
 
+Every room's side panel has "Write a reflection": a private page
+(`/t/{code}/reflect`, `sandbox/web/debrief.py`) with free writing that is
+always open and kept private, and the debrief questions once an activity
+that has a debrief page has been played - each activity's questions once,
+never again for a debrief activity that reads the same ones. An answer may
+be shared, and then shows on that activity's debrief. "Respond to debrief
+questions" and the link to a debrief appear in the panel only once there is
+something behind them; the page asks `/t/{code}/links` which.
+
 The facilitator is optional, an admin seat. Nobody is the facilitator by default, the room's creator included. Any participant may take the seat with a "Become facilitator" button, or choose it when joining; only one person holds it, and nothing in any activity requires it.
 
 The experience is real time but unhurried. Dragging must feel immediate to the person doing it; everyone else may see it 100 ms later. This is not a twitch game. Never trade correctness or clarity for latency below that threshold.

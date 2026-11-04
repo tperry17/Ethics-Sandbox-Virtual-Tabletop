@@ -62,9 +62,11 @@
           </p>
           {% endif %}
 
+          {# The debrief links appear only once there is something behind them;
+             the page asks /links which, and shows what it is sent. #}
           <nav class="room__links" aria-label="This room">
-            <a href="/t/{{ room.code }}/reflect" target="_blank" rel="noopener">Write a reflection</a>
-            <a href="/t/{{ room.code }}/debrief" target="_blank" rel="noopener">Debriefs</a>
+            <div class="room__debrief-links" id="room-debrief-links" data-links-url="/t/{{ room.code }}/links" hidden></div>
+            <a href="/t/{{ room.code }}/reflect#free" target="_blank" rel="noopener">Write a reflection</a>
             {% if is_facilitator %}<a href="/t/{{ room.code }}/replay" target="_blank" rel="noopener">Replay</a>{% endif %}
             <a href="/help" target="_blank" rel="noopener">Help</a>
           </nav>
@@ -133,6 +135,40 @@
 
     <script type="module" src="{{ url_for('static', path='/table/table.js') }}"></script>
     <script>
+      // The debrief links: which to show comes from the server, asked again
+      // every so often and whenever the page is looked at again.
+      (function () {
+        var box = document.getElementById("room-debrief-links");
+        if (!box) return;
+        var shown = "";
+        function draw(links) {
+          var signature = JSON.stringify(links);
+          if (signature === shown) return;
+          shown = signature;
+          box.replaceChildren();
+          links.forEach(function (link) {
+            var a = document.createElement("a");
+            a.className = "button button--secondary button--sm";
+            a.href = link.href;
+            a.target = "_blank";
+            a.rel = "noopener";
+            a.dataset.roomLink = link.id;
+            a.textContent = link.label;
+            box.append(a);
+          });
+          box.hidden = links.length === 0;
+        }
+        function ask() {
+          fetch(box.dataset.linksUrl, { credentials: "same-origin" })
+            .then(function (response) { return response.ok ? response.json() : null; })
+            .then(function (body) { if (body && Array.isArray(body.links)) draw(body.links); })
+            .catch(function () {});
+        }
+        ask();
+        window.setInterval(function () { if (!document.hidden) ask(); }, 20000);
+        document.addEventListener("visibilitychange", function () { if (!document.hidden) ask(); });
+        window.addEventListener("focus", ask);
+      })();
       (function () {
         var button = document.getElementById("copy-room-link");
         if (!button) return;
