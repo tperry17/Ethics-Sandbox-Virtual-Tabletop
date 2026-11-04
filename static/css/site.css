@@ -154,3 +154,25 @@
 .bars__track { background: var(--surface-sunken); border-radius: var(--radius-sm); height: var(--space-4); }
 .bars__fill { display: block; height: 100%; background: var(--accent-rubric); border-radius: var(--radius-sm); }
 .bars__value { color: var(--text-secondary); text-align: right; }
+
+/* "Open a room" on the landing page: a button that opens a short menu with
+   one button per kind of room. */
+.room-menu { position: relative; }
+.room-menu > summary { list-style: none; cursor: pointer; }
+.room-menu > summary::-webkit-details-marker { display: none; }
+.room-menu__panel {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--line-hairline) solid var(--surface-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raised);
+  width: max-content;
+  max-width: 100%;
+}
+.room-menu__panel form { display: contents; }

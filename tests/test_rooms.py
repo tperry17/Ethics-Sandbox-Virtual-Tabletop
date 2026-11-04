@@ -426,11 +426,11 @@ def test_apply_op_refuses_activity_on_a_closed_room() -> None:
         assert isinstance(applied.outcome, Reject)
 
 
-def test_an_open_room_seats_twenty_and_the_next_person_observes() -> None:
+def test_a_room_seats_thirty_and_the_next_person_observes() -> None:
     with db_session() as session:
         room, _creator = rooms.create_room(
             session,
-            game_slug="sandbox",
+            game_slug="value-cards-room",
             facilitator_cookie_id="cookie-0",
             facilitator_name="Ada",
         )
@@ -442,12 +442,12 @@ def test_an_open_room_seats_twenty_and_the_next_person_observes() -> None:
                 cookie_id=f"cookie-{number}",
                 display_name=f"Person {number}",
             )
-            for number in range(1, 20)
+            for number in range(1, 30)
         ]
         session.commit()
         assert all(person.seat_id is not None for person in joined)
-        assert len(rooms.load_table(session, room).seats) == 20
+        assert len(rooms.load_table(session, room).seats) == 30
         extra = rooms.join_room(
-            session, code=room.code, cookie_id="cookie-20", display_name="Extra"
+            session, code=room.code, cookie_id="cookie-30", display_name="Extra"
         )
         assert extra.seat_id is None and extra.is_observer

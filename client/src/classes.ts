@@ -25,7 +25,11 @@ function seatName(model: TableModel, seatId: string): string {
   return seat?.display_name ?? seat?.label ?? seatId;
 }
 
+/** The partner a table is paired with when no real table is: see the model. */
+const HYPOTHETICAL_TABLE = "hypothetical";
+
 function tableName(group: ClassView, tableId: string): string {
+  if (tableId === HYPOTHETICAL_TABLE) return "the hypothetical table";
   return `Table ${group.tables.indexOf(tableId) + 1}`;
 }
 
@@ -213,11 +217,39 @@ function renderPairing(model: TableModel, group: ClassView, send: SendClass): HT
       outcome.textContent = pair.outcome;
       row.append(outcome);
     }
+    // A hypothetical partner nobody has decided for: every way it could go.
+    if ((pair.outcomes ?? []).length > 0) {
+      const list = document.createElement("ul");
+      list.className = "toolbar__outcomes";
+      for (const each of pair.outcomes ?? []) {
+        const item = document.createElement("li");
+        item.textContent = `If ${tableName(group, pair.second)} chose ${each.their_choice}: ${each.text}`;
+        list.append(item);
+      }
+      row.append(list);
+    }
     root.append(row);
   }
   const free = group.tables.filter(
     (id) => !(group.pairs ?? []).some((pair) => pair.first === id || pair.second === id),
   );
+  // A table with no partner may be paired with a hypothetical one.
+  if (free.length >= 1) {
+    const lone = document.createElement("select");
+    lone.setAttribute("aria-label", "Table to pair with a hypothetical one");
+    for (const id of free) {
+      const option = document.createElement("option");
+      option.value = id;
+      option.textContent = tableName(group, id);
+      lone.append(option);
+    }
+    root.append(
+      lone,
+      button("Pair with a hypothetical table", () =>
+        send({ action: "pair", class_id: group.id, first: lone.value, second: HYPOTHETICAL_TABLE }),
+      ),
+    );
+  }
   if (free.length >= 2) {
     const first = document.createElement("select");
     const second = document.createElement("select");

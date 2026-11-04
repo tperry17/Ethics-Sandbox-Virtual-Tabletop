@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 from _db_support import make_test_engine
+from _room_support import start_room
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -63,8 +64,8 @@ def _room_with_people(
     client: TestClient, factory: sessionmaker[Session]
 ) -> tuple[str, TestClient]:
     """A room whose facilitator is Ada, with Grace joined, and a typed note."""
-    response = client.post(
-        "/start", data={"display_name": "Ada Lovelace", "as_facilitator": "true"}
+    response = start_room(
+        client, data={"display_name": "Ada Lovelace", "as_facilitator": "true"}
     )
     code = response.headers["location"].rsplit("/", 1)[1]
     other = TestClient(app, follow_redirects=False)
@@ -280,12 +281,30 @@ def test_each_exercise_shows_its_learning_outcomes() -> None:
     assert "Engagement across differences" in cards
 
 
-def test_a_debrief_can_be_started_as_an_activity_in_any_room() -> None:
+def test_each_room_offers_its_own_activities_and_its_own_debrief() -> None:
+    from sandbox.games import GAMES
     from sandbox.web.live import activity_choices
 
-    slugs = {choice.slug for choice in activity_choices()}
+    offered = {
+        kind: [choice.slug for choice in activity_choices(GAMES[kind])]
+        for kind in ("value-cards-room", "democracy-room")
+    }
 
-    assert {"value-cards-debrief", "democracy-debrief"} <= slugs
+    assert offered == {
+        "value-cards-room": ["value-cards-trading", "value-cards-debrief"],
+        "democracy-room": ["scenario-1", "scenario-2", "democracy-debrief"],
+    }
+    scenario_2 = activity_choices(GAMES["democracy-room"])[1]
+    assert scenario_2.class_only
+    assert [option.id for option in scenario_2.options] == ["city"]
+    debriefs = {
+        kind: [c.slug for c in activity_choices(GAMES[kind]) if c.debrief]
+        for kind in ("value-cards-room", "democracy-room")
+    }
+    assert debriefs == {
+        "value-cards-room": ["value-cards-debrief"],
+        "democracy-room": ["democracy-debrief"],
+    }
 
 
 def test_the_help_page_explains_records_and_the_landing_page_links_to_it() -> None:

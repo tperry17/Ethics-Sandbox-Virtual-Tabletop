@@ -13,116 +13,122 @@
     <link rel="stylesheet" href="{{ url_for('static', path='/css/tabletop.css') }}">
   </head>
   <body>
-    <div class="table-shell">
-      <header class="table-shell__header">
-        <div class="table-shell__identity">
-          <p class="eyebrow">{{ title }}</p>
-          <div class="table-shell__code-row">
-            {{ ui.room_code(room.code) }}
-            <button class="button button--quiet button--sm" type="button" id="copy-room-link" data-room-code="{{ room.code }}">
-              Copy invite link
-            </button>
-            <input class="invite-link" id="invite-link" type="text" readonly value="{{ invite_url }}" aria-label="Invite link" size="30">
-            <span id="copy-note" role="status"></span>
-          </div>
+    <div class="room">
+      <header class="room__bar">
+        <div class="room__identity">
+          <p class="eyebrow">Ethics Sandbox</p>
+          <p class="room__title">{{ title }}</p>
         </div>
-
-        <div class="table-shell__roster" aria-label="Who is at the table">
+        <div class="room__code-row">
+          <span class="room__code-label">Room</span>
+          {{ ui.room_code(room.code) }}
+          <button class="button button--secondary button--sm" type="button" id="copy-room-link" data-room-code="{{ room.code }}">
+            Copy invite link
+          </button>
+          <input class="invite-link" id="invite-link" type="text" readonly value="{{ invite_url }}" aria-label="Invite link" size="30">
+          <span id="copy-note" role="status"></span>
+        </div>
+        <div class="room__people" aria-label="Who is in the room">
           {% for seat in seats %}
           {% set occupant = participants_by_seat.get(seat.id) %}
+          {% if occupant %}
           <span class="table-shell__seat">
-            {% if occupant %}
-              {{ ui.avatar(occupant.display_name[:2]|upper, seat=seat.tint_index + 1, name=occupant.display_name) }}
-            {% else %}
-              {{ ui.avatar("··", seat=seat.tint_index + 1, name="Open seat") }}
-            {% endif %}
+            {{ ui.avatar(occupant.display_name[:2]|upper, seat=seat.tint_index + 1, name=occupant.display_name) }}
             {% if seat.is_facilitator %}<span class="tag">Facilitator</span>{% endif %}
           </span>
+          {% endif %}
           {% endfor %}
+          <span class="room__count">{{ participants_by_seat|length }} of {{ max_seats }} here</span>
           {% if observers %}
-          <span class="table-shell__observers">
-            {{ ui.tag(observers|length ~ " observing") }}
-          </span>
+          <span class="table-shell__observers">{{ ui.tag(observers|length ~ " observing") }}</span>
           {% endif %}
         </div>
+        {# The client puts "Become facilitator" here. #}
+        <div class="room__actions" id="room-bar-actions"></div>
       </header>
 
-      {# The client fills this toolbar from the macros the server sends it. #}
-      {% call ui.toolbar("Table controls", id="table-toolbar") %}
-        <p class="toolbar__empty prose">
-          Macro buttons for this exercise appear here once it defines them.
-        </p>
-      {% endcall %}
+      <div class="room__body">
+        <aside class="room__panel" aria-label="Room controls">
+          {# The client fills this from what the server sends: the room's
+             activities, a class, the table's buttons, trades. #}
+          {% call ui.toolbar("Table controls", id="table-toolbar") %}
+            <p class="toolbar__empty prose">The room's activities and buttons appear here.</p>
+          {% endcall %}
 
-      <p class="prose table-shell__links">
-        <a href="/t/{{ room.code }}/reflect" target="_blank" rel="noopener">Write a reflection</a>
-        · <a href="/t/{{ room.code }}/debrief" target="_blank" rel="noopener">Debriefs</a>
-        {% if is_facilitator %}· <a href="/t/{{ room.code }}/replay" target="_blank" rel="noopener">Replay</a>{% endif %}
-        · <a href="/help" target="_blank" rel="noopener">Help</a>
-      </p>
+          {% if participant.is_observer %}
+          <p class="room-panel__intro" data-observer-note>
+            You are watching: either this room has no free seat, or you chose to
+            watch. You can see everything but not move pieces.
+          </p>
+          {% endif %}
 
-      {% if is_facilitator %}
-      <section class="prose" aria-labelledby="record-heading">
-        <h2 id="record-heading">The record of this room</h2>
-        <p>
-          {% if dormant %}This room is dormant: nobody has been active for 12 hours.
-          {% else %}This room goes dormant after 12 hours without activity.{% endif %}
-          Its record is deleted on {{ purge_date.strftime("%-d %B %Y") }} unless someone
-          is active before then; after 30 days idle, it is deleted.
-        </p>
-        <form method="get" action="/t/{{ room.code }}/record.json" aria-label="Export the record">
-          <fieldset>
-            <legend>Export what happened in this room</legend>
-            <label class="field__check">
-              <input type="checkbox" name="include_text" value="true">
-              Include the notes and other text people wrote
-              <span class="field__hint">(an answer someone kept private is never included)</span>
-            </label>
-            <label class="field__check">
-              <input type="checkbox" name="anonymise" value="true">
-              Replace names with Participant A, B, C
-            </label>
-          </fieldset>
-          <div class="toolbar" role="group" aria-label="Export format">
-            {{ ui.button("Export as JSON", variant="primary", size="sm", type="submit") }}
-            <button class="button button--quiet button--sm" type="submit"
-                    formaction="/t/{{ room.code }}/record.zip">Export as CSV files</button>
+          <nav class="room__links" aria-label="This room">
+            <a href="/t/{{ room.code }}/reflect" target="_blank" rel="noopener">Write a reflection</a>
+            <a href="/t/{{ room.code }}/debrief" target="_blank" rel="noopener">Debriefs</a>
+            {% if is_facilitator %}<a href="/t/{{ room.code }}/replay" target="_blank" rel="noopener">Replay</a>{% endif %}
+            <a href="/help" target="_blank" rel="noopener">Help</a>
+          </nav>
+
+          {% if is_facilitator %}
+          <details class="room__record">
+            <summary>The record of this room</summary>
+            <section class="prose" aria-labelledby="record-heading">
+              <h2 id="record-heading" class="visually-hidden">The record of this room</h2>
+              <p>
+                {% if dormant %}This room is dormant: nobody has been active for 12 hours.
+                {% else %}This room goes dormant after 12 hours without activity.{% endif %}
+                Its record is deleted on {{ purge_date.strftime("%-d %B %Y") }} unless someone
+                is active before then; after 30 days idle, it is deleted.
+              </p>
+              <form method="get" action="/t/{{ room.code }}/record.json" aria-label="Export the record">
+                <fieldset>
+                  <legend>Export what happened in this room</legend>
+                  <label class="field__check">
+                    <input type="checkbox" name="include_text" value="true">
+                    Include the notes and other text people wrote
+                    <span class="field__hint">(an answer someone kept private is never included)</span>
+                  </label>
+                  <label class="field__check">
+                    <input type="checkbox" name="anonymise" value="true">
+                    Replace names with Participant A, B, C
+                  </label>
+                </fieldset>
+                <div class="toolbar" role="group" aria-label="Export format">
+                  {{ ui.button("Export as JSON", variant="primary", size="sm", type="submit") }}
+                  <button class="button button--quiet button--sm" type="submit"
+                          formaction="/t/{{ room.code }}/record.zip">Export as CSV files</button>
+                </div>
+              </form>
+              <form method="post" action="/t/{{ room.code }}/record/delete"
+                    onsubmit="return confirm('Delete this room and everything recorded in it? This cannot be undone.');">
+                {{ ui.button("Delete this room's record", variant="quiet", size="sm", type="submit") }}
+              </form>
+            </section>
+          </details>
+          {% endif %}
+        </aside>
+
+        <main class="room__table">
+          {# The table client takes this element over completely: everything
+             inside it is replaced on the first frame. #}
+          <div
+            id="table-root"
+            class="tabletop"
+            data-source="live"
+            data-room-code="{{ room.code }}"
+            data-participant-id="{{ participant.id }}"
+            data-seat-id="{{ participant.seat_id or '' }}"
+          >
+            <noscript>
+              {{ ui.empty_state(
+                "The table needs JavaScript",
+                "The table surface is drawn in the browser. Everything else about this
+                 room - the code, who is here, and the exercise itself - works without it."
+              ) }}
+            </noscript>
           </div>
-        </form>
-        <form method="post" action="/t/{{ room.code }}/record/delete"
-              onsubmit="return confirm('Delete this room and everything recorded in it? This cannot be undone.');">
-          {{ ui.button("Delete this room's record", variant="quiet", size="sm", type="submit") }}
-        </form>
-      </section>
-      {% endif %}
-
-      {% if participant.is_observer %}
-      <p class="prose" data-observer-note>
-        You are watching: either this room has no free seat, or you chose to
-        watch. You can see everything but not move pieces. If a seat is
-        free, you can take it from the roster above.
-      </p>
-      {% endif %}
-      <main class="table-shell__surface">
-        {# The table client takes this element over completely: everything
-           inside it is replaced on the first frame. #}
-        <div
-          id="table-root"
-          class="tabletop"
-          data-source="live"
-          data-room-code="{{ room.code }}"
-          data-participant-id="{{ participant.id }}"
-          data-seat-id="{{ participant.seat_id or '' }}"
-        >
-          <noscript>
-            {{ ui.empty_state(
-              "The table needs JavaScript",
-              "The table surface is drawn in the browser. Everything else about this
-               room - the code, who is here, and the exercise itself - works without it."
-            ) }}
-          </noscript>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
 
     <script type="module" src="{{ url_for('static', path='/table/table.js') }}"></script>

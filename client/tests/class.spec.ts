@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { openFromLanding } from "./rooms";
 
 /**
  * A class: one activity at several tables, run by whoever starts it. Pairs
@@ -7,9 +8,9 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 
 async function openRoom(browser: Browser, name: string): Promise<{ page: Page; code: string }> {
   const page = await (await browser.newContext()).newPage();
-  await page.goto("/start");
+  await openFromLanding(page, "Test room");
   await page.getByLabel("Your name").fill(name);
-  await page.getByRole("button", { name: "Open a room" }).click();
+  await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
   return { page, code: page.url().split("/t/")[1]! };
 }
@@ -36,7 +37,7 @@ test("a facilitator sorts a class into tables, begins them and times them", asyn
 
   await host.getByLabel("Activity for the class").selectOption("pairs");
   await host.getByLabel("Number of tables").fill("2");
-  await host.getByRole("button", { name: "Start a class" }).click();
+  await host.getByRole("button", { name: "Start a class", exact: true }).click();
   await expect(host.getByText("Class: Pairs, 2 tables")).toBeVisible();
   await expect(guests[0]!.getByText("Table 2: signing up, 0 of 2")).toBeVisible();
   // The facilitator is not offered a seat; a person is.
@@ -69,7 +70,7 @@ test("a facilitator sorts a class into tables, begins them and times them", asyn
   await expect(host.getByText("Not at a table:")).toHaveCount(0);
 
   await host.getByLabel("Minutes on the timer").fill("2");
-  await host.getByRole("button", { name: "Start timer for every table" }).click();
+  await host.getByRole("button", { name: "Start timer for every table", exact: true }).click();
   for (const page of [host, ...guests]) {
     await expect(page.getByRole("timer")).toHaveText(/^[12]:\d\d$/);
   }

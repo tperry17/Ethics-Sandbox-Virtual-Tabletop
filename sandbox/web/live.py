@@ -44,16 +44,19 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from sandbox.db.engine import SessionLocal, session_scope
 from sandbox.db.models import Participant, Room
-from sandbox.games import GAMES, OPEN_ROOM_SLUG, Game
+from sandbox.games import GAMES, Game
 from sandbox.games.engine import (
     announcement,
     build_activity_start,
+    build_add_piece,
     build_macro,
     build_seat_move,
     may_use_facilitator_button,
 )
 from sandbox.games.pairing import may_pair, pair_outcome, pairing_choices
+from sandbox.games.room_types import offered_activities, offered_activity
 from sandbox.model import (
+    HYPOTHETICAL_TABLE,
     SYSTEM_SEAT,
     AcceptSwap,
     AddSeat,
@@ -312,8 +315,19 @@ class ActivityView(BaseModel):
     class_id: str = ""
 
 
+class ClassOutcomeView(BaseModel):
+    """What follows if the partner chose ``their_choice``."""
+
+    their_choice: str
+    text: str
+
+
 class ClassPairView(BaseModel):
-    """Two paired tables and, once both have decided, what follows."""
+    """Two paired tables and, once both have decided, what follows.
+
+    When ``second`` is a hypothetical table that nobody has decided for,
+    ``outcomes`` lists what follows from each choice it could have made.
+    """
 
     first: str
     second: str
@@ -322,6 +336,8 @@ class ClassPairView(BaseModel):
     first_proposed: str | None = None
     second_proposed: str | None = None
     outcome: str | None = None
+    hypothetical: bool = False
+    outcomes: list[ClassOutcomeView] = Field(default_factory=list)
 
 
 class ClassPromptChoiceView(BaseModel):
@@ -417,6 +433,15 @@ class ActivityOptionView(BaseModel):
     choices: list[ActivityOptionChoiceView]
 
 
+class PieceMenuView(BaseModel):
+    """One piece the room's Pieces menu adds: what it is, and its colour."""
+
+    component_id: str
+    kind: str
+    title: str
+    tint_index: int | None = None
+
+
 class ActivityChoiceView(BaseModel):
     """An activity this room can start: what it is called and how many it takes."""
 
@@ -426,6 +451,8 @@ class ActivityChoiceView(BaseModel):
     max_players: int
     duration_minutes: int
     options: list[ActivityOptionView] = Field(default_factory=list)
+    class_only: bool = False
+    debrief: bool = False
 
 
 class StrokeView(BaseModel):
@@ -503,6 +530,7 @@ class SnapshotMessage(BaseModel):
     components: list[ComponentView] = Field(default_factory=list)
     macros: list[MacroView] = Field(default_factory=list)
     activity_choices: list[ActivityChoiceView] = Field(default_factory=list)
+    pieces_menu: list[PieceMenuView] = Field(default_factory=list)
     classes: list[ClassView] = Field(default_factory=list)
 
 
@@ -662,12 +690,36 @@ ACTIVITY_INTENT = "activity"
 # The intent that starts and runs a class: several tables of one activity.
 CLASS_INTENT = "class"
 
+# The intent that adds a piece from the room's Pieces menu.
+ADD_PIECE_INTENT = "add_piece"
 
-def chosen_options(game: Game, sent: object) -> dict[str, str] | str:
+
+def pieces_menu(room_game: Game | None) -> list[PieceMenuView]:
+    """What the room's Pieces menu offers, in the order its definition lists."""
+    if room_game is None or room_game.definition.room is None:
+        return []
+    specs = {piece.id: piece for piece in room_game.definition.components.pieces}
+    return [
+        PieceMenuView(
+            component_id=spec.id,
+            kind=spec.kind.value,
+            title=spec.title or spec.kind.value.capitalize(),
+            tint_index=spec.tint_index,
+        )
+        for component_id in room_game.definition.room.pieces
+        if (spec := specs.get(component_id)) is not None
+    ]
+
+
+def chosen_options(
+    game: Game, sent: object, fixed: dict[str, str] | None = None
+) -> dict[str, str] | str:
     """The options a person chose for ``game``, or a sentence saying what is wrong.
 
     An option left out takes its first choice; one the definition does not
-    offer, or a value it does not list, is refused.
+    offer, or a value it does not list, is refused. ``fixed`` are the
+    options the room has already settled (a scenario, say); they win over
+    anything sent.
     """
     given = sent if isinstance(sent, dict) else {}
     chosen = game.definition.default_options()
@@ -676,21 +728,23 @@ def chosen_options(game: Game, sent: object) -> dict[str, str] | str:
         if option is None or value not in {c.id for c in option.choices}:
             return "That choice is not one this activity offers."
         chosen[option_id] = value
+    chosen.update(fixed or {})
     return chosen
 
 
-def activity_choices() -> list[ActivityChoiceView]:
-    """The activities any room can start: every game but the open room itself.
+def activity_choices(room_game: Game | None) -> list[ActivityChoiceView]:
+    """The activities a room of ``room_game`` can start, and nothing else.
 
-    Whether a game is in the public catalog (``listed``) is a separate matter.
+    Each is one of the room type's own; options the room fixes are not
+    offered as choices.
     """
     return [
         ActivityChoiceView(
-            slug=game.slug,
-            title=game.title,
-            min_players=game.definition.meta.players.min,
-            max_players=game.definition.meta.players.max,
-            duration_minutes=game.definition.meta.duration_minutes,
+            slug=offered.id,
+            title=offered.title,
+            min_players=offered.game.definition.meta.players.min,
+            max_players=offered.game.definition.meta.players.max,
+            duration_minutes=offered.game.definition.meta.duration_minutes,
             options=[
                 ActivityOptionView(
                     id=option.id,
@@ -700,11 +754,13 @@ def activity_choices() -> list[ActivityChoiceView]:
                         for c in option.choices
                     ],
                 )
-                for option in game.definition.options
+                for option in offered.game.definition.options
+                if option.id not in offered.fixed
             ],
+            class_only=offered.class_only,
+            debrief=offered.debrief,
         )
-        for game in GAMES.values()
-        if game.slug != OPEN_ROOM_SLUG
+        for offered in offered_activities(GAMES, room_game)
     ]
 
 
@@ -1307,6 +1363,9 @@ class RoomRuntime:
         if message.op_type == CLASS_INTENT:
             self._on_class(connection, seat_id, message)
             return
+        if message.op_type == ADD_PIECE_INTENT:
+            self._on_add_piece(connection, seat_id, message)
+            return
         try:
             operation = decode_intent(message.op_type, message.payload)
         except IntentError as error:
@@ -1370,20 +1429,28 @@ class RoomRuntime:
         activity_id = payload.get("activity_id")
         operation: Operation
         if action == "open":
-            game = GAMES.get(str(payload.get("slug")))
-            if game is None or game.slug == OPEN_ROOM_SLUG:
+            offered = offered_activity(GAMES, self.game, payload.get("slug"))
+            if offered is None:
                 self._reject(
-                    connection, message.client_id, "There is no such activity."
+                    connection, message.client_id, "This room has no such activity."
                 )
                 return
+            if offered.class_only:
+                self._reject(
+                    connection,
+                    message.client_id,
+                    f"{offered.title} runs as a class: start a class instead.",
+                )
+                return
+            game = offered.game
             meta = game.definition.meta
-            chosen = chosen_options(game, payload.get("options"))
+            chosen = chosen_options(game, payload.get("options"), offered.fixed)
             if isinstance(chosen, str):
                 self._reject(connection, message.client_id, chosen)
                 return
             operation = OpenActivity(
                 kind=game.slug,
-                title=game.title,
+                title=offered.title,
                 min_players=meta.players.min,
                 max_players=meta.players.max,
                 options=tuple(chosen.items()),
@@ -1477,17 +1544,18 @@ class RoomRuntime:
         class_id = payload.get("class_id")
         operation: Operation
         if action == "start":
-            game = GAMES.get(str(payload.get("slug")))
+            offered = offered_activity(GAMES, self.game, payload.get("slug"))
             tables = payload.get("tables")
-            if game is None or game.slug == OPEN_ROOM_SLUG:
+            if offered is None:
                 self._reject(
-                    connection, message.client_id, "There is no such activity."
+                    connection, message.client_id, "This room has no such activity."
                 )
                 return
+            game = offered.game
             if not isinstance(tables, int) or isinstance(tables, bool):
                 self._reject(connection, message.client_id, "Choose how many tables.")
                 return
-            chosen = chosen_options(game, payload.get("options"))
+            chosen = chosen_options(game, payload.get("options"), offered.fixed)
             if isinstance(chosen, str):
                 self._reject(connection, message.client_id, chosen)
                 return
@@ -1499,7 +1567,7 @@ class RoomRuntime:
             meta = game.definition.meta
             operation = StartClass(
                 kind=game.slug,
-                title=game.title,
+                title=offered.title,
                 min_players=meta.players.min,
                 max_players=meta.players.max,
                 tables=tables,
@@ -1757,6 +1825,33 @@ class RoomRuntime:
         text = announcement(game, macro_id, connection.display_name)
         if text:
             self._notice(text)
+
+    def _on_add_piece(
+        self, connection: Connection, seat_id: str, message: IntentMessage
+    ) -> None:
+        """A piece from the Pieces menu, put down where the person is looking."""
+        payload = message.payload
+        component_id = payload.get("component_id")
+        x, y = payload.get("x"), payload.get("y")
+        if (
+            self.game is None
+            or not isinstance(component_id, str)
+            or not all(
+                isinstance(v, (int, float)) and not isinstance(v, bool) for v in (x, y)
+            )
+        ):
+            self._reject(connection, message.client_id, "Choose a piece to add.")
+            return
+        assert isinstance(x, (int, float)) and isinstance(y, (int, float))
+        built = build_add_piece(self.game, self.table, component_id, float(x), float(y))
+        if not isinstance(built, Transaction):
+            self._reject(connection, message.client_id, built.reason)
+            return
+        outcome = self._apply(seat_id, built, log=True)
+        if not isinstance(outcome, Ok):
+            self._reject(connection, message.client_id, outcome.reason)
+            return
+        connection.send(AckMessage(client_id=message.client_id))
 
     def _on_menu_request(
         self, connection: Connection, message: MenuRequestMessage
@@ -2078,6 +2173,19 @@ class RoomRuntime:
                                 if ours is not None and theirs is not None
                                 else None
                             ),
+                            hypothetical=second == HYPOTHETICAL_TABLE,
+                            outcomes=(
+                                [
+                                    ClassOutcomeView(their_choice=choice, text=text)
+                                    for choice in pairing_choices(game, group.options)
+                                    if (text := pair_outcome(game, ours, choice))
+                                    is not None
+                                ]
+                                if second == HYPOTHETICAL_TABLE
+                                and ours is not None
+                                and theirs is None
+                                else []
+                            ),
                         )
                     )
             elif game is not None and seat_id is not None:
@@ -2168,7 +2276,8 @@ class RoomRuntime:
             ),
             components=components,
             macros=self._macros_for(connection),
-            activity_choices=activity_choices(),
+            activity_choices=activity_choices(self.game),
+            pieces_menu=pieces_menu(self.game),
             classes=self._class_views(connection.is_facilitator, connection.seat_id),
         )
         connection.last_seq_sent = self.seq
@@ -2462,6 +2571,7 @@ __all__ = [
     "IntentMessage",
     "GeometryView",
     "LiveHub",
+    "ADD_PIECE_INTENT",
     "MACRO_INTENT",
     "MacroView",
     "MenuItemView",

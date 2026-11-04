@@ -26,7 +26,7 @@ DEFAULT_SIZES: dict[str, tuple[float, float]] = {
     "card": (208, 288),
     "die": (72, 72),
     "cube": (56, 56),
-    "meeple": (64, 88),
+    "meeple": (64, 60),
     "token": (64, 64),
     "note": (160, 128),
     "marker": (36, 36),

@@ -63,10 +63,11 @@
   --surface-sunken: #f2f4f7;
   --surface-border: #d3d9e1;
   --surface-border-strong: #8b95a3;
-  --table-felt: #2d5072;
-  --table-felt-edge: #172d4a;
-  --table-zone-outline: #c3d0de;
-  --table-zone-private: #223f61;
+  /* The table is a light ground: the author's redesign of 2026-11-03. */
+  --table-felt: #e9edf2;
+  --table-felt-edge: #d3d9e1;
+  --table-zone-outline: #727c8c;
+  --table-zone-private: #ffffff;
   --table-drop-target: #cd9a57;
   --card-back: #a41034;
   --card-back-edge: #f8e6ea;
@@ -77,7 +78,7 @@
   --text-secondary: #3c4b5f;
   --text-muted: #5e6b7c;
   --text-inverse: #ffffff;
-  --text-on-felt: #eef2f6;
+  --text-on-felt: #3c4b5f;
   --accent-rubric: #a41034;
   --accent-rubric-soft: #f8e6ea;
   --semantic-assent: #236b5a;
@@ -142,10 +143,10 @@
     --surface-sunken: #0a121e;
     --surface-border: #2f3e55;
     --surface-border-strong: #6b7b91;
-    --table-felt: #1e3754;
-    --table-felt-edge: #0f1e33;
-    --table-zone-outline: #6f8aa8;
-    --table-zone-private: #162b45;
+    --table-felt: #132033;
+    --table-felt-edge: #0a121e;
+    --table-zone-outline: #6b7b91;
+    --table-zone-private: #18243a;
     --table-drop-target: #b98a4c;
     --card-back: #a41034;
     --card-back-edge: #ec8aa0;
@@ -156,7 +157,7 @@
     --text-secondary: #c2cad5;
     --text-muted: #919dad;
     --text-inverse: #0f1928;
-    --text-on-felt: #f2f5f8;
+    --text-on-felt: #c2cad5;
     --accent-rubric: #ec8aa0;
     --accent-rubric-soft: #3f1b26;
     --semantic-assent: #72b9a5;
@@ -182,10 +183,10 @@
   --surface-sunken: #0a121e;
   --surface-border: #2f3e55;
   --surface-border-strong: #6b7b91;
-  --table-felt: #1e3754;
-  --table-felt-edge: #0f1e33;
-  --table-zone-outline: #6f8aa8;
-  --table-zone-private: #162b45;
+  --table-felt: #132033;
+  --table-felt-edge: #0a121e;
+  --table-zone-outline: #6b7b91;
+  --table-zone-private: #18243a;
   --table-drop-target: #b98a4c;
   --card-back: #a41034;
   --card-back-edge: #ec8aa0;
@@ -196,7 +197,7 @@
   --text-secondary: #c2cad5;
   --text-muted: #919dad;
   --text-inverse: #0f1928;
-  --text-on-felt: #f2f5f8;
+  --text-on-felt: #c2cad5;
   --accent-rubric: #ec8aa0;
   --accent-rubric-soft: #3f1b26;
   --semantic-assent: #72b9a5;

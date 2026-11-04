@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { newRoom } from "./rooms";
 
 /** Three people trade value cards: an offer, its answer, and the checklist. */
 
@@ -14,13 +15,12 @@ async function person(browser: Browser, path: string, name: string): Promise<Pag
 test("an offer is made from the selected cards, answered, and ticks the checklist", async ({
   browser,
 }) => {
-  const ines = await person(browser, "/start", "Ines");
+  const ines = await person(browser, await newRoom(browser, "Value Cards"), "Ines");
   const code = ines.url().split("/t/")[1]!;
   const tomas = await person(browser, `/join?code=${code}`, "Tomas");
   const wren = await person(browser, `/join?code=${code}`, "Wren");
 
-  await ines.getByLabel("Activity to start").selectOption("value-cards-trading");
-  await ines.getByRole("button", { name: "Start this activity" }).click();
+  await ines.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await tomas.getByRole("button", { name: "Join" }).click();
   await wren.getByRole("button", { name: "Join" }).click();
   await ines.getByRole("button", { name: "Deal 12 each" }).click();

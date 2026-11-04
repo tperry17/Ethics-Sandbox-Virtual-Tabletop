@@ -14,11 +14,13 @@ corrected.
 
 1. On the Mac, run `scripts/deploy.sh`. Note the address it prints.
 2. Open `/health` on one tablet to prove it can reach the Mac.
-3. Open the address, press "Start a table", and join with your name. Press
-   "Become facilitator" if you want the admin seat; nothing requires it.
+3. Open the address, go to the exercise's page and press "Open a room" (or
+   press "Open a room" on the landing page and choose the exercise), then
+   join with your name. Press "Become facilitator" if you want the admin
+   seat; nothing requires it.
 4. Copy the invite link and put it where people will see it (the call's chat).
-5. For a class of several tables, press "Start a class" instead of "Start
-   the Value Cards Trading", and choose the number of tables.
+5. For a class of several tables, press "Start a class" instead of starting
+   the activity, and choose the number of tables.
 
 ## The first two minutes
 
@@ -26,8 +28,8 @@ People arrive over a stretch of minutes and some will fight with the link.
 
 - Keep the call open and talk. Say what the exercise is for, in a sentence,
   and that nobody wins it.
-- Everyone who opens the link lands in the open sandbox. Let them move
-  cards and dice around; this is how people learn to drag, turn a card
+- Everyone who opens the link lands in the exercise's room, its sandbox.
+  Let them move cards around and add dice or markers from the Pieces menu; this is how people learn to drag, turn a card
   over, and zoom. It costs nothing and it is what the sandbox is for.
 - Ask each person who has joined to say their name aloud, so you can match
   names on the table to faces on the call.
@@ -39,8 +41,8 @@ People arrive over a stretch of minutes and some will fight with the link.
 Exactly three people per table; any number of tables. About 30 minutes,
 plus the debrief.
 
-1. Press "Start the Value Cards Trading" (or "Start a class"), and sign people
-   up. Deal. Everyone reads their opening hand.
+1. In a Value Cards room, start Value Cards Trading (or "Start a class"),
+   and sign people up. Deal. Everyone reads their opening hand.
 2. Trading: people swap cards across the table and say what they are
    seeking and what they can release. Ask them to narrate the trades; the
    reasons are the exercise.
@@ -52,14 +54,17 @@ plus the debrief.
 Nine to twenty people per city; several cities can run at once. About 45
 minutes plus the debrief.
 
-1. Use "Start a class", choose the number of cities, and sort the room into
-   them (random first, then adjust by hand).
+1. In a Leadership and Knowledge in Popular Rule room, start Scenario 1 for
+   one city, or use "Start a class", choose the number of cities, and sort
+   the room into them (random first, then adjust by hand). Scenario 2 always
+   runs as a class: a table per city, each on its own breakout call.
 2. Each person takes a role and reads what only they know. Do not tell
    anyone what to share.
 3. Run the timer from the class controls; push a prompt to every table at
    once when you want to change the question.
-4. For a scenario that pairs two cities, each table proposes its choice and
-   you confirm it.
+4. In Scenario 2, pair two cities: each table proposes its choice and you
+   confirm it. With a single city, the other city is hypothetical: choose
+   its decision yourself, or leave it and see all three possible results.
 5. Debrief: reconstruct the decision together. Whose knowledge travelled,
    whose did not, and why.
 

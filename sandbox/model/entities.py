@@ -97,6 +97,8 @@ def rolled_value(piece: Piece) -> str | None:
 
 
 MAX_TEXT = 280
+# A token is small: one word or number, short enough to read on it.
+MAX_TOKEN_TEXT = 12
 
 
 def written_text(piece: Piece) -> str | None:

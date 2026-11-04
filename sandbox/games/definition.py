@@ -34,6 +34,9 @@ STANDARD_MACROS: tuple[str, ...] = (
     "clear_ink",
 )
 
+# A room type needs fewer: its table may have no deck to deal from.
+ROOM_MACROS: tuple[str, ...] = ("setup", "reset", "clear_ink")
+
 ANNOUNCE_FIELDS = frozenset({"name", "label"})
 
 
@@ -387,6 +390,39 @@ class Buttons(TextSource):
     """
 
 
+class RoomActivity(_Strict):
+    """One activity a room offers: a game, perhaps with some options fixed.
+
+    ``id`` is what the room's toolbar sends to start it. ``options`` fixes
+    choices of the game's own options (a scenario, say); the rest are still
+    chosen when it starts. ``class_only`` offers it only as a class.
+    ``debrief`` lists it under the room's own "Debrief" heading, below the
+    activities.
+    """
+
+    id: Identifier
+    game: Identifier
+    title: str | None = None
+    options: dict[str, str] = Field(default_factory=dict)
+    class_only: bool = False
+    debrief: bool = False
+
+
+class RoomSpec(_Strict):
+    """What makes a definition a room type: one exercise's sandbox.
+
+    ``exercise`` is the catalog slug whose page opens this room;
+    ``activities`` are all the room offers, and ``pieces`` are the
+    components its "Pieces" menu adds to the table, into ``pieces_zone``.
+    """
+
+    exercise: Identifier
+    label: str = Field(min_length=1)
+    activities: tuple[RoomActivity, ...] = Field(min_length=1)
+    pieces: tuple[Identifier, ...] = ()
+    pieces_zone: Identifier = "table"
+
+
 class GameDefinition(_Strict):
     """A whole ``game.yaml``."""
 
@@ -400,6 +436,7 @@ class GameDefinition(_Strict):
     buttons: Buttons
     prompts: Prompts | None = None
     pairing: Pairing | None = None
+    room: RoomSpec | None = None
 
     @model_validator(mode="after")
     def _unique_and_complete(self) -> GameDefinition:
@@ -426,13 +463,27 @@ class GameDefinition(_Strict):
                         f"zone {zone.id!r} is only for {option_id}={choice_id}, "
                         "which is not an option the definition offers"
                     )
+        if self.room is not None:
+            repeated = duplicates([activity.id for activity in self.room.activities])
+            if repeated:
+                raise ValueError(f"room activity ids used more than once: {repeated}")
+            unknown = sorted(
+                set(self.room.pieces) - {piece.id for piece in self.components.pieces}
+            )
+            if unknown:
+                raise ValueError(f"the room's pieces are not pieces: {unknown}")
+            if self.room.pieces and self.zone_spec(self.room.pieces_zone) is None:
+                raise ValueError(
+                    f"the room's pieces go into {self.room.pieces_zone!r}, "
+                    "which is not one of its zones"
+                )
         missing = [
             macro_id
-            for macro_id in STANDARD_MACROS
+            for macro_id in (ROOM_MACROS if self.room else STANDARD_MACROS)
             if macro_id not in {macro.id for macro in self.macros}
         ]
         if missing:
-            raise ValueError(f"every exercise needs these macros as well: {missing}")
+            raise ValueError(f"this definition needs these macros as well: {missing}")
         return self
 
     def default_options(self) -> dict[str, str]:
@@ -464,8 +515,11 @@ __all__ = [
     "PieceSpec",
     "PlayerRange",
     "Prompts",
+    "RoomActivity",
+    "RoomSpec",
     "ResetTableStep",
     "ResetZoneStep",
+    "ROOM_MACROS",
     "STANDARD_MACROS",
     "Seats",
     "SetupStep",

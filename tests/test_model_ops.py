@@ -963,3 +963,14 @@ def test_set_text_writes_on_a_note_and_is_projected_with_the_face() -> None:
     assert isinstance(run_op(table, SEAT_A, SetText("card-0", "")), Ok)
     assert "text" not in piece.props
     assert zone is not None
+
+
+def test_a_token_holds_one_word_or_number() -> None:
+    from sandbox.model.ops import SetText
+
+    table = build_sample_table(deck_size=1)
+    table.pieces["card-0"].kind = PieceKind.TOKEN
+    assert SetText("card-0", "Yes").validate(table, SEAT_A) is None
+    assert SetText("card-0", " 42 ").validate(table, SEAT_A) is None
+    assert SetText("card-0", "two words").validate(table, SEAT_A) is not None
+    assert SetText("card-0", "x" * 13).validate(table, SEAT_A) is not None

@@ -6,17 +6,28 @@ The Ethics Sandbox is a virtual tabletop for structured exercises that teach eth
 
 Exercises are designed by the R&D Studio at the Edmond & Lily Safra Center for Ethics, Harvard University. This attribution belongs on the public landing page's lede (`content/site/site_copy.csv`, key `lede`) and should not be dropped by later copy changes.
 
-The Center's seal is used as the site icon (`static/icons/`) and, in white, on every card back. The brand style guide requires approval from the Center's communications and events team for any use of the logo; the author confirmed on 2026-10-15 that this use is approved, and on 2026-11-02 that the seal may appear on the social-preview images in `static/og/` (made by `scripts/make-og-images.mjs`). Any new use of the seal or logo needs its own approval. Colours follow the Center's brand style guide, with a pure-white page instead of its off-white.
+The Center's seal is used as the site icon (`static/icons/`) and, in white, on every card back. The brand style guide requires approval from the Center's communications and events team for any use of the logo; the author confirmed on 2026-10-15 that this use is approved, and on 2026-11-02 that the seal may appear on the social-preview images in `static/og/` (made by `scripts/make-og-images.mjs`), and on 2026-11-03 that it may appear on the card backs in design drafts of the site and table. Any new use of the seal or logo needs its own approval. Colours follow the Center's brand style guide, with a pure-white page instead of its off-white.
 
-The first two exercises are “Value Cards Trading” and “Democracy Simulation.” The platform must make a third exercise cheap to add.
+The first two exercises are “Value Cards Trading” and “Leadership and Knowledge in Popular Rule” (called the Democracy Simulation until 2026-11-03; its slug is still `democracy-simulation`). The platform must make a third exercise cheap to add.
 
 Facilitators—teachers, community organisers, and workshop leads—run groups on laptops and tablets. There is no sign-in: a room is a URL with a code, and a participant enters a display name to join the table.
 
 ## Rooms and activities
 
-A room is an open sandbox, not one exercise. Up to 30 people join it and use the table however they please: the free table, the value cards, dice, tokens and other loose pieces. No activity is built into a room. An activity is a guided exercise started inside a room: someone presses "Start the <activity>", a sign-up opens for the activity's players (the facilitator may choose them instead), and the activity lays out its own zones for those seats and guides them through its steps. Everyone else keeps using the sandbox, and several activities, or several groups doing the same one, can run in a room at once. An activity's `players: {min, max}` is how many people it takes (three for Value Cards Trading), never the room's capacity.
+A room belongs to one exercise, and it is that exercise's sandbox. Up to 30 people join it and use its table however they please: the free table and the exercise's own loose pieces. A Value Cards room holds the value cards; a Leadership and Knowledge in Popular Rule room holds the two cities' seals and a general account of each city (its own CSV under `content/exercises/democracy-simulation/`), with nothing about either scenario. Every room, whatever its exercise, has a "Pieces" menu that can be opened to add dice, cubes, meeples and tokens to the table; they are not laid out on it. Cubes, meeples and tokens are one set of player pieces, chosen in a seat colour, and a token can have one word or number written on it.
+
+A room is opened only from its exercise's page, with "Open a room", which opens that exercise's room directly; whoever opened it is then asked for a display name, as anyone joining is. Nothing is started by typing an address: there is no `/start` page, and no room, activity or class is opened by a URL alone. People reach a room from its invite link or by entering its code with "Join a room".
+
+Each room offers its own exercise's activities, and its own debrief:
+
+- Value Cards room: Value Cards Trading, and the Value Cards debrief.
+- Leadership and Knowledge in Popular Rule room: Scenario 1 (Construction project), Scenario 2 (Going to war?), and its debrief.
+
+An activity is a guided exercise started inside a room: someone presses "Start <activity>", a sign-up opens for the activity's players (the facilitator may choose them instead), and the activity lays out its own zones for those seats and guides them through its steps. Everyone else keeps using the sandbox, and several activities, or several groups doing the same one, can run in a room at once. An activity's `players: {min, max}` is how many people it takes (three for Value Cards Trading), never the room's capacity.
 
 A class is an activity run as several tables at once. Someone presses "Start a class" instead of "Start the <activity>", chooses how many tables, and becomes the facilitator of all of them, as a non-playing admin: they sit at none. The facilitator can sort the room's people into the tables at random (shown first, adjustable by hand, then confirmed), begin the tables, run one timer and push one prompt to every table at once, and, for a game that declares `pairing`, pair two tables so their decisions are read together. The facilitator can move anyone to another table at any time, begun or not (at a begun table their cards go back face down into the decks they came from, which are shuffled, their other zones go, and they get fresh ones at the new table), and a person who arrives after the sort takes the table with the most room. Players at a paired table propose their table's choice and the facilitator confirms it; they see only their own table's. The class is a `ClassGroup` in `sandbox/model/classes.py`; its tables are ordinary activities.
+
+Scenario 2 of Leadership and Knowledge in Popular Rule always runs as a class, in one room, with one table per city. It is best with two paired cities; it can be run with one, and then the other city is hypothetical: the facilitator may choose its decision, and if nobody does, the facilitator sees all three possible results. On the call the group splits into breakout groups, one per table, so each table is self-contained: its own notes, its own votes, its own list of participants.
 
 The facilitator is optional, an admin seat. Nobody is the facilitator by default, the room's creator included. Any participant may take the seat with a "Become facilitator" button, or choose it when joining; only one person holds it, and nothing in any activity requires it.
 
@@ -53,7 +64,7 @@ Do not substitute the stack.
 - `client/` — TypeScript table client built by Vite
 - `static/` — compiled client output, CSS, and fonts
 - `tests/` — automated tests
-- `docs/BUILD-PLAN.md` — the build plan, and where the build stands
+- `docs/BUILD-PLAN.md` — the build plan the project was built from; complete, kept as a record
 - `.github/workflows/ci.yml` — CI: Ruff (lint and format), mypy, pytest and the Playwright suite on every pull request and every push to `main`
 
 ## Identity without sign-in
@@ -95,8 +106,10 @@ person did: no rule, no deck, and no face it was not given.
   the timer and prompt controls, and pairing. The timer and a pushed prompt
   are drawn by `table.ts` on every screen; reaching zero chimes once and
   changes nothing
-- `activities.ts` — the toolbar's activities: what can be started, who has
-  signed up, and the buttons that act on one
+- `activities.ts` — the side panel's activities: a card for each the room
+  can start, who has signed up, and the buttons that act on one
+- `pieces.ts` — the room's Pieces menu: the die and the player pieces in a
+  chosen colour, added where the person is looking
 - `announcer.ts` — the live region that says what happened, in words
 
 Pieces are DOM elements positioned with `translate3d` inside a single
@@ -106,8 +119,10 @@ records what changed, and one animation frame later only those nodes are
 rewritten. Z-order is the model's — the zone's place in the server's list,
 then the piece's `z` within that zone — and never DOM insertion order.
 Another person's piece interpolates over 120 ms; the piece under your own
-hand never does. Your own private zone is drawn in a hand tray outside the
-world transform, so it stays put when the table moves.
+hand never does. Your own private zone is drawn in a hand tray docked below
+the table, outside the world transform, so it stays put when the table moves;
+it is there whenever you have a private hand, empty or not. A card's picture
+takes the same share of every card, so a deck shows its pictures at one size.
 
 `/table-preview` replays the recorded session with no room behind it, and
 `?pieces=300&measure=1` is the frame-rate harness.
@@ -197,7 +212,8 @@ server do.
   row per macro: `id`, `label`, `hint`, `confirm` (asked first; give one to
   anything destructive) and `announce` (`{name}` and `{label}`).
 - `prompts` — `source:` a CSV with `id` and `text` columns.
-- `pairing` — optional: `source:` a CSV of `our_choice`, `their_choice` and `text`, and `when:` the options it applies to (Democracy Simulation scenario 2). A class may pair two of its tables; someone at a table proposes that table's choice, the facilitator confirms it (or sets it), and once both are confirmed the facilitator sees the matching row.
+- `pairing` — optional: `source:` a CSV of `our_choice`, `their_choice` and `text`, and `when:` the options it applies to (Leadership and Knowledge in Popular Rule, scenario 2). A class may pair two of its tables, or one table with a hypothetical partner (`HYPOTHETICAL_TABLE`); someone at a table proposes that table's choice, the facilitator confirms it (or sets it, and alone sets a hypothetical partner's), and once both are confirmed the facilitator sees the matching row. While a hypothetical partner is undecided, the facilitator sees the row for each choice it could make.
+- `room` — only on a room type (`sandbox/games/value_cards_room/`, `democracy_room/`): `exercise` (the catalog slug whose page opens it), `label` (its button), `activities` (each an `id`, a `game`, optional `title`, `options` it fixes, `class_only`, and `debrief`, which lists it under the side panel's own "Debrief" heading, below the activities), `pieces` (the components of its Pieces menu) and `pieces_zone`. A room type needs only the `setup`, `reset` and `clear_ink` macros; `sandbox/games/room_types.py` reads it, and validation checks every catalog exercise has one room.
 
 Steps are `{op: ..., ...}`: `setup` (run the setup steps here),
 `spawn_deck`, `spawn`, `shuffle`, `deal` and `draw` (`from`, `to`,
@@ -258,8 +274,8 @@ def call_pairs(table: Table, context: GameContext) -> list[Operation]:
 it uses, and plays every macro at both ends of the player range; pytest
 runs the same check. `/games/{slug}/preview` draws a game's table after
 setup from the spectator projection, and an exercise page shows it once
-the exercise has a definition. Any game, listed or not, can be started as an
-activity in a room; `/start` always opens the sandbox. Definitions and
+the exercise has a definition. A room offers only its own exercise's
+activities and debrief (see "Rooms and activities"). Definitions and
 content hot-reload under `uv run dev`.
 
 ### Who may move what
@@ -287,7 +303,7 @@ after committing, and a live room's snapshots never overwrite it.
 - Every new dependency must be justified in one line in this file.
 - Commits must stay scoped to one prompt.
 - Name each branch for the work it contains (for example `claude/mac-lan-deploy-script`), not with a generated name; this is explicit permission to push to that branch instead of an assigned one.
-- Push every commit as soon as it is made, and keep every pushed branch in an open pull request against `main`. Open it with the first push, following `.github/pull_request_template.md` (summary, questions for the author, follow-up needed to activate the work, checks); when later commits change the picture, update its description. Keep the template consistent with the one in HolyTispoon/HEARsay-Mysteries-Commons-Comma: the shared sections are word for word the same, and this repo adds only the build-plan pointer and the Checks list.
+- Push every commit as soon as it is made, and keep every pushed branch in an open pull request against `main`. Open it with the first push, following `.github/pull_request_template.md` (summary, questions for the author, follow-up needed to activate the work, checks); when later commits change the picture, update its description. Keep the template consistent with the one in HolyTispoon/HEARsay-Mysteries-Commons-Comma: the shared sections are word for word the same, and this repo adds only the Checks list.
 - Watch every pull request you open or push to, from the first push until it
   is merged or closed: subscribe to its activity (in a Claude Code session,
   `subscribe_pr_activity`) and act on what arrives - fix failing checks and
@@ -298,17 +314,13 @@ after committing, and a live room's snapshots never overwrite it.
   (see `.github/pull_request_template.md`): every open question, every
   assumption made where the request, the plan or the content was unclear,
   and anything the author should double-check, numbered. If there is
-  genuinely nothing, it says "None" and why.
-- Claim a build-plan step before starting it, with
-  `scripts/claim-step.sh <number>` (see "Claiming a step" in
-  `docs/BUILD-PLAN.md`), and open a draft pull request for its branch at
-  once. A step whose branch already exists on GitHub, or that has an open
-  pull request, is taken: do not work on it, even if the status table on
-  `main` says otherwise. Work on a claimed step goes on the branch named for
-  it in the status table, which takes the place of a descriptive name.
-- `docs/BUILD-PLAN.md` is the build plan and its status. A pull request
-  that completes or advances a step updates the status in the same pull
-  request. Where the plan and this file disagree, this file wins.
+  genuinely nothing, it says "None" and why. Every open question on any
+  pull request is also put to the author directly, numbered, in the
+  conversation they are working in (in a Claude Code session, the reply to
+  them), not only in the pull request.
+- The build plan (`docs/BUILD-PLAN.md`) is complete (the author,
+  2026-11-03). New work is asked for directly and tracked in pull requests,
+  not as plan steps; this file is the only statement of the rules.
 
 ## Dependency justifications
 
@@ -327,9 +339,9 @@ after committing, and a live room's snapshots never overwrite it.
 - Playwright provides the required browser-level test runner.
 - Hypothesis provides property-based tests for `sandbox/model/`, required to check the security and integrity invariants of `project()` and the operations against far more tables and sequences than hand-written examples could cover.
 - Alembic manages the SQLAlchemy schema as versioned migrations, so production (Postgres) and local development (SQLite) are always brought to the same shape deliberately, never by `create_all` drift.
-- python-multipart is required by Starlette to parse the HTML form submissions on `/start` and `/join`.
+- python-multipart is required by Starlette to parse the HTML form submissions, such as `/join` and an exercise page's "Open a room".
 - pytest-asyncio runs the realtime tests, which must await the room task itself rather than a synchronous stand-in for it.
-- PyYAML reads each exercise's `game.yaml`, the definition format the build plan specifies.
+- PyYAML reads each exercise's `game.yaml`, the definition format the games use.
 - types-PyYAML gives mypy strict the types for PyYAML.
 - anyio (already installed by Starlette, now imported directly) lets the `/join` route, which runs on a worker thread, tell a live room about a new seat before it answers.
 - @axe-core/playwright runs the axe accessibility engine from the Playwright suite, so every page and the table are checked for roles, labels and contrast on each pull request.

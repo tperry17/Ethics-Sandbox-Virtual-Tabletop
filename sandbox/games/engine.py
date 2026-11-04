@@ -50,6 +50,7 @@ from sandbox.model import (
     Deal,
     Draw,
     Flip,
+    Move,
     MoveToZone,
     Operation,
     Rect,
@@ -771,7 +772,45 @@ def announcement(game: Game, macro_id: str, name: str) -> str:
     return button.announce.format(name=name, label=button.label)
 
 
+def build_add_piece(
+    game: Game, table: Table, component_id: str, x: float, y: float
+) -> Transaction | Reject:
+    """One piece from the room's Pieces menu, put down at ``x``, ``y``.
+
+    Only a room type has a Pieces menu, and only what it lists can be added.
+    The piece goes into the room's ``pieces_zone``, kept inside its edges.
+    The new piece's id is random, like every spawned piece's.
+    """
+    room = game.definition.room
+    if room is None or component_id not in room.pieces:
+        return Reject("That is not one of this room's pieces.")
+    spec = next(p for p in game.definition.components.pieces if p.id == component_id)
+    zone = table.zones.get(room.pieces_zone)
+    if zone is None or not isinstance(zone.geometry, Rect):
+        return Reject("This room has nowhere to put new pieces.")
+    rect = zone.geometry
+    piece_id = new_op_id()
+    return Transaction(
+        steps=(
+            Spawn(
+                component_id=spec.id,
+                kind=spec.kind,
+                zone_id=zone.id,
+                piece_ids=(piece_id,),
+            ),
+            Move(
+                piece_id=piece_id,
+                x=min(max(x, rect.x), rect.x + rect.width),
+                y=min(max(y, rect.y), rect.y + rect.height),
+            ),
+        ),
+        name=f"add:{spec.id}",
+        label=f"Add {(spec.title or spec.kind.value).lower()}",
+    )
+
+
 __all__ = [
+    "build_add_piece",
     "may_use_facilitator_button",
     "Scope",
     "SetupFailedError",

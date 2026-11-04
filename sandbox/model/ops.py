@@ -16,6 +16,7 @@ from typing import Protocol
 
 from sandbox.model.entities import (
     MAX_TEXT,
+    MAX_TOKEN_TEXT,
     SYSTEM_SEAT,
     Geometry,
     Piece,
@@ -681,6 +682,13 @@ class SetText:
             return "You can only write on a note, a token or a marker."
         if len(self.text) > MAX_TEXT:
             return f"That is too long: at most {MAX_TEXT} characters."
+        if piece.kind is PieceKind.TOKEN and (
+            len(self.text.split()) > 1 or len(self.text.strip()) > MAX_TOKEN_TEXT
+        ):
+            return (
+                f"A token holds one word or number, at most {MAX_TOKEN_TEXT} "
+                "characters."
+            )
         return _reason_not_movable(table, piece, actor_seat)
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:

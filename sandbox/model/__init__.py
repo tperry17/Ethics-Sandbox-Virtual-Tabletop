@@ -16,6 +16,7 @@ from sandbox.model.activities import (
     SetActivityPlayers,
 )
 from sandbox.model.classes import (
+    HYPOTHETICAL_TABLE,
     AssignClassTables,
     ChangeActivitySeats,
     ClearClassTimer,
@@ -121,6 +122,7 @@ __all__ = [
     "ClassGroup",
     "ClearClassTimer",
     "EndClass",
+    "HYPOTHETICAL_TABLE",
     "PairTables",
     "PushClassPrompt",
     "SetClassDecision",

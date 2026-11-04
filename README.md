@@ -65,7 +65,3 @@ server. Use the same `DATABASE_URL` as the server.
 
 For how to run each exercise, see `docs/FACILITATING.md`; for what does not
 work yet, `docs/ROUGH-EDGES.md`.
-
-## Claiming a build-plan step
-
-`scripts/claim-step.sh <number>` claims a step of `docs/BUILD-PLAN.md` so no one else starts it. It refuses a step that is done, waiting on the author, or already claimed, and otherwise pushes the step's branch with the step marked "Claimed", then marks it "Claimed" on `main` as well, so the status table there shows it. Only the first push to that branch succeeds, so two people claiming at once cannot both win. Open a draft pull request for the branch straight afterwards.

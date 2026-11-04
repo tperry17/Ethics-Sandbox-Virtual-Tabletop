@@ -1,15 +1,17 @@
 # The Ethics Sandbox — Build Plan
 
-This file is the build plan the project is being built from: a series of
+**The plan is complete** (the author, 2026-11-03). Every step is done, and
+it is no longer updated: new work is asked for directly and tracked in pull
+requests. It is kept as a record of how the project was built. CLAUDE.md
+states the rules.
+
+This file is the build plan the project was built from: a series of
 prompts, run in order, one branch and one pull request each. The top of the
-file says where the build stands; the prompts themselves follow, as written.
+file says how the build ended; the prompts themselves follow, as written.
 
 CLAUDE.md is the project constitution and wins wherever it and this plan
 disagree. Several things have changed since the plan was written (listed
 below); where a prompt still says otherwise, follow CLAUDE.md.
-
-Every pull request that completes or advances a step updates the status
-table below in the same pull request.
 
 ## Where we are
 
@@ -25,8 +27,9 @@ and comes first: Prompts 10, 11 and 12 start activities inside the rooms it
 builds. Prompt 10 has a paused draft, pull request #16; see its section. Prompt 14 does not depend on the games and can run alongside the
 others.
 
-Before starting a step, claim it (see "Claiming a step"). A claimed step
-shows "Claimed" in this table on `main`.
+All seventeen prompts are done. After the last one, the author replaced the
+open room Prompt 17 built with one room per exercise (2026-11-03); that work
+is outside the plan, and CLAUDE.md's "Rooms and activities" states it.
 
 | # | Step | Status | Branch | Commit or PR |
 |---|------|--------|--------|--------------|
@@ -47,53 +50,6 @@ shows "Claimed" in this table on `main`.
 | 15 | Tests | Done | | PR #25 |
 | 17 | Open rooms and activities | Done | | PR #18 |
 | 16 | Launch pass | Done | | PR #26 |
-
-### Claiming a step
-
-A step is claimed by the existence of its branch on GitHub. Each unfinished
-step has one fixed branch name in the table above, so two people (or two
-Claude sessions) starting the same step reach for the same branch, and
-GitHub accepts only the first push to it.
-
-To claim a step, run `scripts/claim-step.sh <number>` from a clean checkout.
-It:
-
-1. refuses if the step is Done, waiting on the author, or already Claimed
-   on `main`;
-2. refuses if the step's branch already exists on GitHub - someone has it;
-3. creates the branch from `origin/main`, marks the step "Claimed" in this
-   table, commits, and pushes without force. If someone else pushed the
-   branch first, the push is rejected and the claim fails;
-4. marks the step "Claimed" in this table on `main` too, with a one-line
-   commit pushed straight to `main`, so anyone reading the table there sees
-   the claim. If that push keeps failing, the claim still holds and the
-   script says to mark the row by hand.
-
-Then open a draft pull request for the branch at once, titled
-`Prompt <number>: <step>`, so the claim is visible to anyone looking at
-the pull requests. Do the work on that branch only.
-
-If the claim fails, the step is taken: do not work on it, and do not push
-to its branch. To give a claim up, close its pull request and delete its
-branch; the step is then free again.
-
-Without the script, the check is the same by hand: look at the step's row
-on `main`, for the step's branch (`git ls-remote --heads origin <branch>`)
-and for an open pull request naming the step. If any of them shows a claim,
-the step is taken.
-
-Work outside the numbered prompts, already merged:
-
-- `d491312` — editorial text moved out of Python into CSV files under
-  `content/`, edited as a spreadsheet.
-- `108a5cb` — landing page shows exercises before principles; new lede with
-  the R&D Studio attribution.
-- `a32c5d3` — an `image` column in `cards.csv` and `roles.csv`, so a card
-  or role can be an uploaded image.
-- `880b3d1` (PR #2) — `scripts/deploy.sh` serves the tabletop from a Mac on
-  the local network.
-- `c88eb82` (PR #3) — descriptive branch names and a pull request for every
-  pushed branch.
 
 ## Gaps in completed steps
 
@@ -150,10 +106,15 @@ Where these conflict with a prompt below, these win.
   an optional admin seat that nobody holds by default. Prompt 17 builds
   this; CLAUDE.md's "Rooms and activities" is the rule.
 - **"Start a table" is "Open a room".** Prompt 3 asks for a "Start a
-  table" action on the landing page and on each exercise page. Because a
-  room is not created for an exercise, both pages offer "Open a room"
-  (to `/start`), and the exercise page says to choose the exercise from the
-  room's toolbar. The wording is in `content/site/site_copy.csv`.
+  table" action on the landing page and on each exercise page. Both pages
+  offer "Open a room"; the wording is in `content/site/site_copy.csv`.
+  Until rooms belong to exercises it goes to `/start` and opens the open room.
+- **Room types** (the author, 2026-11-03; superseding the 2026-10-31 note
+  above that a room is an open sandbox for every exercise). A room belongs
+  to one exercise and is its sandbox, opened only from that exercise's
+  page. `/start` goes. Each room offers its own exercise's activities and
+  debrief. Dice, cubes, meeples and tokens are in a "Pieces" menu in every
+  room instead of on the table. This is built outside the plan.
 - **Call.** Section 0 says Zoom; CLAUDE.md says a separate video or phone
   call. Nothing depends on which.
 - **No principles of engagement.** The six principles that were on the

@@ -1,6 +1,6 @@
 ## Summary
 
-<!-- What changed and why, in a few sentences or bullets. Name the files that matter. Say how it was checked and what was not checked. Name the build-plan step (docs/BUILD-PLAN.md) if this PR completes or advances one. -->
+<!-- What changed and why, in a few sentences or bullets. Name the files that matter. Say how it was checked and what was not checked. -->
 
 ## Questions for the author
 
@@ -19,4 +19,3 @@
 - [ ] `uv run mypy sandbox tests`
 - [ ] `uv run pytest`
 - [ ] `npm run test:e2e` (if the table client or a page changed)
-- [ ] `docs/BUILD-PLAN.md` status updated (if a plan step moved)

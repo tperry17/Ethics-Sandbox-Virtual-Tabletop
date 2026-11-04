@@ -19,6 +19,7 @@ from _model_support import (
     SEAT_A,
     SEAT_B,
 )
+from _room_support import start_room
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 from starlette.websockets import WebSocketDisconnect
@@ -723,8 +724,8 @@ def socket_client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
 def test_a_browser_that_has_not_joined_is_refused_the_socket(
     socket_client: TestClient,
 ) -> None:
-    started = socket_client.post(
-        "/start",
+    started = start_room(
+        socket_client,
         data={
             "display_name": "Ada",
             "as_facilitator": "true",
@@ -742,8 +743,8 @@ def test_a_browser_that_has_not_joined_is_refused_the_socket(
 def test_the_facilitator_socket_answers_hello_with_a_snapshot(
     socket_client: TestClient,
 ) -> None:
-    started = socket_client.post(
-        "/start",
+    started = start_room(
+        socket_client,
         data={
             "display_name": "Ada",
             "as_facilitator": "true",

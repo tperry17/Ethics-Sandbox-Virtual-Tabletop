@@ -160,6 +160,10 @@ export interface ClassPairView {
   second_proposed?: string | null;
   /** What follows from the two decisions, once both are in. */
   outcome: string | null;
+  /** The partner is hypothetical: only the facilitator decides for it. */
+  hypothetical?: boolean;
+  /** With a hypothetical partner still undecided: what follows from each choice. */
+  outcomes?: { their_choice: string; text: string }[];
 }
 
 /** A class: one activity at several tables, run by the facilitator. */
@@ -202,6 +206,15 @@ export interface OfferView {
 }
 
 /** An activity this room can start. */
+/** One piece the room's Pieces menu adds. */
+export interface PieceMenuView {
+  component_id: string;
+  kind: PieceKind;
+  title: string;
+  /** A seat colour, for a player piece; none for a die. */
+  tint_index?: number | null;
+}
+
 export interface ActivityChoiceView {
   slug: string;
   title: string;
@@ -210,6 +223,10 @@ export interface ActivityChoiceView {
   duration_minutes: number;
   /** Choices the person makes when starting it; the first is the default. */
   options?: ActivityOptionView[];
+  /** Offered only as a class: the room's toolbar does not start it alone. */
+  class_only?: boolean;
+  /** Listed under the room's "Debrief" heading, below the activities. */
+  debrief?: boolean;
 }
 
 export interface ActivityOptionView {
@@ -261,6 +278,7 @@ export interface SnapshotMessage {
   components: ComponentView[];
   macros: MacroView[];
   activity_choices?: ActivityChoiceView[];
+  pieces_menu?: PieceMenuView[];
   classes?: ClassView[];
 }
 

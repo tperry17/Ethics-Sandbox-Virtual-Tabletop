@@ -142,8 +142,12 @@ export class InteractionController {
     });
     facilitator.hidden = true;
 
-    group.append(point, pen, clearMine, clearAll, facilitator);
+    group.append(point, pen, clearMine, clearAll);
     this.table.toolArea.prepend(group);
+    // "Become facilitator" belongs with the room, in its top bar, if the page has one.
+    const bar = document.getElementById("room-bar-actions");
+    if (bar !== null) bar.append(facilitator);
+    else group.append(facilitator);
     this.toolButtons = { point, pen };
     this.clearAllButton = clearAll;
     this.facilitatorButton = facilitator;
@@ -370,7 +374,6 @@ export class InteractionController {
     }
     this.gesture = { kind: "drag", pointerId: press.pointerId, pieces };
     this.table.interacting = true;
-    this.table.inviteTray(true);
     this.continueDrag(pieces, event);
   }
 
@@ -485,7 +488,6 @@ export class InteractionController {
     this.table.setDropTarget(null);
     this.table.setStackTarget(null);
     this.table.setTrayTarget(false);
-    this.table.inviteTray(false);
     this.table.interacting = false;
   }
 
@@ -651,20 +653,21 @@ export class InteractionController {
     if (pieceId === undefined) return;
     event.preventDefault();
     const piece = this.model.pieces.get(pieceId);
-    if (piece?.kind === "note") {
-      this.write(pieceId);
+    if (piece?.kind === "note" || piece?.kind === "token") {
+      this.write(pieceId, piece.kind);
       return;
     }
     this.flip(this.targetsFor(pieceId));
   };
 
-  /** Ask what to write on a note. The server judges whether it may be written. */
-  private write(pieceId: string): void {
+  /** Ask what to write on a note or a token. The server judges whether it may be. */
+  private write(pieceId: string, kind: "note" | "token" = "note"): void {
     const current = this.model.pieces.get(pieceId)?.text ?? "";
-    const text = window.prompt("Write on this note:", current);
+    const question = kind === "token" ? "One word or number for this token:" : "Write on this note:";
+    const text = window.prompt(question, current);
     if (text === null) return;
     this.table.intents.send("set_text", { piece_id: pieceId, text }, this.settles(pieceId));
-    this.table.announcer.announce("Note written on.");
+    this.table.announcer.announce(kind === "token" ? "Token written on." : "Note written on.");
   }
 
   private onContextMenu = (event: MouseEvent): void => {

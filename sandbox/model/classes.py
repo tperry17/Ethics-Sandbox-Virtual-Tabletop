@@ -304,9 +304,19 @@ class PushClassPrompt:
         return [_class_patch(group)]
 
 
+# The partner of a table paired with no real table: a hypothetical one,
+# whose decision only the facilitator may set.
+HYPOTHETICAL_TABLE = "hypothetical"
+
+
 @dataclass(frozen=True)
 class PairTables:
-    """Pair two tables of a class, so their decisions are read together."""
+    """Pair two tables of a class, so their decisions are read together.
+
+    ``second`` may be ``HYPOTHETICAL_TABLE``: the table is paired with a
+    partner that is not in the room, whose decision the facilitator sets
+    (or leaves unset).
+    """
 
     class_id: str
     first: str
@@ -321,7 +331,9 @@ class PairTables:
         group = table.classes[self.class_id]
         if self.first == self.second:
             return "Pair two different tables."
-        if self.first not in group.tables or self.second not in group.tables:
+        if self.first not in group.tables or (
+            self.second not in group.tables and self.second != HYPOTHETICAL_TABLE
+        ):
             return "Both tables must belong to this class."
         if any(t in pair for pair in group.pairs for t in (self.first, self.second)):
             return "A table can have only one partner. Unpair it first."
@@ -383,6 +395,16 @@ class SetClassDecision:
         if (reason := _reason_missing(table, self.class_id)) is not None:
             return reason
         group = table.classes[self.class_id]
+        if self.table_id == HYPOTHETICAL_TABLE:
+            if (
+                r := _facilitator_only(
+                    table, actor_seat, "decide for a hypothetical table"
+                )
+            ) is not None:
+                return r
+            if not any(self.table_id in pair for pair in group.pairs):
+                return "Pair a table with a hypothetical one first."
+            return None
         if self.table_id not in group.tables:
             return "That table is not part of this class."
         sits_there = actor_seat in table.activities[self.table_id].seats

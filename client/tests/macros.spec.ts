@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { openFromLanding } from "./rooms";
 
 /**
  * Activities started in an open room. Pairs is the reference game: two
@@ -7,9 +8,9 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 
 async function openRoom(browser: Browser, name: string): Promise<{ page: Page; code: string }> {
   const page = await (await browser.newContext()).newPage();
-  await page.goto("/start");
+  await openFromLanding(page, "Test room");
   await page.getByLabel("Your name").fill(name);
-  await page.getByRole("button", { name: "Open a room" }).click();
+  await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
   const code = page.url().split("/t/")[1]!;
   return { page, code };
@@ -30,8 +31,7 @@ async function startPairs(
 ): Promise<{ host: Page; guest: Page; code: string }> {
   const { page: host, code } = await openRoom(browser, "Ines");
   const guest = await join(browser, code, "Tomas");
-  await host.getByLabel("Activity to start").selectOption("pairs");
-  await host.getByRole("button", { name: "Start this activity" }).click();
+  await host.getByRole("button", { name: "Start Pairs", exact: true }).click();
   await guest.getByRole("button", { name: "Join" }).click();
   await expect(host.getByText(/Pairs: running/)).toBeVisible();
   await expect(guest.getByText(/Pairs: running/)).toBeVisible();
@@ -41,9 +41,15 @@ async function startPairs(
 test("a player deals, and each person sees only their own cards", async ({ browser }) => {
   const { host, guest } = await startPairs(browser);
 
+  // The hand is docked below the table before any card arrives, and is not
+  // drawn on the table as well.
+  await expect(host.locator(".hand-tray__empty")).toBeVisible();
+  await expect(host.locator(".tabletop__zones .zone--private")).toBeHidden();
+
   const deal = host.getByRole("button", { name: "Deal three each" });
   await expect(deal).toBeVisible();
   await deal.click();
+  await expect(host.locator(".hand-tray__empty")).toBeHidden();
 
   const hostCards = host.locator(".hand-tray__fan .piece .piece__title");
   const guestCards = guest.locator(".hand-tray__fan .piece .piece__title");
@@ -111,8 +117,7 @@ test("an open room starts an activity for those who sign up, and its buttons are
   const guest = await join(browser, code, "Tomas");
   const bystander = await join(browser, code, "Wren");
 
-  await host.getByLabel("Activity to start").selectOption("pairs");
-  await host.getByRole("button", { name: "Start this activity" }).click();
+  await host.getByRole("button", { name: "Start Pairs", exact: true }).click();
   await expect(host.getByText(/Pairs: signing up, 1 of 2/)).toBeVisible();
 
   await guest.getByRole("button", { name: "Join" }).click();
