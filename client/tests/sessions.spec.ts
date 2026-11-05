@@ -60,12 +60,12 @@ test("Value Cards Trading: four browsers, a drop and a rejoin, and a macro mid-d
   await ines.page.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await tomas.page.getByRole("button", { name: "Join" }).click();
   await wren.page.getByRole("button", { name: "Join" }).click();
-  await ines.page.getByRole("button", { name: "Deal 12 each" }).click();
+  await ines.page.getByRole("button", { name: "Deal 6 each" }).click();
 
   const hand = (page: Page, seat: number) =>
     page.locator(`.tabletop__pieces-layer .piece[data-zone-id$=":hand-seat-${seat}"]`);
-  await expect(hand(ines.page, 1)).toHaveCount(12);
-  await expect(hand(tomas.page, 2)).toHaveCount(12);
+  await expect(hand(ines.page, 1)).toHaveCount(6);
+  await expect(hand(tomas.page, 2)).toHaveCount(6);
 
   // The bystander sits at no seat and sees no card faces from anyone's hand.
   await expect(bystander.page.locator("[data-status='connected']")).toBeVisible();
@@ -79,14 +79,14 @@ test("Value Cards Trading: four browsers, a drop and a rejoin, and a macro mid-d
   await expect(tomas.page.locator("[data-status]:not([data-status='connected'])")).toBeVisible();
   tomas.restore();
   await expect(tomas.page.locator("[data-status='connected']")).toBeVisible({ timeout: 20_000 });
-  await expect(hand(tomas.page, 2)).toHaveCount(12);
+  await expect(hand(tomas.page, 2)).toHaveCount(6);
 
   // Tomas closes the tab altogether and returns with the same cookie.
   const tomasState = await tomas.context.storageState();
   await tomas.page.close();
   const back = await (await browser.newContext({ storageState: tomasState })).newPage();
   await back.goto(`/t/${code}`);
-  await expect(hand(back, 2)).toHaveCount(12);
+  await expect(hand(back, 2)).toHaveCount(6);
 
   // Wren has a card in hand mid-drag while the facilitator presses Shuffle.
   const card = hand(wren.page, 3).first();
@@ -97,8 +97,8 @@ test("Value Cards Trading: four browsers, a drop and a rejoin, and a macro mid-d
   await ines.page.locator("button[data-activity-id]", { hasText: "Shuffle deck" }).click();
   await wren.page.mouse.up();
   // Nothing was lost or duplicated: still twelve cards a hand, still connected.
-  await expect(hand(wren.page, 3)).toHaveCount(12, { timeout: 15_000 });
-  await expect(hand(ines.page, 1)).toHaveCount(12);
+  await expect(hand(wren.page, 3)).toHaveCount(6, { timeout: 15_000 });
+  await expect(hand(ines.page, 1)).toHaveCount(6);
   await expect(ines.page.locator("[data-status='connected']")).toBeVisible();
 });
 

@@ -57,7 +57,9 @@ zones:
     step: [0, 260]
 
 setup:
-  - {op: spawn_deck, deck: values, zone: deck}
+  # The trio plays with the 18 cards of the crimson "Deck" group; the room's
+  # sandbox keeps the full 36, the navy "Sidebar" group included.
+  - {op: spawn_deck, deck: values, zone: deck, where: {group: Deck}}
 
 macros:
   - id: setup
@@ -66,7 +68,7 @@ macros:
       - {op: setup}
   - id: deal
     steps:
-      - {op: deal, from: deck, to: hand, count: 12, face_up: true}
+      - {op: deal, from: deck, to: hand, count: 6, face_up: true}
   - id: record_hands
     who: anyone
     python: record_hands
