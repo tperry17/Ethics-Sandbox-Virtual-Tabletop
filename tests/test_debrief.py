@@ -402,6 +402,27 @@ def test_the_side_panel_offers_debrief_links_only_once_they_lead_somewhere(
     assert opened["href"] == f"/t/{played.code}/debrief/{aid}"
 
 
+def test_the_table_page_is_sent_shared_free_writing_and_nothing_else(
+    factory: sessionmaker[Session],
+) -> None:
+    played, aid = _value_cards(factory)
+    reflect = f"/t/{played.code}/reflect"
+    played.clients["Bea"].post(reflect, data={"body": "first", "share": "true"})
+    played.clients["Cy"].post(reflect, data={"body": "kept back"})
+    played.clients["Di"].post(
+        reflect,
+        data={"scope_prompt": f"{aid}/debrief-01", "body": "answer", "share": "true"},
+    )
+    played.clients["Cy"].post(reflect, data={"body": "second", "share": "true"})
+
+    writing = played.get("Ada", f"/t/{played.code}/links").json()["writing"]
+
+    assert writing == [
+        {"name": "Cy", "body": "second"},
+        {"name": "Bea", "body": "first"},
+    ]
+
+
 def test_links_are_for_people_in_the_room(factory: sessionmaker[Session]) -> None:
     played = Played(factory, ["Ada"])
     stranger = TestClient(app, follow_redirects=False)

@@ -730,4 +730,24 @@ def room_links(
             else f"/t/{room.code}/debrief"
         )
         links.append({"id": "debrief", "label": label, "href": href})
-    return JSONResponse({"links": links})
+    return JSONResponse(
+        {"links": links, "writing": _shared_free_writing(session, room)}
+    )
+
+
+def _shared_free_writing(session: Session, room: Room) -> list[dict[str, str]]:
+    """The free writing people in ``room`` shared with the table, newest first.
+
+    Read on every ask rather than cached: sharing writes no event to the log.
+    """
+    rows = session.execute(
+        select(Reflection, Participant.display_name)
+        .join(Participant, Participant.id == Reflection.participant_id)
+        .where(
+            Reflection.room_id == room.id,
+            Reflection.visibility == "shared",
+            Reflection.prompt_key.startswith(f"{FREE_WRITING}/"),
+        )
+        .order_by(Reflection.created_at.desc())
+    ).all()
+    return [{"name": name, "body": reflection.body} for reflection, name in rows]

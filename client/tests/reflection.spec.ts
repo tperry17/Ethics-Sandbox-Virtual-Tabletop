@@ -28,6 +28,13 @@ test("a reflection can be written before any activity, and no debrief link leads
   await page.getByLabel("Share this with the table").check();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("For everyone to read. (free writing, shared)")).toBeVisible();
+
+  // Shared writing is shown beside the table; private writing is not.
+  await page.goto(`/t/${code}`);
+  const shared = page.locator("#room-shared-writing");
+  await expect(shared.getByRole("heading", { name: "Shared writing" })).toBeVisible();
+  await expect(shared).toContainText("For everyone to read.");
+  await expect(shared).not.toContainText("Something to come back to.");
 });
 
 test("once an activity with questions is played, the panel offers to respond to them", async ({

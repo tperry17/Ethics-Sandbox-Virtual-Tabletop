@@ -36,8 +36,9 @@ page has been played - each activity's questions once, never again for a
 debrief activity that reads the same ones (a debrief activity still shows
 them as cards on its table). Anything written there is private unless its
 writer shares it: a shared answer shows on that activity's debrief, and
-shared free writing shows apart from the answers, on the reflection page
-and on every debrief in the room. "Respond to debrief
+shared free writing shows apart from the answers, on the reflection page,
+on every debrief in the room, and in the table page's side panel under
+"Shared writing" (sent with `/t/{code}/links`). "Respond to debrief
 questions" and the link to a debrief appear in the panel only once there is
 something behind them; the page asks `/t/{code}/links` which.
 
