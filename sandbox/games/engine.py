@@ -59,6 +59,7 @@ from sandbox.model import (
     ResetTable,
     ResetZone,
     SetProp,
+    SetText,
     Shuffle,
     Spawn,
     Table,
@@ -812,8 +813,53 @@ def build_add_piece(
     )
 
 
+def build_shared_note(game: Game, table: Table, text: str) -> Transaction | Reject:
+    """A note on the room's table carrying ``text``: writing someone shared.
+
+    The note is the room type's own note component, put down in its
+    ``pieces_zone``. Notes stack down the right-hand side of that zone, each
+    a little below the last, so a new one does not land on an old one.
+    """
+    room = game.definition.room
+    spec = next(
+        (p for p in game.definition.components.pieces if p.kind is PieceKind.NOTE),
+        None,
+    )
+    if room is None or spec is None:
+        return Reject("This room has no notes to write on.")
+    zone = table.zones.get(room.pieces_zone)
+    if zone is None or not isinstance(zone.geometry, Rect):
+        return Reject("This room has nowhere to put a note.")
+    rect = zone.geometry
+    width = spec.width or 160.0
+    height = spec.height or 128.0
+    already = sum(
+        1 for piece in table.pieces_in_zone(zone.id) if piece.kind is PieceKind.NOTE
+    )
+    piece_id = new_op_id()
+    return Transaction(
+        steps=(
+            Spawn(
+                component_id=spec.id,
+                kind=spec.kind,
+                zone_id=zone.id,
+                piece_ids=(piece_id,),
+            ),
+            Move(
+                piece_id=piece_id,
+                x=rect.x + rect.width - width / 2 - 40 - (already // 6) * 40,
+                y=rect.y + height / 2 + 40 + (already % 6) * 60,
+            ),
+            SetText(piece_id=piece_id, text=text),
+        ),
+        name=f"note:{spec.id}",
+        label="Share writing",
+    )
+
+
 __all__ = [
     "build_add_piece",
+    "build_shared_note",
     "may_use_facilitator_button",
     "Scope",
     "SetupFailedError",

@@ -170,6 +170,8 @@
   box-shadow: var(--shadow-piece);
   font-family: var(--font-reading);
   font-size: var(--text-sm);
+  overflow: hidden;
+  overflow-wrap: anywhere;
   transform: rotate(1.5deg);
 }
 
@@ -1109,6 +1111,9 @@
   font-size: var(--text-sm);
 }
 .room__links a { color: var(--accent-rubric); }
+.room__debrief-links { display: grid; gap: var(--space-2); justify-items: start; margin-block-end: var(--space-2); }
+.room__debrief-links[hidden] { display: none; }
+.room__links .room__debrief-links a { color: inherit; }
 
 .room__record > summary { cursor: pointer; font-family: var(--font-ui); font-size: var(--text-sm); font-weight: 600; }
 .room__record[open] > summary { margin-block-end: var(--space-3); }
