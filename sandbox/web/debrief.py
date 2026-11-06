@@ -21,6 +21,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import anyio.from_thread
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -40,13 +41,30 @@ from sandbox.games.debrief import (
     Section,
     leaf_entries,
 )
+from sandbox.games.engine import build_shared_note
 from sandbox.games.loader import Face
-from sandbox.model import Activity, ClassGroup, Record, Table
+from sandbox.model import (
+    SYSTEM_SEAT,
+    Activity,
+    ClassGroup,
+    Record,
+    Table,
+    Transaction,
+)
+from sandbox.model.entities import MAX_TEXT
 from sandbox.web.deps import get_session
 from sandbox.web.identity import read_participant_cookie
+from sandbox.web.live import hub
 from sandbox.web.preview import table_picture
 from sandbox.web.replay import LogEvent, load_events, replay, seed_of
-from sandbox.web.rooms import append_event, get_participant, get_room_by_code
+from sandbox.web.rooms import (
+    append_event,
+    apply_op,
+    game_for,
+    get_participant,
+    get_room_by_code,
+    load_table,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 templates = Jinja2Templates(directory=PROJECT_ROOT / "sandbox" / "web" / "templates")
@@ -635,12 +653,16 @@ def reflect_save(
 ) -> Response:
     """Keep what someone wrote, private unless they share it with the table.
 
-    A shared answer shows on its activity's debrief; shared free writing,
-    which answers no question, shows apart from the answers, on the
-    reflection page and on every debrief in the room.
+    A shared answer shows on its activity's debrief. Shared free writing,
+    which answers no question, shows apart from the answers: on the
+    reflection page, on every debrief in the room, and on the room's table
+    as a note.
     """
-    if scope_prompt.partition("/")[0] == FREE_WRITING:
+    free = scope_prompt.partition("/")[0] == FREE_WRITING
+    if free:
         scope_prompt = f"{FREE_WRITING}/"
+    if body.strip() and free and share:
+        _note_on_table(session, who, body.strip())
     if body.strip():
         session.add(
             Reflection(
@@ -655,6 +677,29 @@ def reflect_save(
     return RedirectResponse(
         url=f"/t/{who.room.code}/reflect?saved=true", status_code=303
     )
+
+
+def _note_on_table(session: Session, who: Viewer, body: str) -> None:
+    """Put shared free writing on the room's table as a note, signed.
+
+    A note holds at most ``MAX_TEXT`` characters; longer writing is cut
+    there, and the whole of it stays on the reflection page. A room someone
+    has open places the note itself; otherwise it goes on the stored table.
+    """
+    text = f"{who.participant.display_name}: {body}"
+    if len(text) > MAX_TEXT:
+        text = text[: MAX_TEXT - 1].rstrip() + "\u2026"
+    seat = who.participant.seat_id or SYSTEM_SEAT
+    placed = anyio.from_thread.run(hub.shared_note, who.room.code, seat, text)
+    if placed is not None:
+        return
+    game = game_for(who.room)
+    if game is None:
+        return
+    room = session.merge(who.room)
+    built = build_shared_note(game, load_table(session, room), text)
+    if isinstance(built, Transaction):
+        apply_op(session, room, seat, built)
 
 
 # -- what the side panel offers ------------------------------------------------------
@@ -730,24 +775,4 @@ def room_links(
             else f"/t/{room.code}/debrief"
         )
         links.append({"id": "debrief", "label": label, "href": href})
-    return JSONResponse(
-        {"links": links, "writing": _shared_free_writing(session, room)}
-    )
-
-
-def _shared_free_writing(session: Session, room: Room) -> list[dict[str, str]]:
-    """The free writing people in ``room`` shared with the table, newest first.
-
-    Read on every ask rather than cached: sharing writes no event to the log.
-    """
-    rows = session.execute(
-        select(Reflection, Participant.display_name)
-        .join(Participant, Participant.id == Reflection.participant_id)
-        .where(
-            Reflection.room_id == room.id,
-            Reflection.visibility == "shared",
-            Reflection.prompt_key.startswith(f"{FREE_WRITING}/"),
-        )
-        .order_by(Reflection.created_at.desc())
-    ).all()
-    return [{"name": name, "body": reflection.body} for reflection, name in rows]
+    return JSONResponse({"links": links})

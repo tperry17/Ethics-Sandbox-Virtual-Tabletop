@@ -31,6 +31,8 @@ components:
       height: 580
   pieces:
     - {id: d6, kind: die, title: Die, faces: ["1", "2", "3", "4", "5", "6"]}
+    # Not in the Pieces menu: the note shared writing is put on the table as.
+    - {id: shared-note, kind: note, title: Shared writing, width: 300, height: 260}
     - {id: cube-1, kind: cube, title: Cube, tint_index: 0}
     - {id: cube-2, kind: cube, title: Cube, tint_index: 1}
     - {id: cube-3, kind: cube, title: Cube, tint_index: 2}

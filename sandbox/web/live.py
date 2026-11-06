@@ -51,6 +51,7 @@ from sandbox.games.engine import (
     build_add_piece,
     build_macro,
     build_seat_move,
+    build_shared_note,
     may_use_facilitator_button,
 )
 from sandbox.games.pairing import may_pair, pair_outcome, pairing_choices
@@ -927,7 +928,16 @@ class _SeatTaken:
     stored: tuple[Seat, tuple[Zone, ...]]
 
 
-_Command = _Join | _Leave | _Inbound | _SeatTaken | _SeatsChanged
+@dataclass(frozen=True)
+class _SharedNote:
+    """Someone shared writing; put it on this room's table as a note."""
+
+    seat_id: str
+    text: str
+    done: asyncio.Future[bool]
+
+
+_Command = _Join | _Leave | _Inbound | _SeatTaken | _SeatsChanged | _SharedNote
 
 
 @dataclass(frozen=True)
@@ -1154,6 +1164,12 @@ class RoomRuntime:
     ) -> None:
         await self._commands.put(_SeatsChanged(occupants, names))
 
+    async def shared_note(self, seat_id: str, text: str) -> bool:
+        """Put shared writing on the table as a note; whether it was put there."""
+        done: asyncio.Future[bool] = asyncio.get_running_loop().create_future()
+        await self._commands.put(_SharedNote(seat_id, text, done))
+        return await done
+
     async def drain(self) -> None:
         """Wait until every queued command has been handled. For tests."""
         await self._commands.join()
@@ -1210,6 +1226,16 @@ class RoomRuntime:
             return
         if isinstance(command, _SeatsChanged):
             self._seat_occupants(command.occupants, command.names)
+            return
+        if isinstance(command, _SharedNote):
+            placed = False
+            if self.game is not None:
+                built = build_shared_note(self.game, self.table, command.text)
+                if isinstance(built, Transaction):
+                    outcome = self._apply(command.seat_id, built, log=True)
+                    placed = isinstance(outcome, Ok)
+            if not command.done.done():
+                command.done.set_result(placed)
             return
         if isinstance(command, _Leave):
             self._on_leave(command.connection)
@@ -2429,6 +2455,18 @@ class LiveHub:
         loaded = await asyncio.to_thread(_load_occupants, self.session_factory, code)
         if loaded is not None:
             await runtime.seats_changed(*loaded)
+
+    async def shared_note(self, code: str, seat_id: str, text: str) -> bool | None:
+        """Put shared writing on a live room's table as a note.
+
+        None when nobody has the room open: the caller then writes the note
+        to the stored table itself, which a room reads when it next starts.
+        """
+        async with self._lock:
+            runtime = self._rooms.get(code)
+        if runtime is None:
+            return None
+        return await runtime.shared_note(seat_id, text)
 
     async def close_room(self, code: str) -> None:
         async with self._lock:

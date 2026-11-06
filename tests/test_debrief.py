@@ -34,6 +34,8 @@ from sandbox.model import (
     ShowTo,
     Transaction,
 )
+from sandbox.model.entities import MAX_TEXT
+from sandbox.model.types import PieceKind
 from sandbox.web import rooms
 from sandbox.web.app import app, get_session
 from sandbox.web.replay import load_events, replay, seed_of
@@ -402,7 +404,16 @@ def test_the_side_panel_offers_debrief_links_only_once_they_lead_somewhere(
     assert opened["href"] == f"/t/{played.code}/debrief/{aid}"
 
 
-def test_the_table_page_is_sent_shared_free_writing_and_nothing_else(
+def _notes(played: Played) -> list[str]:
+    table = played.table()
+    return [
+        str(piece.props.get("text", ""))
+        for piece in table.pieces.values()
+        if piece.kind is PieceKind.NOTE
+    ]
+
+
+def test_shared_free_writing_goes_on_the_table_as_a_signed_note(
     factory: sessionmaker[Session],
 ) -> None:
     played, aid = _value_cards(factory)
@@ -415,12 +426,25 @@ def test_the_table_page_is_sent_shared_free_writing_and_nothing_else(
     )
     played.clients["Cy"].post(reflect, data={"body": "second", "share": "true"})
 
-    writing = played.get("Ada", f"/t/{played.code}/links").json()["writing"]
+    # Only shared free writing becomes a note; private writing and answers
+    # to debrief questions do not.
+    assert sorted(_notes(played)) == ["Bea: first", "Cy: second"]
 
-    assert writing == [
-        {"name": "Cy", "body": "second"},
-        {"name": "Bea", "body": "first"},
-    ]
+
+def test_a_long_shared_note_is_cut_to_what_a_note_holds(
+    factory: sessionmaker[Session],
+) -> None:
+    played = Played(factory, ["Ada", "Bea"])
+    reflect = f"/t/{played.code}/reflect"
+    long = "word " * 100
+    played.clients["Bea"].post(reflect, data={"body": long, "share": "true"})
+
+    [note] = _notes(played)
+    assert len(note) <= MAX_TEXT
+    assert note.startswith("Bea: word")
+    assert note.endswith("\u2026")
+    # The whole of it is still on the reflection page.
+    assert long.strip() in played.get("Ada", reflect).text
 
 
 def test_links_are_for_people_in_the_room(factory: sessionmaker[Session]) -> None:

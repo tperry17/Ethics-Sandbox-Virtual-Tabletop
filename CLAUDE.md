@@ -37,8 +37,10 @@ debrief activity that reads the same ones (a debrief activity still shows
 them as cards on its table). Anything written there is private unless its
 writer shares it: a shared answer shows on that activity's debrief, and
 shared free writing shows apart from the answers, on the reflection page,
-on every debrief in the room, and in the table page's side panel under
-"Shared writing" (sent with `/t/{code}/links`). "Respond to debrief
+on every debrief in the room, and on the room's table as a signed note
+(the room type's `note` piece, cut to the 280 characters a note holds; a
+live room places it, otherwise it goes on the stored table). Validation
+checks that every room type has a note piece. "Respond to debrief
 questions" and the link to a debrief appear in the panel only once there is
 something behind them; the page asks `/t/{code}/links` which.
 

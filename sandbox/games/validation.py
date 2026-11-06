@@ -23,6 +23,7 @@ from sandbox.games.loader import (
     load_game,
 )
 from sandbox.model import Reject, Table, TableRng, run_op
+from sandbox.model.types import PieceKind
 
 EXERCISES_CSV = "site/exercises.csv"
 
@@ -144,6 +145,11 @@ def _room_errors(
         if room is None:
             continue
         rooms_for.setdefault(room.exercise, []).append(game.slug)
+        # Shared writing is put on the table as one of the room's notes.
+        if not any(
+            piece.kind is PieceKind.NOTE for piece in game.definition.components.pieces
+        ):
+            errors.append(f"{game.slug}: a room needs a note piece for shared writing.")
         if whole_catalog and room.exercise not in catalog:
             errors.append(
                 f"{game.slug}: is the room for {room.exercise!r}, which is not "

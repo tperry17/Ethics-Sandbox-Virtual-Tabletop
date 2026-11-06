@@ -64,11 +64,6 @@
 
           {# The debrief links appear only once there is something behind them;
              the page asks /links which, and shows what it is sent. #}
-          {# Free writing people chose to share; filled from /links, hidden while there is none. #}
-          <section class="room__shared-writing room-panel__section" id="room-shared-writing" aria-labelledby="shared-writing-heading" hidden>
-            <h2 class="room-panel__heading" id="shared-writing-heading">Shared writing</h2>
-            <ul class="room__shared-writing-list"></ul>
-          </section>
           <nav class="room__links" aria-label="This room">
             <div class="room__debrief-links" id="room-debrief-links" data-links-url="/t/{{ room.code }}/links" hidden></div>
             <a href="/t/{{ room.code }}/reflect#free" target="_blank" rel="noopener">Write a reflection</a>
@@ -163,33 +158,11 @@
           });
           box.hidden = links.length === 0;
         }
-        var writing = document.getElementById("room-shared-writing");
-        var written = "";
-        function drawWriting(rows) {
-          if (!writing) return;
-          var signature = JSON.stringify(rows);
-          if (signature === written) return;
-          written = signature;
-          var list = writing.querySelector("ul");
-          list.replaceChildren();
-          rows.forEach(function (row) {
-            var item = document.createElement("li");
-            var name = document.createElement("span");
-            name.className = "room__shared-writing-name";
-            name.textContent = row.name;
-            var text = document.createElement("p");
-            text.textContent = row.body;
-            item.append(name, text);
-            list.append(item);
-          });
-          writing.hidden = rows.length === 0;
-        }
         function ask() {
           fetch(box.dataset.linksUrl, { credentials: "same-origin" })
             .then(function (response) { return response.ok ? response.json() : null; })
             .then(function (body) {
               if (body && Array.isArray(body.links)) draw(body.links);
-              if (body && Array.isArray(body.writing)) drawWriting(body.writing);
             })
             .catch(function () {});
         }
