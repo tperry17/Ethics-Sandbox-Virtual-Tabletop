@@ -107,6 +107,18 @@ def _reason_not_movable(table: Table, piece: Piece, actor_seat: str) -> str | No
         return None
     if piece.locked:
         return "That piece is locked."
+    return _reason_out_of_reach(table, piece, actor_seat)
+
+
+def _reason_out_of_reach(table: Table, piece: Piece, actor_seat: str) -> str | None:
+    """Whether ``piece`` is out of ``actor_seat``'s reach, lock aside.
+
+    Held by someone else, or resting in another seat's private zone: the
+    same limits as moving it, without the lock, so that whoever could move a
+    piece but for its lock may unlock it.
+    """
+    if table.is_facilitator(actor_seat):
+        return None
     if piece.held_by is not None and piece.held_by != actor_seat:
         return "Someone else is already holding that piece."
     zone = table.zones.get(piece.zone_id)
@@ -511,6 +523,8 @@ class Draw:
     count: int
     from_zone: str
     to_zone: str
+    face_up: bool | None = None
+    """Turn each drawn piece this way up; None leaves it as it came off the pile."""
     op_id: str = field(default_factory=new_op_id)
 
     def validate(self, table: Table, actor_seat: str) -> str | None:
@@ -538,6 +552,8 @@ class Draw:
             piece.z = next_z
             x, y, rotation = place_in_zone(destination, index=index, count=index + 1)
             piece.x, piece.y, piece.rotation = x, y, rotation
+            if self.face_up is not None:
+                piece.face_up = self.face_up
             _clear_reveal(piece)
             patches.append(_piece_patch(piece))
         return patches
@@ -555,6 +571,8 @@ class Deal:
     from_zone: str
     to_zones: tuple[str, ...]
     count_each: int
+    face_up: bool | None = None
+    """Turn each dealt piece this way up; None leaves it as it came off the pile."""
     op_id: str = field(default_factory=new_op_id)
 
     def validate(self, table: Table, actor_seat: str) -> str | None:
@@ -585,6 +603,7 @@ class Deal:
                     count=1,
                     from_zone=self.from_zone,
                     to_zone=zone_id,
+                    face_up=self.face_up,
                     op_id=new_op_id(),
                 )
                 patches.extend(draw.apply(table, actor_seat))
@@ -706,7 +725,12 @@ class SetText:
 
 @dataclass(frozen=True)
 class Lock:
-    """Lock a piece so only the facilitator may move it. Facilitator-only to invoke."""
+    """Lock a piece in place, so that nobody moves it by accident.
+
+    Anyone who could move the piece may lock it, and anyone who could move
+    it but for the lock may unlock it; the facilitator may do either to any
+    piece. While it is locked, only the facilitator moves it.
+    """
 
     piece_id: str
     op_id: str = field(default_factory=new_op_id)
@@ -715,9 +739,8 @@ class Lock:
         piece = _get_piece(table, self.piece_id)
         if (reason := _reason_piece_missing(piece, self.piece_id)) is not None:
             return reason
-        if not table.is_facilitator(actor_seat):
-            return "Only the facilitator may lock a piece."
-        return None
+        assert piece is not None
+        return _reason_out_of_reach(table, piece, actor_seat)
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         piece = table.pieces[self.piece_id]
@@ -727,7 +750,7 @@ class Lock:
 
 @dataclass(frozen=True)
 class Unlock:
-    """Unlock a previously locked piece. Facilitator-only to invoke."""
+    """Unlock a locked piece. Allowed to whoever could otherwise move it."""
 
     piece_id: str
     op_id: str = field(default_factory=new_op_id)
@@ -736,9 +759,8 @@ class Unlock:
         piece = _get_piece(table, self.piece_id)
         if (reason := _reason_piece_missing(piece, self.piece_id)) is not None:
             return reason
-        if not table.is_facilitator(actor_seat):
-            return "Only the facilitator may unlock a piece."
-        return None
+        assert piece is not None
+        return _reason_out_of_reach(table, piece, actor_seat)
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         piece = table.pieces[self.piece_id]

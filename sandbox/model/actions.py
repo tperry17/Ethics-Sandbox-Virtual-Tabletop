@@ -12,8 +12,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sandbox.model.entities import Piece, Table
+from sandbox.model.entities import Piece, Table, Zone
 from sandbox.model.ops import (
+    Deal,
     Despawn,
     EndShow,
     Flip,
@@ -25,9 +26,10 @@ from sandbox.model.ops import (
     Roll,
     Rotate,
     ShowTo,
+    Shuffle,
     Unlock,
 )
-from sandbox.model.types import PieceKind, ZoneKind
+from sandbox.model.types import PieceKind, Visibility, ZoneKind
 from sandbox.model.visibility import entitled_to_face
 
 
@@ -55,6 +57,72 @@ def _entitled_by_zone(table: Table, piece: Piece, seat_id: str) -> bool:
     )
 
 
+# How many cards each the deck menu offers to deal to everyone at once.
+DEAL_COUNTS = (1, 3, 5)
+
+
+def _players_hands(table: Table, deck: Zone) -> list[str]:
+    """The private hands a deck deals to: one per player, in seat order.
+
+    Only a private hand counts, so what each player is dealt is theirs alone.
+    A deck on the room's own table deals to the room's hands. A deck that
+    belongs to an activity deals to that activity's private hands if it has
+    them, and otherwise to its players' hands in the room. A hand counts
+    when someone is sitting in its seat and that someone is not the
+    facilitator, who does not play.
+    """
+    activity = next((a for a in table.activities.values() if deck.id in a.zones), None)
+    in_activities = {z for a in table.activities.values() for z in a.zones}
+    hands = [
+        zone
+        for zone in table.zones.values()
+        if zone.kind is ZoneKind.HAND
+        and zone.visibility is Visibility.PRIVATE_TO_OWNER
+        and zone.owner_seat is not None
+        and (seat := table.seats.get(zone.owner_seat)) is not None
+        and seat.participant_id is not None
+        and not seat.is_facilitator
+    ]
+    room_hands = [zone for zone in hands if zone.id not in in_activities]
+    if activity is None:
+        chosen = room_hands
+    else:
+        own = [zone for zone in hands if zone.id in activity.zones]
+        chosen = own or [z for z in room_hands if z.owner_seat in activity.seats]
+    order = list(table.seats)
+    chosen.sort(key=lambda zone: order.index(zone.owner_seat or ""))
+    return [zone.id for zone in chosen]
+
+
+def _deck_entries(table: Table, piece: Piece) -> list[MenuEntry]:
+    """Shuffling a deck, and dealing from it to everyone, from any card in it."""
+    deck = table.zones.get(piece.zone_id)
+    if deck is None or deck.kind is not ZoneKind.DECK:
+        return []
+    entries = [MenuEntry("shuffle", "Shuffle the deck", Shuffle(zone_id=deck.id))]
+    hands = tuple(_players_hands(table, deck))
+    if not hands:
+        return entries
+    # Besides the usual few, as many each as go round, so a deck can be
+    # dealt out evenly in one go.
+    most = len(table.pieces_in_zone(deck.id)) // len(hands)
+    for count in sorted({*DEAL_COUNTS, most}):
+        label = "1 card each" if count == 1 else f"{count} cards each"
+        if count == most and count not in DEAL_COUNTS:
+            label = f"{label}, as many as go round"
+        entries.append(
+            MenuEntry(
+                f"deal:{count}",
+                label,
+                # Face up, so each player can read what they were dealt: in a
+                # private hand that is its owner alone.
+                Deal(from_zone=deck.id, to_zones=hands, count_each=count, face_up=True),
+                group="Deal to everyone…",
+            )
+        )
+    return entries
+
+
 def _candidates(table: Table, piece: Piece, seat_id: str) -> list[MenuEntry]:
     entries: list[MenuEntry] = [
         # "Turn over" rather than "turn face up/down": the true orientation
@@ -69,6 +137,7 @@ def _candidates(table: Table, piece: Piece, seat_id: str) -> list[MenuEntry]:
     ]
     if piece.kind is PieceKind.DIE:
         entries.append(MenuEntry("roll", "Roll", Roll(target_id=piece.id)))
+    entries.extend(_deck_entries(table, piece))
 
     entries.append(MenuEntry("look", "Look closely", Peek(piece_id=piece.id)))
 

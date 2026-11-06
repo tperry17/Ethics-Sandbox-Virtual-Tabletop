@@ -67,7 +67,7 @@ test("once an activity with questions is played, the panel offers to respond to 
   await ines.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await tomas.getByRole("button", { name: "Join" }).click();
   await wren.getByRole("button", { name: "Join" }).click();
-  await expect(ines.getByRole("button", { name: "Deal 12 each" })).toBeVisible();
+  await expect(ines.getByRole("button", { name: "Deal 6 each" })).toBeVisible();
 
   // The page asks again whenever it is looked at again.
   await ines.evaluate(() => window.dispatchEvent(new Event("focus")));

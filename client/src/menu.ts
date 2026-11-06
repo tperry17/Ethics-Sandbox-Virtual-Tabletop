@@ -16,6 +16,8 @@ export class ContextMenu {
   private requestId: string | null = null;
   private pieceId: string | null = null;
   private returnFocus: HTMLElement | null = null;
+  /** Questions asked without opening the menu, by request id: a keyboard shortcut's. */
+  private readonly asked = new Map<string, (items: MenuItemView[]) => void>();
 
   constructor(
     private readonly host: HTMLElement,
@@ -62,7 +64,23 @@ export class ContextMenu {
     this.link.send({ type: "menu_request", client_id: this.requestId, piece_id: pieceId });
   }
 
+  /**
+   * Ask what may be done to `pieceId` without showing a menu, for a shortcut
+   * that stands for one of its entries. The answer is the server's, as ever.
+   */
+  ask(pieceId: string, answer: (items: MenuItemView[]) => void): void {
+    const requestId = newClientId();
+    this.asked.set(requestId, answer);
+    this.link.send({ type: "menu_request", client_id: requestId, piece_id: pieceId });
+  }
+
   receive(message: MenuMessage): void {
+    const answer = this.asked.get(message.client_id);
+    if (answer !== undefined) {
+      this.asked.delete(message.client_id);
+      answer(message.items);
+      return;
+    }
     if (!this.isOpen || message.client_id !== this.requestId) return;
     this.list.replaceChildren();
     if (message.items.length === 0) {

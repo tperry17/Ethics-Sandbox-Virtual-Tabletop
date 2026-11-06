@@ -23,16 +23,16 @@ test("an offer is made from the selected cards, answered, and ticks the checklis
   await ines.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await tomas.getByRole("button", { name: "Join" }).click();
   await wren.getByRole("button", { name: "Join" }).click();
-  await ines.getByRole("button", { name: "Deal 12 each" }).click();
+  await ines.getByRole("button", { name: "Deal 6 each" }).click();
 
   const mine = ines.locator('.tabletop__pieces-layer .piece[data-zone-id$=":hand-seat-1"]');
   const theirs = ines.locator('.tabletop__pieces-layer .piece[data-zone-id$=":hand-seat-2"]');
-  await expect(mine).toHaveCount(12);
-  await expect(theirs).toHaveCount(12);
+  await expect(mine).toHaveCount(6);
+  await expect(theirs).toHaveCount(6);
 
   // Offering with nothing selected says what to select.
   await ines.getByRole("button", { name: "Offer a trade" }).click();
-  await expect(ines.getByText(/Select cards in your hand/)).toBeVisible();
+  await expect(ines.getByText(/Select cards of your own/)).toBeVisible();
 
   await mine.first().click();
   await theirs.first().click({ modifiers: ["Shift"] });
@@ -47,5 +47,5 @@ test("an offer is made from the selected cards, answered, and ticks the checklis
   await expect(ines.locator("[data-offer-id]")).toHaveCount(0);
   await expect(wren.getByText(/Ines and Tomas: have traded/)).toBeVisible();
   await expect(wren.getByText(/Ines and Wren: not yet/)).toBeVisible();
-  await expect(mine).toHaveCount(12);
+  await expect(mine).toHaveCount(6);
 });

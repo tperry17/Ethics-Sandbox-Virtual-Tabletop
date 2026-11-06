@@ -86,7 +86,10 @@ class DeckSpec(_Strict):
     available on the loaded card, for pages that need more than the face.
     ``revealable: false`` makes the deck's cards ones nobody may show to
     anyone, even a person who can read them: the model refuses the reveal,
-    and the menu does not offer it.
+    and the menu does not offer it. ``locked: true`` lays its cards out
+    locked in place; anyone who may move them may unlock them. ``kind:
+    tile`` makes them tiles, whose two sides are both public: the back
+    shows the picture and the title, at the same size as the front.
     """
 
     id: Identifier
@@ -100,6 +103,7 @@ class DeckSpec(_Strict):
     group: str | None = None
     badge: str | None = None
     revealable: bool = True
+    locked: bool = False
     width: float | None = Field(default=None, gt=0)
     height: float | None = Field(default=None, gt=0)
 

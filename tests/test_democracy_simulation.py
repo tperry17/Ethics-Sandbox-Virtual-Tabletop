@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections import Counter
 
 import pytest
+from _games_support import seated
 
 from sandbox.content_loading import CONTENT_ROOT
 from sandbox.games import GAMES
@@ -20,6 +21,7 @@ from sandbox.games.engine import (
     seat_order,
 )
 from sandbox.model import (
+    Flip,
     MoveToZone,
     Ok,
     OpenActivity,
@@ -32,9 +34,11 @@ from sandbox.model import (
     TableRng,
     TakeFacilitator,
     Transaction,
+    Unlock,
     project,
     run_op,
 )
+from sandbox.model.types import PieceKind
 
 GAME = GAMES["democracy-simulation"]
 
@@ -451,3 +455,19 @@ def test_start_meeting_records_every_seats_card_and_interest() -> None:
     assert len(seats) == 9
     assert all({"card_number", "job", "interest"} <= set(v) for v in seats.values())
     assert all(v["interest"] for v in seats.values())
+
+
+def test_the_room_lays_each_citys_tile_out_locked_and_public_both_ways_up() -> None:
+    room = GAMES["democracy-room"]
+    table = seated(room, 2)
+    tiles = [piece for piece in table.pieces.values() if piece.kind is PieceKind.TILE]
+
+    assert sorted(piece.zone_id for piece in tiles) == ["hudrosia", "potamosia"]
+    assert all(piece.locked for piece in tiles)
+    # A participant unlocks one, turns it over, and still sees which city it is.
+    tile = tiles[0]
+    assert isinstance(run_op(table, "seat-2", Unlock(piece_id=tile.id)), Ok)
+    assert isinstance(run_op(table, "seat-2", Flip(piece_id=tile.id)), Ok)
+    viewed = next(p for p in project(table, "seat-2").pieces if p.id == tile.id)
+    assert viewed.face_up is False
+    assert viewed.component_id == tile.component_id

@@ -141,6 +141,7 @@ Deal from one zone to several, one piece at a time, round by round.
 | `from_zone` | `str` |
 | `to_zones` | `tuple[str, ...]` |
 | `count_each` | `int` |
+| `face_up` | `bool | None` |
 
 ### DeclineSwap
 
@@ -167,6 +168,7 @@ Move the top ``count`` pieces of one zone into another.
 | `count` | `int` |
 | `from_zone` | `str` |
 | `to_zone` | `str` |
+| `face_up` | `bool | None` |
 
 ### EndActivity
 
@@ -275,7 +277,7 @@ Take your name off an activity that has not begun. The last one out closes it.
 
 ### Lock
 
-Lock a piece so only the facilitator may move it. Facilitator-only to invoke.
+Lock a piece in place, so that nobody moves it by accident.
 
 | Field | Type |
 | --- | --- |
@@ -550,7 +552,7 @@ Remove the shared group tag from a set of pieces.
 
 ### Unlock
 
-Unlock a previously locked piece. Facilitator-only to invoke.
+Unlock a locked piece. Allowed to whoever could otherwise move it.
 
 | Field | Type |
 | --- | --- |

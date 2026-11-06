@@ -19,9 +19,10 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from sandbox.model.actions import piece_actions
-from sandbox.model.entities import Table
-from sandbox.model.ops import ShowTo, run_op
+from sandbox.model.entities import Activity, Rect, Table, Zone
+from sandbox.model.ops import Deal, ShowTo, run_op
 from sandbox.model.results import Ok
+from sandbox.model.types import Layout, Visibility, ZoneKind
 
 
 def _keys(table: Table, piece_id: str, seat: str) -> list[str]:
@@ -78,11 +79,114 @@ def test_a_card_being_shown_offers_to_stop_showing_it() -> None:
     assert "end_show" not in _keys(table, card, SEAT_B)
 
 
-def test_locking_and_removing_are_offered_to_the_facilitator_only() -> None:
+def test_removing_is_offered_to_the_facilitator_only_and_locking_to_anyone() -> None:
     table = build_sample_table(deck_size=1)
 
     assert {"lock", "delete"} <= set(_keys(table, "card-0", FACILITATOR))
-    assert not {"lock", "delete"} & set(_keys(table, "card-0", SEAT_A))
+    assert "lock" in _keys(table, "card-0", SEAT_A)
+    assert "delete" not in _keys(table, "card-0", SEAT_A)
+
+
+def _seated(table: Table) -> Table:
+    for seat in table.seats.values():
+        seat.participant_id = f"person-{seat.id}"
+    return table
+
+
+def test_a_card_in_a_deck_offers_a_shuffle_and_a_deal_to_every_player() -> None:
+    table = _seated(build_sample_table(deck_size=6))
+
+    entries = {e.key: e for e in piece_actions(table, "card-0", SEAT_A)}
+
+    assert "shuffle" in entries
+    assert {"deal:1", "deal:3"} <= set(entries)
+    assert "deal:5" not in entries  # six cards do not go round two players five times
+    deal = entries["deal:3"].operation
+    assert isinstance(deal, Deal)
+    # Every player's hand, in seat order; the facilitator's tray is not a hand.
+    assert deal.to_zones == (HAND_A, HAND_B)
+    assert deal.face_up is True
+    assert isinstance(run_op(table, SEAT_A, deal), Ok)
+    assert len(table.pieces_in_zone(HAND_A)) == 3
+    assert len(table.pieces_in_zone(HAND_B)) == 3
+
+
+def test_a_deal_skips_an_empty_seat_and_the_facilitator() -> None:
+    table = _seated(build_sample_table(deck_size=6))
+    table.seats[SEAT_B].participant_id = None
+    table.zones["hand-f"] = Zone(
+        id="hand-f",
+        kind=ZoneKind.HAND,
+        label="Facilitator's hand",
+        geometry=Rect(0, 0, 10, 10),
+        visibility=Visibility.PRIVATE_TO_OWNER,
+        layout=Layout.FAN,
+        owner_seat=FACILITATOR,
+    )
+
+    deal = {e.key: e for e in piece_actions(table, "card-0", SEAT_A)}["deal:1"]
+
+    assert isinstance(deal.operation, Deal)
+    assert deal.operation.to_zones == (HAND_A,)
+
+
+def test_a_deck_in_an_activity_deals_to_that_activitys_hands_only() -> None:
+    table = _seated(build_sample_table(deck_size=6))
+    table.activities["activity-1"] = Activity(
+        id="activity-1",
+        kind="pairs",
+        title="Pairs",
+        min_players=1,
+        max_players=2,
+        seats=(SEAT_B,),
+        status="running",
+        zones=(DECK, HAND_B),
+    )
+
+    deal = {e.key: e for e in piece_actions(table, "card-0", SEAT_B)}["deal:1"]
+
+    assert isinstance(deal.operation, Deal)
+    assert deal.operation.to_zones == (HAND_B,)
+
+
+def test_a_deck_in_an_activity_without_hands_deals_to_its_players_room_hands() -> None:
+    table = _seated(build_sample_table(deck_size=6))
+    table.activities["activity-1"] = Activity(
+        id="activity-1",
+        kind="trading",
+        title="Trading",
+        min_players=1,
+        max_players=2,
+        seats=(SEAT_A,),
+        status="running",
+        zones=(DECK,),
+    )
+
+    deal = {e.key: e for e in piece_actions(table, "card-0", SEAT_A)}["deal:1"]
+
+    assert isinstance(deal.operation, Deal)
+    assert deal.operation.to_zones == (HAND_A,)
+
+
+def test_an_open_hand_is_never_dealt_to() -> None:
+    table = _seated(build_sample_table(deck_size=6))
+    table.zones[HAND_B].visibility = Visibility.PUBLIC
+
+    deal = {e.key: e for e in piece_actions(table, "card-0", SEAT_A)}["deal:1"]
+
+    assert isinstance(deal.operation, Deal)
+    assert deal.operation.to_zones == (HAND_A,)
+
+
+def test_a_card_outside_a_deck_offers_neither_shuffle_nor_deal() -> None:
+    table = _seated(build_sample_table(deck_size=1))
+    table.pieces["card-0"].zone_id = PUBLIC_TABLE
+    table.pieces["card-0"].face_up = True
+
+    keys = _keys(table, "card-0", SEAT_A)
+
+    assert "shuffle" not in keys
+    assert not any(key.startswith("deal:") for key in keys)
 
 
 def test_a_die_may_be_rolled() -> None:

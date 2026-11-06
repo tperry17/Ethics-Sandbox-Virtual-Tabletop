@@ -31,6 +31,7 @@ DEFAULT_SIZES: dict[str, tuple[float, float]] = {
     "note": (160, 128),
     "marker": (36, 36),
     "board": (480, 320),
+    "tile": (300, 400),
 }
 MARGIN = 40.0
 PREVIEW_SEED = 0

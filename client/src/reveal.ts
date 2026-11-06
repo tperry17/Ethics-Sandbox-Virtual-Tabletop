@@ -188,6 +188,8 @@ function action(label: string, onClick: () => void): HTMLElement {
 function enlarged(kind: string, component: ComponentView): HTMLElement {
   const card = document.createElement("article");
   card.className = `piece piece--${kind} piece--enlarged`;
+  // The printed frame, as on the table.
+  if (component.group) card.dataset.group = component.group.toLowerCase();
   appendFace(card, component);
   return card;
 }

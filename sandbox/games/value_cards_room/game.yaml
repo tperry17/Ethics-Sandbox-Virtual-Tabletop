@@ -27,6 +27,8 @@ components:
       body: definition
       folio: number
       image: art
+      group: group               # the printed card's frame
+      badge: schwartz            # and the icon in its corner
   pieces:
     - {id: d6, kind: die, title: Die, faces: ["1", "2", "3", "4", "5", "6"]}
     # Not in the Pieces menu: the note shared writing is put on the table as.

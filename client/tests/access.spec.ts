@@ -161,7 +161,7 @@ async function startTrading(browser: Browser, touch: boolean) {
   await ines.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await tomas.getByRole("button", { name: "Join" }).click();
   await wren.getByRole("button", { name: "Join" }).click();
-  await ines.getByRole("button", { name: "Deal 12 each" }).click();
+  await ines.getByRole("button", { name: "Deal 6 each" }).click();
   return { ines, tomas, wren };
 }
 
@@ -169,12 +169,12 @@ test("a trade is offered and answered with the keyboard alone", async ({ browser
   const { ines, tomas, wren } = await startTrading(browser, false);
   const mine = ines.locator('.tabletop__pieces-layer .piece[data-zone-id$=":hand-seat-1"]');
   const theirs = ines.locator('.tabletop__pieces-layer .piece[data-zone-id$=":hand-seat-2"]');
-  await expect(mine).toHaveCount(12);
+  await expect(mine).toHaveCount(6);
 
   await mine.first().focus();
-  await ines.keyboard.press("Space");
+  await ines.keyboard.press("x");
   await theirs.first().focus();
-  await ines.keyboard.press("Shift+Space");
+  await ines.keyboard.press("Shift+X");
   await expect(ines.locator("[data-announcer]")).toContainText("2 selected");
 
   await ines.getByRole("button", { name: "Offer a trade" }).focus();
@@ -191,7 +191,7 @@ test("a trade is offered and answered by touch alone", async ({ browser }) => {
   const { ines, tomas, wren } = await startTrading(browser, true);
   const mine = ines.locator('.tabletop__pieces-layer .piece[data-zone-id$=":hand-seat-1"]');
   const theirs = ines.locator('.tabletop__pieces-layer .piece[data-zone-id$=":hand-seat-2"]');
-  await expect(mine).toHaveCount(12);
+  await expect(mine).toHaveCount(6);
 
   await mine.first().tap();
   await theirs.first().tap();

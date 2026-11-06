@@ -50,6 +50,7 @@ from sandbox.model import (
     Deal,
     Draw,
     Flip,
+    Lock,
     Move,
     MoveToZone,
     Operation,
@@ -398,6 +399,8 @@ class _Builder:
                 )
                 if not deck.revealable:
                     self.run(SetProp(piece_id=piece_id, key="revealable", value=False))
+                if deck.locked:
+                    self.run(Lock(piece_id=piece_id))
             # The cards went in in file order, and everyone saw their ids
             # arrive in that order. A shuffle is what makes those ids stop
             # meaning anything; a hidden zone always gets one.
