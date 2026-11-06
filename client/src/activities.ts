@@ -201,7 +201,7 @@ export function renderTrades(
     const partners = new Set(want.map((id) => owner(id)));
     if (give.length === 0 || want.length === 0 || partners.size !== 1) {
       hint.textContent =
-        "Select cards in your hand and the cards you want from one other hand, then offer.";
+        "Select cards of your own and the cards you want from one other player, then offer.";
       return;
     }
     hint.textContent = "";

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from _games_support import seated
+
 from sandbox.games import GAMES
 from sandbox.games.engine import (
     build_activity_start,
@@ -85,13 +87,16 @@ def test_it_takes_exactly_three_and_starts_when_the_third_signs_up() -> None:
     assert f"{activity_id}:hand-seat-4" not in table.zones
 
 
-def test_deal_gives_twelve_open_cards_to_each_of_three() -> None:
+def test_deal_gives_six_open_cards_of_the_base_deck_to_each_of_three() -> None:
     table, activity_id = _dealt()
+    groups = {card.component_id: card.face.group for card in GAME.decks["values"]}
     for seat in PLAYERS:
         zone = f"{activity_id}:hand-{seat}"
         hand = table.pieces_in_zone(zone)
-        assert len(hand) == 12
+        assert len(hand) == 6
         assert all(card.face_up for card in hand)
+        # The trio plays with the base deck; the sidebar cards stay out.
+        assert {groups[card.component_id] for card in hand} == {"Deck"}
     assert not table.pieces_in_zone(f"{activity_id}:deck")
 
 
@@ -113,7 +118,7 @@ def test_nobody_may_take_from_another_hand_but_a_trade_swaps() -> None:
     assert isinstance(run_op(table, "seat-2", AcceptSwap(offer_id=offer.op_id)), Ok)
     assert mine in _hand(table, activity_id, "seat-2")
     assert theirs in _hand(table, activity_id, "seat-1")
-    assert len(_hand(table, activity_id, "seat-1")) == 12
+    assert len(_hand(table, activity_id, "seat-1")) == 6
 
 
 def test_the_top_three_zone_holds_three_and_is_not_shown_automatically() -> None:
@@ -171,3 +176,13 @@ def test_each_card_face_carries_its_group_and_its_schwartz_icon() -> None:
         assert card.face.badge is not None
         assert card.face.badge.startswith("/content/decks/value-cards/images/icons/")
         assert card.face.folio is not None
+
+
+def test_the_room_sandbox_keeps_the_full_deck_of_36() -> None:
+    room = GAMES["value-cards-room"]
+    table = seated(room, 1)
+    groups = {card.component_id: card.face.group for card in room.decks["values"]}
+
+    cards = table.pieces_in_zone("deck")
+    assert len(cards) == 36
+    assert {groups[str(card.component_id)] for card in cards} == {"Deck", "Sidebar"}

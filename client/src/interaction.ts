@@ -24,6 +24,8 @@ const LONG_PRESS_MS = 500;
 const PEEK_HOLD_MS = 450;
 /** At most one move per piece this often while dragging; the server coalesces anyway. */
 const MOVE_SEND_MS = 50;
+/** How long the pointer rests on a piece before its keyboard hint appears. */
+const HINT_DELAY_MS = 450;
 /** One arrow-key press moves a piece this far, in world units. Shift moves five steps. */
 export const GRID_STEP = 20;
 const INK_WIDTH = 4;
@@ -87,8 +89,21 @@ export class InteractionController {
   private toolButtons: { point: HTMLButtonElement; pen: HTMLButtonElement } | null = null;
   private clearAllButton: HTMLButtonElement | null = null;
   private facilitatorButton: HTMLButtonElement | null = null;
+  /** The piece under a mouse pointer, which the single-key shortcuts act on first. */
+  private hovered: string | null = null;
+  private readonly hint: HTMLElement;
+  private hintTimer: number | null = null;
+  /** A close look is open because Space is held down; letting go closes it. */
+  private spaceLook = false;
 
-  constructor(private readonly table: TableRenderer) {}
+  constructor(private readonly table: TableRenderer) {
+    this.hint = document.createElement("div");
+    this.hint.className = "piece-hint";
+    this.hint.hidden = true;
+    // A reminder for the mouse; what the keys do is also on the piece's menu,
+    // and a screen reader is not read the hint on every piece it passes.
+    this.hint.setAttribute("aria-hidden", "true");
+  }
 
   attach(): void {
     const root = this.root;
@@ -98,7 +113,13 @@ export class InteractionController {
     root.addEventListener("pointercancel", this.onPointerCancel);
     root.addEventListener("dblclick", this.onDoubleClick);
     root.addEventListener("contextmenu", this.onContextMenu);
+    root.addEventListener("pointerover", this.onPointerOver);
+    root.addEventListener("pointerleave", this.onPointerLeave);
+    root.append(this.hint);
     window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keyup", this.onKeyUp);
+    // A look held open by Space ends if the window loses the key-up.
+    window.addEventListener("blur", this.endSpaceLook);
     document.addEventListener("pointerdown", this.onDocumentPointerDown, true);
     this.table.listener = {
       onOwnPeek: (pieceId) => this.onOwnPeek(pieceId),
@@ -188,6 +209,7 @@ export class InteractionController {
   };
 
   private onPointerDown = (event: PointerEvent): void => {
+    this.hideHint();
     const target = event.target;
     if (!(target instanceof Element)) return;
     if (target.closest("button, .table-menu, .reveals, .peek, input, a")) return;
@@ -562,6 +584,7 @@ export class InteractionController {
   }
 
   private closePeek(): void {
+    this.spaceLook = false;
     const pieceId = this.table.reveals.peekingAt;
     this.table.reveals.closePeek();
     if (pieceId !== null) this.table.pieceElement(pieceId)?.focus({ preventScroll: true });
@@ -572,6 +595,74 @@ export class InteractionController {
     if (this.table.lookingFromMenu !== pieceId) return;
     this.table.lookingFromMenu = null;
     if (this.openPeek(pieceId)) this.table.reveals.focusPeek();
+  }
+
+  // -- hovering, and the hint that says what the keys do -------------------------------
+
+  private onPointerOver = (event: PointerEvent): void => {
+    if (event.pointerType === "touch") return;
+    const node = (event.target as Element | null)?.closest<HTMLElement>("[data-piece-id]");
+    const pieceId = node?.dataset.pieceId ?? null;
+    if (pieceId === this.hovered) return;
+    this.hovered = pieceId;
+    this.hideHint();
+    if (pieceId === null || node === null || node === undefined) return;
+    this.hintTimer = window.setTimeout(() => this.showHint(pieceId, node), HINT_DELAY_MS);
+  };
+
+  private onPointerLeave = (): void => {
+    this.hovered = null;
+    this.hideHint();
+  };
+
+  /** The hovered piece, if it is still on the table. */
+  private get hoveredPiece(): string | null {
+    if (this.hovered === null || !this.model.pieces.has(this.hovered)) return null;
+    return this.hovered;
+  }
+
+  private showHint(pieceId: string, node: HTMLElement): void {
+    this.hintTimer = null;
+    if (this.gesture !== null || this.hovered !== pieceId || this.table.menu.isOpen) return;
+    const piece = this.model.pieces.get(pieceId);
+    if (piece === undefined || (piece.kind !== "card" && piece.kind !== "tile")) return;
+    // Which keys are worth mentioning, from what is drawn: whether the server
+    // allows any of them is still the server's to say when one is pressed.
+    const keys: Array<[string, string]> = [];
+    if (piece.component_id !== null) keys.push(["Space", "hold to enlarge"]);
+    keys.push(["F", "turn over"]);
+    if (this.model.zones.get(piece.zone_id)?.kind === "deck") keys.push(["S", "shuffle"]);
+    if (piece.locked) keys.push(["U", "unlock"]);
+    else if (piece.kind === "tile") keys.push(["L", "lock"]);
+    this.hint.replaceChildren();
+    keys.forEach(([key, what], index) => {
+      if (index > 0) this.hint.append(" · ");
+      const kbd = document.createElement("kbd");
+      kbd.textContent = key;
+      this.hint.append(kbd, ` ${what}`);
+    });
+    const box = this.root.getBoundingClientRect();
+    const rect = node.getBoundingClientRect();
+    this.hint.hidden = false;
+    const width = this.hint.offsetWidth;
+    const left = Math.min(
+      Math.max(rect.left + rect.width / 2 - box.left - width / 2, 8),
+      Math.max(box.width - width - 8, 8),
+    );
+    // Below the piece when there is room, otherwise above it.
+    const below = rect.bottom - box.top + 8;
+    const top =
+      below + this.hint.offsetHeight + 8 <= box.height
+        ? below
+        : Math.max(rect.top - box.top - this.hint.offsetHeight - 8, 8);
+    this.hint.style.left = `${left}px`;
+    this.hint.style.top = `${top}px`;
+  }
+
+  private hideHint(): void {
+    if (this.hintTimer !== null) window.clearTimeout(this.hintTimer);
+    this.hintTimer = null;
+    this.hint.hidden = true;
   }
 
   // -- ink -----------------------------------------------------------------------------
@@ -704,7 +795,9 @@ export class InteractionController {
       if (piece === undefined) continue;
       // Only a face being hidden can be shown in advance: a face being
       // turned up is not known here until the server sends it.
-      if (piece.component_id !== null) this.table.setOverride(id, { hideFace: true });
+      // A tile's other side is public and already here, so it can be shown either way.
+      if (piece.kind === "tile") this.table.setOverride(id, { turned: true });
+      else if (piece.component_id !== null) this.table.setOverride(id, { hideFace: true });
       this.table.intents.send("flip", { piece_id: id }, this.settles(id));
     }
     if (ids.length === 1) {
@@ -728,6 +821,34 @@ export class InteractionController {
     }
   }
 
+  private lock(ids: string[], locked: boolean): void {
+    for (const id of ids) {
+      this.table.intents.send(locked ? "lock" : "unlock", { piece_id: id });
+    }
+    const what = locked ? "locked" : "unlocked";
+    if (ids.length === 1) {
+      this.table.announcer.announce(`${capital(this.table.pieceLabel(ids[0]!))} ${what}.`);
+    } else if (ids.length > 1) {
+      this.table.announcer.announce(`${ids.length} pieces ${what}.`);
+    }
+  }
+
+  /**
+   * Shuffle the deck `pieceId` lies in. Whether there is one to shuffle is
+   * the menu's question, so this asks it and sends the menu's own entry.
+   */
+  private shuffle(pieceId: string): void {
+    this.table.menu.ask(pieceId, (items) => {
+      const entry = items.find((item) => item.id === "shuffle");
+      if (entry === undefined) {
+        this.table.notice("There is no deck here to shuffle.", "info");
+        return;
+      }
+      this.table.chooseMenuItem(entry, pieceId);
+      this.table.announcer.announce("Deck shuffled.");
+    });
+  }
+
   /** Callbacks that drop a piece's override once the server answers. */
   private settles(id: string): { onAck: () => void; onReject: () => void } {
     return {
@@ -741,8 +862,14 @@ export class InteractionController {
   private onKeyDown = (event: KeyboardEvent): void => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
-    if (target.closest(".table-menu")) return;
-    // Keys belong to the table when focus is on it, or on nothing at all;
+    if (target.closest(".table-menu") || isTyping(target)) return;
+    // With the pointer resting on a piece, or a close look open, the
+    // single-key shortcuts are for the table wherever focus was left - on a
+    // button just pressed in the side panel, say.
+    const pointing = this.hoveredPiece !== null || this.table.reveals.peekingAt !== null;
+    const plain = !(event.ctrlKey || event.metaKey || event.altKey);
+    if (pointing && plain && this.shortcut(event, target)) return;
+    // Otherwise keys belong to the table when focus is on it, or on nothing at all;
     // never while someone is typing, or using a control elsewhere on the page.
     const onTable = this.root.contains(target);
     if (!onTable && target !== document.body) return;
@@ -759,6 +886,7 @@ export class InteractionController {
       return;
     }
     if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (this.shortcut(event, target)) return;
     const pieceId = target.dataset.pieceId;
     if (pieceId === undefined) {
       // Nothing focused, but something selected: the selection is what R turns.
@@ -793,9 +921,9 @@ export class InteractionController {
       this.flip(ids);
       return;
     }
-    if (event.key === " ") {
-      // Select, as a click does: Space picks this piece alone, Shift-Space
-      // adds it to (or takes it from) the selection. Offers use the selection.
+    if (event.key === "x" || event.key === "X") {
+      // Select, as a click does: X picks this piece alone, Shift-X adds it
+      // to (or takes it from) the selection. Offers use the selection.
       event.preventDefault();
       this.click(pieceId, event.shiftKey);
       const count = this.table.selected.size;
@@ -825,6 +953,59 @@ export class InteractionController {
       }
     }
   };
+
+  private onKeyUp = (event: KeyboardEvent): void => {
+    if (event.key === " ") this.endSpaceLook();
+  };
+
+  private endSpaceLook = (): void => {
+    if (!this.spaceLook) return;
+    this.spaceLook = false;
+    if (this.table.reveals.peekingAt !== null) this.closePeek();
+  };
+
+  /**
+   * F, L, U, S and Space: the keys that act on the piece under the pointer
+   * first, then on the focused piece, then on the selection. True if the key
+   * was one of them and has been used.
+   */
+  private shortcut(event: KeyboardEvent, target: HTMLElement): boolean {
+    this.hideHint();
+    if (event.key === " " && this.spaceLook) {
+      // Space is being held: the look stays open until it is let go.
+      event.preventDefault();
+      return true;
+    }
+    // The single-letter keys act on the piece under the pointer first, then
+    // on the focused piece, then on the selection.
+    const hovered = this.hoveredPiece;
+    const subject = hovered ?? target.dataset.pieceId ?? null;
+    const subjects = subject !== null ? this.targetsFor(subject) : [...this.table.selected];
+    const letter = event.key.length === 1 ? event.key.toLowerCase() : "";
+    if (letter === "f" && subjects.length > 0) {
+      event.preventDefault();
+      this.flip(subjects);
+      return true;
+    }
+    if ((letter === "l" || letter === "u") && subjects.length > 0) {
+      event.preventDefault();
+      this.lock(subjects, letter === "l");
+      return true;
+    }
+    if (letter === "s" && subject !== null) {
+      event.preventDefault();
+      this.shuffle(subject);
+      return true;
+    }
+    if (event.key === " " && subject !== null && this.openPeek(subject)) {
+      // A close look at the card, for as long as Space is held down.
+      event.preventDefault();
+      this.spaceLook = true;
+      this.table.intents.send("peek", { piece_id: subject });
+      return true;
+    }
+    return false;
+  }
 
   /** Move pieces by a grid step: one move and one release each, settled on the release. */
   private nudge(ids: string[], dx: number, dy: number, way: string): void {

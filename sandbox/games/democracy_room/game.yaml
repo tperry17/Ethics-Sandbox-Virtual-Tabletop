@@ -22,6 +22,8 @@ room:
 components:
   decks:
     - id: cities
+      kind: tile                 # both sides public: the account, and the seal and name
+      locked: true               # laid out in place; unlock from the menu, or with U
       source: exercises/democracy-simulation/cities.csv
       key: key
       title: name
@@ -69,6 +71,14 @@ zones:
     rect: [440, 40, 360, 640]
     visibility: public
     layout: stack
+  - id: hand                      # every room has a private hand for each seat
+    kind: hand
+    label: Hand
+    rect: [40, 940, 1200, 220]
+    visibility: private_to_owner
+    layout: fan
+    per_seat: true
+    step: [0, 240]
 
 setup:
   - {op: spawn_deck, deck: cities, zone: potamosia, where: {key: potamosia}}

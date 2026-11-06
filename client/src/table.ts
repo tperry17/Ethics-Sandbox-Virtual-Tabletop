@@ -51,14 +51,16 @@ const ANNOUNCE_EACH_UP_TO = 3;
  * A local, not-yet-confirmed result laid over what the server last said.
  *
  * `x`/`y`/`rotation` pin where a piece is drawn (its own hand is on it);
- * `hideFace` draws the back of a card just turned face down; `lifted` draws
- * it picked up. Any field left out falls through to the server's truth.
+ * `hideFace` draws the back of a card just turned face down; `turned` draws
+ * a tile's other side; `lifted` draws it picked up. Any field left out falls
+ * through to the server's truth.
  */
 export interface Override {
   x?: number;
   y?: number;
   rotation?: number;
   hideFace?: boolean;
+  turned?: boolean;
   lifted?: boolean;
 }
 export interface RendererOptions {
@@ -643,6 +645,8 @@ export class TableRenderer {
       shown.component_id = null;
       shown.face_up = false;
     }
+    // A tile's other side is known already, so turning one over can be shown at once.
+    if (override.turned === true) shown.face_up = !piece.face_up;
     if (override.lifted === true) shown.held_by = this.model.seatId;
     return shown;
   }
@@ -1068,7 +1072,8 @@ export class TableRenderer {
     this.schedule();
   }
 
-  private chooseMenuItem(item: MenuItemView, pieceId: string): void {
+  /** Send what a menu entry stands for, as if it had been chosen from the menu. */
+  chooseMenuItem(item: MenuItemView, pieceId: string): void {
     this.intents.send(item.op_type, item.payload);
     if (item.op_type === "peek") this.lookingFromMenu = pieceId;
   }

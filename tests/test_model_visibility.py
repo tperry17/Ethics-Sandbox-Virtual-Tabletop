@@ -9,6 +9,7 @@ from _model_support import (
     build_sample_table,
 )
 
+from sandbox.model.types import PieceKind
 from sandbox.model.visibility import entitled_to_face, project
 
 
@@ -130,3 +131,31 @@ def test_project_of_deck_hides_component_id_but_reports_the_pile() -> None:
     deck_pieces = [p for p in view.pieces if p.zone_id == DECK]
     assert len(deck_pieces) == 6
     assert all(p.component_id is None for p in deck_pieces)
+
+
+def test_a_tile_shows_its_component_either_way_up_in_a_public_zone() -> None:
+    table = build_sample_table(deck_size=1)
+    tile = table.pieces["card-0"]
+    tile.kind = PieceKind.TILE
+    tile.zone_id = PUBLIC_TABLE
+    tile.face_up = False
+
+    for viewer in (SEAT_A, SEAT_B, FACILITATOR, None):
+        viewed = next(p for p in project(table, viewer).pieces if p.id == "card-0")
+        assert viewed.component_id == tile.component_id
+        assert viewed.face_up is False
+
+
+def test_a_tile_is_still_hidden_in_a_hidden_zone_and_private_in_a_hand() -> None:
+    table = build_sample_table(deck_size=1)
+    tile = table.pieces["card-0"]
+    tile.kind = PieceKind.TILE
+    tile.face_up = False
+
+    for viewer in (SEAT_A, SEAT_B, FACILITATOR, None):
+        viewed = next(p for p in project(table, viewer).pieces if p.id == "card-0")
+        assert viewed.component_id is None
+
+    tile.zone_id = HAND_A
+    assert entitled_to_face(table, tile, table.zones[HAND_A], SEAT_A)
+    assert not entitled_to_face(table, tile, table.zones[HAND_A], SEAT_B)

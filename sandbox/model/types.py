@@ -16,6 +16,9 @@ class PieceKind(StrEnum):
     NOTE = "note"
     MARKER = "marker"
     BOARD = "board"
+    TILE = "tile"
+    """A piece with two public sides, like a city's tile: turning it over
+    hides nothing, so whoever may see one side may see the other."""
 
 
 class ZoneKind(StrEnum):

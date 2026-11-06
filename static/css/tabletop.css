@@ -44,13 +44,6 @@
   transform: translateY(0) rotate(-0.25deg);
 }
 
-.piece--card::before {
-  width: 2.5rem;
-  height: var(--line-strong);
-  background: var(--accent-rubric);
-  content: "";
-}
-
 .piece--card .piece__title { font-size: var(--text-md); font-weight: 600; line-height: var(--leading-tight); text-wrap: balance; }
 .piece--card .piece__copy { font-size: var(--text-sm); }
 .piece__text { display: block; font-size: var(--text-sm); overflow-wrap: anywhere; }
@@ -67,10 +60,11 @@
 /* A card's picture takes the same share of every card of its size, however
    long the words below it, so every card in a deck shows it at one size. */
 .piece--card { container-type: size; }
-/* Rows: the rubric, the picture, the title, the words, the foot. The words
-   take what is left, so the picture sits at the same height on every card. */
-.piece--card:has(.piece__image) { grid-template-rows: auto auto auto 1fr auto; }
-.piece--card .piece__image { grid-row: auto; flex: none; inline-size: 100%; block-size: 30cqh; min-height: 0; object-fit: contain; }
+/* Rows: the picture, the title, the words, the foot. The words take what is
+   left, so the picture sits at the same height on every card, and they give
+   way before the foot does, so the number is never cut off. */
+.piece--card:has(.piece__image) { grid-template-rows: auto auto minmax(0, 1fr) auto; gap: var(--space-2); }
+.piece--card .piece__image { grid-row: auto; flex: none; inline-size: 100%; block-size: 28cqh; min-height: 0; object-fit: contain; }
 
 .piece--card.is-face-down {
   place-items: center;
@@ -78,9 +72,6 @@
   background: var(--card-back);
   color: var(--card-back-ink);
 }
-
-/* A back carries the seal alone: no title rule. */
-.piece--card.is-face-down::before { content: none; }
 
 /* The Center's seal, in the back's ink. The image is used only as a mask, so
    its colour comes from the token; the style guide allows the seal in white
@@ -941,6 +932,62 @@
 
 .room__identity { display: grid; gap: 0.1rem; min-width: 0; }
 .room__identity .eyebrow { margin: 0; }
+.room__home { color: inherit; text-decoration: none; }
+.room__home:hover { color: var(--text-primary); text-decoration: underline; }
+.room__home:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+
+/* A tile: a city's seal and its account, laid on the table rather than
+   held. Its front is drawn as a card's face is; its back is the seal and
+   the name alone, at the same size, on the page's own white rather than a
+   card's crimson back. */
+.piece--tile {
+  padding: var(--space-5);
+  place-items: start stretch;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: var(--space-3);
+  overflow: hidden;
+  border: var(--line-hairline) solid var(--surface-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: 0 0.18rem 0.3rem var(--shadow-color);
+  font-family: var(--font-reading);
+  font-size: max(var(--text-sm), 16px);
+  line-height: 1.35;
+}
+.piece--tile .piece__image { grid-row: auto; inline-size: 100%; block-size: 30cqh; object-fit: contain; }
+.piece--tile { container-type: size; }
+.piece--tile .piece__title { font-size: var(--text-md); font-weight: 600; line-height: var(--leading-tight); text-wrap: balance; }
+.piece--tile .piece__copy { font-size: var(--text-sm); }
+.piece--tile.is-back { place-content: center; place-items: center; grid-template-rows: auto auto; background: var(--surface-page); }
+.piece--tile.is-back .piece__title { text-align: center; }
+.piece--tile.is-back .piece__image { block-size: 55cqh; }
+.piece--tile.is-back .piece__title { font-size: var(--text-xl); }
+
+/* What the keys do to the piece under the pointer. */
+.piece-hint {
+  position: absolute;
+  z-index: 6;
+  padding: var(--space-1) var(--space-2);
+  border: var(--line-hairline) solid var(--surface-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raised);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.piece-hint[hidden] { display: none; }
+.piece-hint kbd {
+  padding: 0 0.3em;
+  border: var(--line-hairline) solid var(--surface-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
 .room__title {
   margin: 0;
   font-family: var(--font-reading);

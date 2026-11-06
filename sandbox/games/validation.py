@@ -23,6 +23,7 @@ from sandbox.games.loader import (
     load_game,
 )
 from sandbox.model import Reject, Table, TableRng, run_op
+from sandbox.model.types import Visibility, ZoneKind
 
 EXERCISES_CSV = "site/exercises.csv"
 
@@ -144,6 +145,15 @@ def _room_errors(
         if room is None:
             continue
         rooms_for.setdefault(room.exercise, []).append(game.slug)
+        # Every room gives each seat a private hand, so cards can always be
+        # dealt to people for their eyes only.
+        if not any(
+            zone.kind is ZoneKind.HAND
+            and zone.per_seat
+            and zone.visibility is Visibility.PRIVATE_TO_OWNER
+            for zone in game.definition.zones
+        ):
+            errors.append(f"{game.slug}: a room needs a private, per-seat hand zone.")
         if whole_catalog and room.exercise not in catalog:
             errors.append(
                 f"{game.slug}: is the room for {room.exercise!r}, which is not "
