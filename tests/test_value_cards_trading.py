@@ -87,7 +87,7 @@ def test_it_takes_exactly_three_and_starts_when_the_third_signs_up() -> None:
     assert f"{activity_id}:hand-seat-4" not in table.zones
 
 
-def test_deal_gives_six_open_cards_of_the_crimson_deck_to_each_of_three() -> None:
+def test_deal_gives_six_open_cards_of_the_base_deck_to_each_of_three() -> None:
     table, activity_id = _dealt()
     groups = {card.component_id: card.face.group for card in GAME.decks["values"]}
     for seat in PLAYERS:
@@ -95,7 +95,7 @@ def test_deal_gives_six_open_cards_of_the_crimson_deck_to_each_of_three() -> Non
         hand = table.pieces_in_zone(zone)
         assert len(hand) == 6
         assert all(card.face_up for card in hand)
-        # The trio plays with the 18 crimson cards; the navy ones stay out.
+        # The trio plays with the base deck; the sidebar cards stay out.
         assert {groups[card.component_id] for card in hand} == {"Deck"}
     assert not table.pieces_in_zone(f"{activity_id}:deck")
 

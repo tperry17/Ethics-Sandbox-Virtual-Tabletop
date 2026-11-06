@@ -57,8 +57,8 @@ zones:
     step: [0, 260]
 
 setup:
-  # The trio plays with the 18 cards of the crimson "Deck" group; the room's
-  # sandbox keeps the full 36, the navy "Sidebar" group included.
+  # The trio plays with the 18 cards of the base deck (group "Deck"); the
+  # room's sandbox keeps the full 36, the sidebar cards included.
   - {op: spawn_deck, deck: values, zone: deck, where: {group: Deck}}
 
 macros:

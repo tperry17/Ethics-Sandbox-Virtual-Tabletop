@@ -151,8 +151,8 @@ player who is not the facilitator, in seat order, so each sees only their
 own. A deck on the room's table deals to the room's hands; a deck in an
 activity deals to that activity's private hands, or, if it has none, to
 its players' hands in the room. Every room type has a private, per-seat
-hand (validation checks it). Value Cards Trading plays with the 18 crimson
-"Deck" cards, 6 each, laid out in the open on the board (`seat_area`
+hand (validation checks it). Value Cards Trading plays with the 18 cards
+of the base deck (`group` "Deck"), 6 each, laid out in the open on the board (`seat_area`
 zones), not in a hand; the Value Cards room's sandbox keeps all 36. Faces a patch newly entitles
 a viewer to travel with that patch as `components`, to that viewer only.
 
