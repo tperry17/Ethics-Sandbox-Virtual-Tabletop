@@ -60,6 +60,21 @@ function Assert-Command([string]$Name, [string]$Install) {
     }
 }
 
+# Whether a program starts and succeeds, with its output thrown away.
+function Test-Runs([string]$Program, [string[]]$Arguments) {
+    if (-not (Test-Path $Program)) { return $false }
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $Program @Arguments *> $null
+        return ($LASTEXITCODE -eq 0)
+    } catch {
+        return $false
+    } finally {
+        $ErrorActionPreference = $previous
+    }
+}
+
 # Read a file another process is still writing.
 function Read-SharedText([string]$Path) {
     if (-not (Test-Path $Path)) { return '' }
@@ -131,6 +146,18 @@ Write-Host 'Free.'
 Write-Step 'Installing Python and client dependencies'
 # A virtualenv activated in this terminal must not stand in for the project's.
 Remove-Item Env:VIRTUAL_ENV -ErrorAction SilentlyContinue
+# A .venv moved or copied from another folder keeps that folder's path in its
+# program launchers (uv says "trampoline failed to canonicalize script path").
+# Rebuild it rather than reuse it.
+$venv = Join-Path $ProjectRoot '.venv'
+if ((Test-Path $venv) -and -not (Test-Runs (Join-Path $venv 'Scripts\pytest.exe') @('--version'))) {
+    Write-Host 'The .venv here was built for another folder; rebuilding it.'
+    try {
+        Remove-Item -Recurse -Force $venv
+    } catch {
+        throw "Could not delete $venv ($($_.Exception.Message)). Close VS Code and any other terminal using it, then run this again."
+    }
+}
 Invoke-Checked uv @('sync', '--frozen')
 Invoke-Checked npm.cmd @('ci', '--no-audit', '--no-fund')
 

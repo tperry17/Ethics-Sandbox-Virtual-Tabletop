@@ -70,6 +70,22 @@ jobs:
       # background; then the server must answer and name the tunnel's
       # address. Reaching it through Cloudflare is tried but not required,
       # since a new quick-tunnel address can take a while to resolve.
+      # A .venv built in another folder and moved here, as when a
+      # facilitator moves the project: the script must rebuild it.
+      - name: Put a moved .venv in place
+        shell: powershell
+        run: |
+          $elsewhere = Join-Path $env:RUNNER_TEMP 'elsewhere'
+          Copy-Item -Recurse -Path . -Destination $elsewhere
+          Push-Location $elsewhere
+          uv sync --frozen
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Pop-Location
+          Move-Item (Join-Path $elsewhere '.venv') '.venv'
+          Remove-Item -Recurse -Force $elsewhere
+          & .venv\Scripts\pytest.exe --version
+          if ($LASTEXITCODE -eq 0) { Write-Error 'The moved .venv still works, so this step tests nothing.'; exit 1 }
+          exit 0
       - name: Serve through a quick tunnel
         shell: powershell
         run: |
@@ -91,5 +107,6 @@ jobs:
           }
           taskkill /T /F /PID $server.Id | Out-Null
           if (-not $page) { Write-Error 'The server never answered /health.'; exit 1 }
+          if (-not (Select-String -Path "$log.out" -SimpleMatch 'built for another folder; rebuilding it' -Quiet)) { Write-Error 'The script did not rebuild the moved .venv.'; exit 1 }
           if (-not $address) { Write-Error '/health does not name a trycloudflare.com address.'; exit 1 }
           if ($reached) { "Reached $address/health through Cloudflare." } else { Write-Warning "Could not reach $address/health through Cloudflare within a minute." }
