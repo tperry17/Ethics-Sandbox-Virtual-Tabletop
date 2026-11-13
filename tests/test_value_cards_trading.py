@@ -183,6 +183,6 @@ def test_the_room_sandbox_keeps_the_full_deck_of_36() -> None:
     table = seated(room, 1)
     groups = {card.component_id: card.face.group for card in room.decks["values"]}
 
-    cards = table.pieces_in_zone("deck")
+    cards = table.pieces_in_zone("deck") + table.pieces_in_zone("sidebar")
     assert len(cards) == 36
     assert {groups[str(card.component_id)] for card in cards} == {"Deck", "Sidebar"}

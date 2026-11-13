@@ -412,20 +412,53 @@ def _check_references(definition: GameDefinition) -> None:
 def _check_filters(
     definition: GameDefinition, decks: dict[str, tuple[Card, ...]]
 ) -> None:
-    """Every column a ``where`` filters on must be one its deck has."""
+    """Every column a ``where`` filters on must be one its deck has.
+
+    A ``collect`` names no deck, so its columns must be in at least one.
+    """
+
+    def columns_of(deck_id: str) -> set[str]:
+        return set(decks[deck_id][0].fields) if decks[deck_id] else set()
+
     steps = [*definition.setup]
     for macro in definition.macros:
         steps.extend(macro.steps or ())
-    for step in steps:
-        if not isinstance(step, SpawnDeckStep):
-            continue
-        columns = set(decks[step.deck][0].fields) if decks[step.deck] else set()
-        for column in step.where:
-            if column not in columns:
-                raise GameDefinitionError(
-                    f"A spawn_deck of {step.deck!r} filters on a column "
-                    f"{column!r} that the deck's CSV does not have."
-                )
+    filters: list[tuple[str, str, set[str]]] = [
+        (f"A spawn_deck of {step.deck!r}", column, columns_of(step.deck))
+        for step in steps
+        if isinstance(step, SpawnDeckStep)
+        for column in step.where
+    ]
+    every_column = set().union(*(columns_of(deck_id) for deck_id in decks))
+    filters += [
+        (f"A collect into {step.to!r}", column, every_column)
+        for step in steps
+        if isinstance(step, CollectStep)
+        for column in step.where
+    ]
+    if definition.room is not None:
+        filters += [
+            (f"The room's deck {room_deck.id!r}", column, columns_of(room_deck.deck))
+            for room_deck in definition.room.decks
+            for column in room_deck.where
+        ]
+    for what, column, columns in filters:
+        if column not in columns:
+            raise GameDefinitionError(
+                f"{what} filters on a column {column!r} that the deck's CSV "
+                "does not have."
+            )
+    for room_deck in definition.room.decks if definition.room else ():
+        if not any(
+            all(
+                card.fields.get(c, "").casefold() == v.casefold()
+                for c, v in room_deck.where.items()
+            )
+            for card in decks[room_deck.deck]
+        ):
+            raise GameDefinitionError(
+                f"The room's deck {room_deck.id!r} would have no cards."
+            )
 
 
 def _import_rules(directory: Path, rules: Path) -> ModuleType:

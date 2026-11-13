@@ -435,7 +435,10 @@ class ActivityOptionView(BaseModel):
 
 
 class PieceMenuView(BaseModel):
-    """One piece the room's Pieces menu adds: what it is, and its colour."""
+    """One piece the room's Pieces menu adds: what it is, and its colour.
+
+    ``kind`` "deck" is a whole pile of cards, added as a deck of its own.
+    """
 
     component_id: str
     kind: str
@@ -699,6 +702,7 @@ def pieces_menu(room_game: Game | None) -> list[PieceMenuView]:
     """What the room's Pieces menu offers, in the order its definition lists."""
     if room_game is None or room_game.definition.room is None:
         return []
+    room = room_game.definition.room
     specs = {piece.id: piece for piece in room_game.definition.components.pieces}
     return [
         PieceMenuView(
@@ -707,8 +711,12 @@ def pieces_menu(room_game: Game | None) -> list[PieceMenuView]:
             title=spec.title or spec.kind.value.capitalize(),
             tint_index=spec.tint_index,
         )
-        for component_id in room_game.definition.room.pieces
+        for component_id in room.pieces
         if (spec := specs.get(component_id)) is not None
+    ] + [
+        # A further pile of cards: added by the same intent, as a whole deck.
+        PieceMenuView(component_id=deck.id, kind="deck", title=deck.title)
+        for deck in room.decks
     ]
 
 
@@ -1878,6 +1886,10 @@ class RoomRuntime:
             self._reject(connection, message.client_id, outcome.reason)
             return
         connection.send(AckMessage(client_id=message.client_id))
+        if any(isinstance(step, AddZone) for step in built.steps):
+            # A deck is a zone of its own, and a client builds a zone it has
+            # never seen only from a whole table.
+            self._resend_everyone()
 
     def _on_menu_request(
         self, connection: Connection, message: MenuRequestMessage

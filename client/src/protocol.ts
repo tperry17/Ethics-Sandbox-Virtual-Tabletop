@@ -207,10 +207,10 @@ export interface OfferView {
 }
 
 /** An activity this room can start. */
-/** One piece the room's Pieces menu adds. */
+/** One piece the room's Pieces menu adds, or ("deck") a whole pile of cards. */
 export interface PieceMenuView {
   component_id: string;
-  kind: PieceKind;
+  kind: PieceKind | "deck";
   title: string;
   /** A seat colour, for a player piece; none for a die. */
   tint_index?: number | null;

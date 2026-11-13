@@ -1,6 +1,7 @@
 /**
- * The room's Pieces menu: dice and a set of player pieces in one colour,
- * added to the table where the person is looking. What the menu offers, and
+ * The room's Pieces menu: dice, further decks of the room's cards, and a set
+ * of player pieces in one colour, added to the table where the person is
+ * looking. What the menu offers, and
  * whether a piece may be added, is the server's; this only draws the list
  * it was sent and reports which piece was chosen.
  */
@@ -20,8 +21,8 @@ function button(label: string, onClick: () => void, className = "button button--
 }
 
 /**
- * The menu as a disclosure: closed, a "Pieces" button; open, the die and
- * the player pieces with a row of colours. Null when the room has none.
+ * The menu as a disclosure: closed, a "Pieces" button; open, the die, the
+ * decks and the player pieces with a row of colours. Null when the room has none.
  */
 export function renderPiecesMenu(
   menu: PieceMenuView[],
@@ -42,7 +43,7 @@ export function renderPiecesMenu(
   panel.setAttribute("role", "group");
   panel.setAttribute("aria-label", "Add a piece");
 
-  // Pieces with no colour of their own: each its own row.
+  // Pieces with no colour of their own, and decks: each its own row.
   for (const entry of menu.filter((each) => each.tint_index === null || each.tint_index === undefined)) {
     const row = document.createElement("div");
     row.className = "pieces-menu__row";

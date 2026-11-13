@@ -55,3 +55,28 @@ async def test_only_the_menus_own_pieces_can_be_added() -> None:
         await room.settle(0.05)
         assert set(room.runtime.table.pieces) == before
         assert len(host.socket.of_type("reject")) == 3
+
+
+async def test_the_value_cards_menu_adds_a_core_deck_or_a_sidebar() -> None:
+    async with open_room(0, kind="value-cards-room") as (room, host, _guests):
+        await room.settle(0.05)
+        menu = _menu(host.socket.of_type("snapshot")[-1])
+        decks = [(e["component_id"], e["title"]) for e in menu if e["kind"] == "deck"]
+        assert decks == [("core-deck", "Core deck"), ("sidebar-deck", "Sidebar")]
+
+        before = set(room.runtime.table.zones)
+        snapshots = len(host.socket.of_type("snapshot"))
+        await room.intent(
+            host,
+            "add_piece",
+            {"component_id": "sidebar-deck", "x": 800, "y": 450},
+            client_id="d",
+        )
+        await room.settle(0.05)
+        (added,) = set(room.runtime.table.zones) - before
+        assert len(room.runtime.table.pieces_in_zone(added)) == 18
+        assert host.socket.of_type("ack")[-1]["client_id"] == "d"
+        # The new zone arrives in a whole table, which a client can draw.
+        latest = host.socket.of_type("snapshot")
+        assert len(latest) > snapshots
+        assert added in {zone["id"] for zone in latest[-1]["view_table"]["zones"]}

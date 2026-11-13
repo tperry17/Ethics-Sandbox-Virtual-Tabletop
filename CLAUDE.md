@@ -14,7 +14,7 @@ Facilitators—teachers, community organisers, and workshop leads—run groups o
 
 ## Rooms and activities
 
-A room belongs to one exercise, and it is that exercise's sandbox. Up to 30 people join it and use its table however they please: the free table and the exercise's own loose pieces. A Value Cards room holds the value cards; a Leadership and Knowledge in Popular Rule room holds the two cities' seals and a general account of each city (its own CSV under `content/exercises/democracy-simulation/`), with nothing about either scenario. Every room, whatever its exercise, has a "Pieces" menu that can be opened to add dice, cubes, meeples and tokens to the table; they are not laid out on it. Cubes, meeples and tokens are one set of player pieces, chosen in a seat colour, and a token can have one word or number written on it.
+A room belongs to one exercise, and it is that exercise's sandbox. Up to 30 people join it and use its table however they please: the free table and the exercise's own loose pieces. A Value Cards room holds the value cards as two face-down piles, the core deck (`group` "Deck") and the sidebar (`group` "Sidebar"); a Leadership and Knowledge in Popular Rule room holds the two cities' seals and a general account of each city (its own CSV under `content/exercises/democracy-simulation/`), with nothing about either scenario. Every room, whatever its exercise, has a "Pieces" menu that can be opened to add dice, cubes, meeples and tokens to the table; they are not laid out on it. A room type may also list decks in that menu (the Value Cards room lists the core deck and the sidebar): each one added is a further pile of its own, a deck zone that shuffles and deals like the first, until the room's reset or setup takes it away (at most 12 at once). Cubes, meeples and tokens are one set of player pieces, chosen in a seat colour, and a token can have one word or number written on it.
 
 A room is opened only from its exercise's page, with "Open a room", which opens that exercise's room directly; whoever opened it is then asked for a display name, as anyone joining is. Nothing is started by typing an address: there is no `/start` page, and no room, activity or class is opened by a URL alone. People reach a room from its invite link or by entering its code with "Join a room".
 
@@ -123,8 +123,8 @@ person did: no rule, no deck, and no face it was not given.
   changes nothing
 - `activities.ts` — the side panel's activities: a card for each the room
   can start, who has signed up, and the buttons that act on one
-- `pieces.ts` — the room's Pieces menu: the die and the player pieces in a
-  chosen colour, added where the person is looking
+- `pieces.ts` — the room's Pieces menu: the die, any further decks, and the
+  player pieces in a chosen colour, added where the person is looking
 - `announcer.ts` — the live region that says what happened, in words
 
 Pieces are DOM elements positioned with `translate3d` inside a single
@@ -168,7 +168,7 @@ activity deals to that activity's private hands, or, if it has none, to
 its players' hands in the room. Every room type has a private, per-seat
 hand (validation checks it). Value Cards Trading plays with the 18 cards
 of the base deck (`group` "Deck"), 6 each, laid out in the open on the board (`seat_area`
-zones), not in a hand; the Value Cards room's sandbox keeps all 36. Faces a patch newly entitles
+zones), not in a hand; the Value Cards room's sandbox keeps all 36, as the core deck and the sidebar. Faces a patch newly entitles
 a viewer to travel with that patch as `components`, to that viewer only.
 
 Reveals are read from state (`revealed_to`, `revealed_by`), not from
@@ -250,12 +250,12 @@ server do.
   anything destructive) and `announce` (`{name}` and `{label}`).
 - `prompts` — `source:` a CSV with `id` and `text` columns.
 - `pairing` — optional: `source:` a CSV of `our_choice`, `their_choice` and `text`, and `when:` the options it applies to (Leadership and Knowledge in Popular Rule, scenario 2). A class may pair two of its tables, or one table with a hypothetical partner (`HYPOTHETICAL_TABLE`); someone at a table proposes that table's choice, the facilitator confirms it (or sets it, and alone sets a hypothetical partner's), and once both are confirmed the facilitator sees the matching row. While a hypothetical partner is undecided, the facilitator sees the row for each choice it could make.
-- `room` — only on a room type (`sandbox/games/value_cards_room/`, `democracy_room/`): `exercise` (the catalog slug whose page opens it), `label` (its button), `activities` (each an `id`, a `game`, optional `title`, `options` it fixes, `class_only`, and `debrief`, which lists it under the side panel's own "Debrief" heading, below the activities), `pieces` (the components of its Pieces menu) and `pieces_zone`. A room type needs only the `setup`, `reset` and `clear_ink` macros; `sandbox/games/room_types.py` reads it, and validation checks every catalog exercise has one room.
+- `room` — only on a room type (`sandbox/games/value_cards_room/`, `democracy_room/`): `exercise` (the catalog slug whose page opens it), `label` (its button), `activities` (each an `id`, a `game`, optional `title`, `options` it fixes, `class_only`, and `debrief`, which lists it under the side panel's own "Debrief" heading, below the activities), `pieces` (the components of its Pieces menu), `decks` (further piles that menu adds, each an `id`, a `title`, a `deck`, an optional `where`, and the zone it is `shaped_like`) and `pieces_zone`. A room type needs only the `setup`, `reset` and `clear_ink` macros; `sandbox/games/room_types.py` reads it, and validation checks every catalog exercise has one room.
 
 Steps are `{op: ..., ...}`: `setup` (run the setup steps here),
 `spawn_deck`, `spawn`, `shuffle`, `deal` and `draw` (`from`, `to`,
 `count`, `face_up`), `collect` (`to`, optional `kinds`, `from`,
-`face_up`), `flip`, `reset_table`, `reset_zone`, `clear_ink`. Naming a
+`where`, `face_up`), `flip`, `reset_table`, `reset_zone`, `clear_ink`. Naming a
 per-seat zone means every seat's copy, in seat order. A card dealt or
 drawn into its owner's private hand lands face up, so its owner can read
 it; anywhere else it stays as it came off the pile. `face_up` in the step

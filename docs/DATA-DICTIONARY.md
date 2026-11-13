@@ -385,6 +385,14 @@ Hand the facilitator role back, so anyone may take it.
 
 No fields.
 
+### RemoveZone
+
+Take an empty zone off the table: one added while the room was in use.
+
+| Field | Type |
+| --- | --- |
+| `zone_id` | `str` |
+
 ### ReorderZ
 
 Send a piece to the top or bottom of its zone's stacking order.

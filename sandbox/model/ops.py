@@ -1392,6 +1392,35 @@ class AddZone:
 
 
 @dataclass(frozen=True)
+class RemoveZone:
+    """Take an empty zone off the table: one added while the room was in use.
+
+    Facilitator-only, like clearing a zone. A zone with pieces in it, or one
+    an activity laid out, is refused: emptying it and ending the activity
+    are their own operations.
+    """
+
+    zone_id: str
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        zone = _get_zone(table, self.zone_id)
+        if zone is None:
+            return f"There is no zone {self.zone_id!r} on the table."
+        if not table.is_facilitator(actor_seat):
+            return "Only the facilitator may remove a zone."
+        if table.pieces_in_zone(zone.id):
+            return f"{zone.label} still has pieces in it."
+        if any(zone.id in activity.zones for activity in table.activities.values()):
+            return f"{zone.label} belongs to an activity."
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        del table.zones[self.zone_id]
+        return [Patch(kind="zone", op="remove", entity_id=self.zone_id, fields={})]
+
+
+@dataclass(frozen=True)
 class Transaction:
     """Several operations applied as one: every one of them, or none at all.
 

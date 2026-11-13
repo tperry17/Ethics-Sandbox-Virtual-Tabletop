@@ -93,3 +93,21 @@ test("the site's name above the table leads back to the main page", async ({ bro
   await page.getByRole("link", { name: "Ethics Sandbox" }).click();
   await page.waitForURL(/\/$/);
 });
+
+test("the Value Cards room lays out the core deck and the sidebar, and the Pieces menu adds more", async ({
+  browser,
+}) => {
+  const page = await openRoom(browser, "Value Cards", "Ines");
+  const cardsIn = (zone: string) =>
+    page.locator(`.tabletop__pieces-layer .piece--card[data-zone-id${zone}]`);
+  await expect(cardsIn('="deck"')).toHaveCount(18);
+  await expect(cardsIn('="sidebar"')).toHaveCount(18);
+
+  await page.locator(".pieces-menu summary").click();
+  const row = page.locator(".pieces-menu__row", { hasText: "Sidebar" });
+  await row.getByRole("button", { name: "Add" }).click();
+  await expect(cardsIn('^="added-deck-"')).toHaveCount(18);
+  await expect(cardsIn('="sidebar"')).toHaveCount(18);
+  // A pile of its own, outlined and named like the others.
+  await expect(page.locator('.zone[data-zone-id^="added-deck-"] .zone__label')).toHaveText("Sidebar");
+});
