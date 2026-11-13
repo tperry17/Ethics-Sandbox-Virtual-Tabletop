@@ -57,7 +57,7 @@ from any tunnel already set up on the Windows side.
    database should not sit on a drive Windows also syncs or scans.
 
    ```
-   cd ~ && gh repo clone HolyTispoon/Ethics-Sandbox-Virtual-Tabletop
+   cd ~ && gh repo clone tperry17/Ethics-Sandbox-Virtual-Tabletop
    ```
 
 8. In Windows Settings, under Power, set the screen and sleep to "Never"
