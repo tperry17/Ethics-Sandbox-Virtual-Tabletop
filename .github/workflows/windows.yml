@@ -42,8 +42,9 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
-      # As docs/FACILITATING-ON-WINDOWS.md clones: line endings as committed.
-      - run: git config --global core.autocrlf false
+      # Git for Windows' default, as a facilitator's clone has it:
+      # .gitattributes must keep the checkout's line endings as committed.
+      - run: git config --global core.autocrlf true
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
