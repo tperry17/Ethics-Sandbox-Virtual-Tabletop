@@ -79,7 +79,7 @@
               <p>
                 {% if dormant %}This room is dormant: nobody has been active for 12 hours.
                 {% else %}This room goes dormant after 12 hours without activity.{% endif %}
-                Its record is deleted on {{ purge_date.strftime("%-d %B %Y") }} unless someone
+                Its record is deleted on {{ purge_date.day }} {{ purge_date.strftime("%B %Y") }} unless someone
                 is active before then; after 30 days idle, it is deleted.
               </p>
               <form method="get" action="/t/{{ room.code }}/record.json" aria-label="Export the record">
