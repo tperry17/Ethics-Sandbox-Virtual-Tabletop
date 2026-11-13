@@ -18,11 +18,13 @@ from any tunnel already set up on the Windows side.
    wsl --install -d Ubuntu
    ```
 
-2. In the Ubuntu terminal, install git and curl:
+2. In the Ubuntu terminal, install git, curl and the GitHub CLI:
 
    ```
-   sudo apt update && sudo apt install -y git curl
+   sudo apt update && sudo apt install -y git curl gh
    ```
+
+   If apt cannot find `gh`, install it from cli.github.com instead.
 
 3. Install Node.js 22 (the version CI uses) with nvm; the commands are on
    nodejs.org's download page under Linux. Ubuntu's own `nodejs` package is
@@ -41,15 +43,24 @@ from any tunnel already set up on the Windows side.
    sudo dpkg -i cloudflared-linux-amd64.deb
    ```
 
-6. Clone the project into the Linux home folder, not under `/mnt/c/`.
+6. The repository is private, so sign git in to GitHub. Choose GitHub.com,
+   HTTPS, "Yes" to authenticating git with your GitHub credentials, and
+   logging in with a web browser; it shows a code to enter in the browser.
+   `deploy.sh` fetches `main` at every start and uses this login.
+
+   ```
+   gh auth login
+   ```
+
+7. Clone the project into the Linux home folder, not under `/mnt/c/`.
    Files on the Windows drive are slow from WSL, and the live SQLite
    database should not sit on a drive Windows also syncs or scans.
 
    ```
-   cd ~ && git clone https://github.com/HolyTispoon/Ethics-Sandbox-Virtual-Tabletop.git
+   cd ~ && gh repo clone HolyTispoon/Ethics-Sandbox-Virtual-Tabletop
    ```
 
-7. In Windows Settings, under Power, set the screen and sleep to "Never"
+8. In Windows Settings, under Power, set the screen and sleep to "Never"
    while plugged in. A sleeping desktop drops every table.
 
 ## Each session
