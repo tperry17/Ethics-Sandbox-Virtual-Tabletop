@@ -40,14 +40,12 @@ Open PowerShell (not as administrator) for all of these.
    gh auth login
    ```
 
-3. Clone the project into your user folder, keeping line endings as they
-   are in the repository (the checks compare files byte for byte). Keep it
-   out of OneDrive, Dropbox and Google Drive: syncing the live database can
-   corrupt it.
+3. Clone the project into your user folder. Keep it out of OneDrive,
+   Dropbox and Google Drive: syncing the live database can corrupt it.
 
    ```
    cd $HOME
-   gh repo clone tperry17/Ethics-Sandbox-Virtual-Tabletop -- -c core.autocrlf=false
+   gh repo clone tperry17/Ethics-Sandbox-Virtual-Tabletop
    ```
 
 4. In Settings, System, Power, set sleep to "Never" while plugged in. The
@@ -82,6 +80,12 @@ Open PowerShell (not as administrator) for all of these.
 - **The checks fail.** Nobody had run them on Windows before this guide.
   Send the output to whoever maintains the project, and run with
   `-SkipChecks` meanwhile; the same checks pass on every pull request.
+- **`test_the_card_files_are_up_to_date` fails, saying a card file is out
+  of date.** The copy was cloned before the repository fixed its line
+  endings (13 November 2026), so its files have Windows line endings. In
+  the project folder, with no edits of your own to keep, run
+  `git rm -r --cached -q .` and then `git reset --hard`; this rewrites the
+  files with the repository's line endings.
 - **"Port 8000 is already in use".** An earlier run is still open in
   another window: press Ctrl-C there or close it. Or serve on another port
   with `-Port 8001`.

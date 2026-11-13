@@ -116,10 +116,6 @@ if (-not $NoPull -and -not $Updated) {
     exit $LASTEXITCODE
 }
 
-if ((git config core.autocrlf) -eq 'true') {
-    Write-Warning 'git converts line endings here (core.autocrlf is true). If the checks fail on line endings, clone again with: gh repo clone tperry17/Ethics-Sandbox-Virtual-Tabletop -- -c core.autocrlf=false'
-}
-
 Write-Step "Checking that port $Port is free"
 if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
     $owners = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |

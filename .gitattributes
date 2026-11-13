@@ -1,2 +1,8 @@
-# Windows batch files need CRLF line endings, whatever git is set to do.
+# Every text file is checked out with LF line endings, whatever git's
+# core.autocrlf says (Git for Windows sets it to true). Some content CSVs have
+# fields that span lines, and a CR inside one changes the card's text; the
+# card files' up-to-date test catches the difference.
+* text=auto eol=lf
+
+# Windows batch files need CRLF line endings.
 *.cmd text eol=crlf
