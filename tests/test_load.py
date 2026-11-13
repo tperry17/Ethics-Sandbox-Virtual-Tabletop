@@ -12,7 +12,6 @@ from __future__ import annotations
 import asyncio
 import gc
 import os
-import resource
 import sys
 import tracemalloc
 
@@ -24,10 +23,51 @@ PIECES = 300
 OBSERVERS = 6
 
 
-def _peak_rss_bytes() -> int:
-    """Peak resident memory in bytes: macOS reports bytes, Linux kilobytes."""
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    return peak if sys.platform == "darwin" else peak * 1024
+if sys.platform == "win32":
+    import ctypes
+    from ctypes import wintypes
+
+    class _MemoryCounters(ctypes.Structure):
+        """PROCESS_MEMORY_COUNTERS, as K32GetProcessMemoryInfo fills it."""
+
+        _fields_ = [
+            ("cb", wintypes.DWORD),
+            ("PageFaultCount", wintypes.DWORD),
+            ("PeakWorkingSetSize", ctypes.c_size_t),
+            ("WorkingSetSize", ctypes.c_size_t),
+            ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+            ("PagefileUsage", ctypes.c_size_t),
+            ("PeakPagefileUsage", ctypes.c_size_t),
+        ]
+
+    _kernel32 = ctypes.WinDLL("kernel32")
+    _kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+    _kernel32.K32GetProcessMemoryInfo.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(_MemoryCounters),
+        wintypes.DWORD,
+    ]
+    _kernel32.K32GetProcessMemoryInfo.restype = wintypes.BOOL
+
+    def _peak_rss_bytes() -> int:
+        """Peak resident memory (the peak working set) in bytes."""
+        counters = _MemoryCounters()
+        counters.cb = ctypes.sizeof(counters)
+        process = _kernel32.GetCurrentProcess()
+        if not _kernel32.K32GetProcessMemoryInfo(process, counters, counters.cb):
+            raise ctypes.WinError()
+        return int(counters.PeakWorkingSetSize)
+
+else:
+    import resource
+
+    def _peak_rss_bytes() -> int:
+        """Peak resident memory in bytes: macOS reports bytes, Linux kilobytes."""
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        return peak if sys.platform == "darwin" else peak * 1024
 
 
 async def _drag(room: LiveFixture, client: Client, first: int, stop: float) -> None:
