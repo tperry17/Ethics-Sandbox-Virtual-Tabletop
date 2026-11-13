@@ -192,3 +192,45 @@ def test_a_closed_room_says_it_is_closed_and_what_to_do(client: TestClient) -> N
 def test_an_unknown_code_on_the_join_form_says_what_to_do(client: TestClient) -> None:
     response = client.post("/join", data={"room_code": "ZZZZZZ", "display_name": "Bo"})
     assert "Check the code for typing mistakes" in response.text
+
+
+def test_the_join_form_links_back_to_the_exercise_it_came_from(
+    client: TestClient,
+) -> None:
+    page = client.get("/exercises/value-cards-trading").text
+    assert 'href="/join?exercise=value-cards-trading"' in page
+
+    form = client.get("/join?exercise=value-cards-trading").text
+    assert 'href="/exercises/value-cards-trading"' in form
+    assert 'name="exercise" value="value-cards-trading"' in form
+
+    refused = client.post(
+        "/join",
+        data={
+            "room_code": "ZZZZZZ",
+            "display_name": "Bo",
+            "exercise": "value-cards-trading",
+        },
+    )
+    assert 'href="/exercises/value-cards-trading"' in refused.text
+
+
+def test_the_join_form_for_a_new_room_links_back_to_its_exercise(
+    client: TestClient,
+) -> None:
+    for kind, slug in (
+        ("value-cards-room", "value-cards-trading"),
+        ("democracy-room", "democracy-simulation"),
+    ):
+        opened = client.post("/rooms", data={"kind": kind})
+        form = client.get(opened.headers["location"]).text
+        assert f'href="/exercises/{slug}"' in form
+
+
+def test_the_join_form_with_no_exercise_links_only_to_the_landing_page(
+    client: TestClient,
+) -> None:
+    for url in ("/join", "/join?exercise=no-such-thing", "/join?code=ZZZZZZ"):
+        form = client.get(url).text
+        assert 'href="/exercises/' not in form
+        assert '<a href="/">← Ethics Sandbox</a>' in form

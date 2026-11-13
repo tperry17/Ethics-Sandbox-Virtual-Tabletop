@@ -13,7 +13,12 @@
   </head>
   <body>
     <main class="site">
+      {% if exercise %}
+      <p class="site__back"><a href="/exercises/{{ exercise.slug }}">← {{ exercise.title }}</a>
+        · <a href="/">Ethics Sandbox</a></p>
+      {% else %}
       <p class="site__back"><a href="/">← Ethics Sandbox</a></p>
+      {% endif %}
 
       <header class="site__header">
         <p class="eyebrow">Join a table</p>
@@ -36,6 +41,7 @@
       {% endif %}
 
       <form class="site__section" method="post" action="/join">
+        {% if exercise %}<input type="hidden" name="exercise" value="{{ exercise.slug }}">{% endif %}
         {{ ui.field("room_code", "Room code", value=code, placeholder="ABC123") }}
         {{ ui.field("display_name", "Your name", value=display_name, placeholder="Shown to the table") }}
         <label class="field__check">

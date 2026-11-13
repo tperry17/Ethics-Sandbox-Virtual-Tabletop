@@ -56,7 +56,7 @@
             <button class="button button--primary button--lg" type="submit">{{ site_copy.open_room_label }}</button>
           </form>
           {% endif %}
-          <a class="button button--secondary button--lg" href="/join">{{ site_copy.join_room_label }}</a>
+          <a class="button button--secondary button--lg" href="/join?exercise={{ exercise.slug }}">{{ site_copy.join_room_label }}</a>
         </div>
         <div class="prose">
           <p>{{ site_copy.open_room_exercise }}</p>

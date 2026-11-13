@@ -27,7 +27,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from sandbox.content_loading import CONTENT_ROOT
 from sandbox.db import Room, init_db, session_scope
-from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES
+from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, Exercise
 from sandbox.games.loader import IMAGE_SUFFIXES, Card, Game
 from sandbox.games.room_types import room_for_exercise, room_types
 from sandbox.web.content import HELP_RECORDS, SITE_COPY
@@ -336,13 +336,38 @@ def open_room_route(
     return response
 
 
+def _join_exercise(session: Session, exercise: str, code: str) -> Exercise | None:
+    """The exercise whose page the join form links back to, if there is one.
+
+    An exercise page's "Join a room" names its exercise; otherwise a code
+    that names a room gives the exercise that room type belongs to.
+    """
+    if exercise in EXERCISES_BY_SLUG:
+        return EXERCISES_BY_SLUG[exercise]
+    room = get_room_by_code(session, code) if code.strip() else None
+    game = GAMES.get(room.game_slug) if room is not None else None
+    if game is None or game.definition.room is None:
+        return None
+    return EXERCISES_BY_SLUG.get(game.definition.room.exercise)
+
+
 @app.get("/join", response_class=HTMLResponse)
-async def join_form(request: Request, code: str = "") -> HTMLResponse:
+def join_form(
+    request: Request,
+    code: str = "",
+    exercise: str = "",
+    session: Session = Depends(get_session),
+) -> HTMLResponse:
     """Render the form for entering a room code and display name."""
     return templates.TemplateResponse(
         request=request,
         name="join.html",
-        context={"error": None, "code": code, "display_name": ""},
+        context={
+            "error": None,
+            "code": code,
+            "display_name": "",
+            "exercise": _join_exercise(session, exercise, code),
+        },
     )
 
 
@@ -352,6 +377,7 @@ def join_room_route(
     room_code: str = Form(...),
     display_name: str = Form(...),
     as_facilitator: bool = Form(False),
+    exercise: str = Form(""),
     session: Session = Depends(get_session),
 ) -> Response:
     """Seat the caller at the room named by ``room_code``."""
@@ -362,7 +388,12 @@ def join_room_route(
             request=request,
             name="join.html",
             status_code=400,
-            context={"error": message, "code": room_code, "display_name": display_name},
+            context={
+                "error": message,
+                "code": room_code,
+                "display_name": display_name,
+                "exercise": _join_exercise(session, exercise, room_code),
+            },
         )
         set_participant_cookie(response, request, cookie_id)
         return response
