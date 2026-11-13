@@ -56,8 +56,12 @@ domain of your own and set `SANDBOX_PUBLIC_URL` to it.
 
 The machine must stay on, awake and online for the whole session, keep the
 same `SANDBOX_SECRET_KEY` and database file between runs (`deploy.sh` does),
-and run one copy of the server only. For a Windows desktop, see
-`docs/FACILITATING-ON-WINDOWS.md`.
+and run one copy of the server only.
+
+On Windows, without WSL, `scripts\serve-tunnel.cmd` does the same: it runs
+`scripts/serve-tunnel.ps1`, the PowerShell counterpart of `deploy.sh` and
+`serve-tunnel.sh`, and serves on `127.0.0.1` only, since the tunnel is all
+that needs to reach it. See `docs/FACILITATING-ON-WINDOWS.md`.
 
 ### Showing an exercise without a group
 

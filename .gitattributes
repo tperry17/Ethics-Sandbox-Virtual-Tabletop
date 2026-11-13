@@ -1,0 +1,2 @@
+# Windows batch files need CRLF line endings, whatever git is set to do.
+*.cmd text eol=crlf

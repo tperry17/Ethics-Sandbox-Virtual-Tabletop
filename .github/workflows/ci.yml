@@ -107,3 +107,59 @@ jobs:
           name: playwright-webkit-results-${{ strategy.job-index }}
           path: test-results/
           retention-days: 7
+
+  windows:
+    name: Windows (serve-tunnel.cmd)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      # As docs/FACILITATING-ON-WINDOWS.md clones: line endings as committed.
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install cloudflared
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'cloudflared'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          Invoke-WebRequest -Uri 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' -OutFile (Join-Path $dir 'cloudflared.exe')
+          Add-Content -Path $env:GITHUB_PATH -Value $dir
+      - name: The script parses in Windows PowerShell
+        shell: powershell
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD\scripts\serve-tunnel.ps1", [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | Format-List; exit 1 }
+      # The whole script as a facilitator runs it, checks included, in the
+      # background; then the server must answer and name the tunnel's
+      # address. Reaching it through Cloudflare is tried but not required,
+      # since a new quick-tunnel address can take a while to resolve.
+      - name: Serve through a quick tunnel
+        shell: powershell
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'serve'
+          $server = Start-Process -FilePath cmd.exe -ArgumentList '/c', 'scripts\serve-tunnel.cmd', '-NoPull' -RedirectStandardOutput "$log.out" -RedirectStandardError "$log.err" -PassThru
+          $page = $null
+          $deadline = (Get-Date).AddMinutes(20)
+          while (-not $page -and (Get-Date) -lt $deadline -and -not $server.HasExited) {
+            Start-Sleep -Seconds 5
+            try { $page = (Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8000/health' -TimeoutSec 5).Content } catch { }
+          }
+          Get-Content "$log.out", "$log.err" -ErrorAction SilentlyContinue
+          $address = [regex]::Match([string]$page, 'https://[a-z0-9-]+\.trycloudflare\.com').Value
+          $reached = $false
+          if ($address) {
+            foreach ($try in 1..12) {
+              try { Invoke-WebRequest -UseBasicParsing -Uri "$address/health" -TimeoutSec 10 | Out-Null; $reached = $true; break } catch { Start-Sleep -Seconds 5 }
+            }
+          }
+          taskkill /T /F /PID $server.Id | Out-Null
+          if (-not $page) { Write-Error 'The server never answered /health.'; exit 1 }
+          if (-not $address) { Write-Error '/health does not name a trycloudflare.com address.'; exit 1 }
+          if ($reached) { "Reached $address/health through Cloudflare." } else { Write-Warning "Could not reach $address/health through Cloudflare within a minute." }

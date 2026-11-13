@@ -80,7 +80,7 @@ Do not substitute the stack.
 - `static/` — compiled client output, CSS, and fonts
 - `tests/` — automated tests
 - `docs/BUILD-PLAN.md` — the build plan the project was built from; complete, kept as a record
-- `.github/workflows/ci.yml` — CI: Ruff (lint and format), mypy, pytest and the Playwright suite on every pull request and every push to `main`
+- `.github/workflows/ci.yml` — CI: Ruff (lint and format), mypy, pytest and the Playwright suite on every pull request and every push to `main`, and a run of `scripts\serve-tunnel.cmd` on Windows
 
 ## Identity without sign-in
 
