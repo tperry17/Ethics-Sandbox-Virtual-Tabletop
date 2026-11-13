@@ -16,6 +16,9 @@ secret; most of it is a choice made to ship.
 - Without `SANDBOX_SECRET_KEY` the app uses a fixed development secret.
   `scripts/deploy.sh` always sets one; running `uvicorn` by hand does not.
 - The Mac must stay awake, charged and on the same network as the tablets.
+- A Cloudflare quick tunnel (`scripts/serve-tunnel.sh`) gets a new address
+  every time it starts. Links from an earlier start stop working, and
+  people who come back under the new address join as new participants.
 
 ## Site
 

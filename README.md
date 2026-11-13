@@ -37,24 +37,27 @@ will drop every table's connections. Hosting is the Mac on the local
 network for now; Fly.io or Render, with staging and production, is set
 aside until asked for.
 
-### Serving it publicly through a Cloudflare Tunnel
+### Serving it publicly through a Cloudflare quick tunnel
 
-The plan is to run the app on a machine other than the author's MacBook and
-reach it through a Cloudflare Tunnel, which gives participants an HTTPS
-address from anywhere. `scripts/deploy.sh` runs on Linux too (its Mac-only
-steps, the network address lookup and `caffeinate`, are skipped when those
-tools are absent). Set `SANDBOX_PUBLIC_URL` to the tunnel's address so
-invite links use it:
+`scripts/serve-tunnel.sh` opens a Cloudflare quick tunnel to the server's
+port, waits for its `https://<random words>.trycloudflare.com` address, and
+runs `scripts/deploy.sh` with `SANDBOX_PUBLIC_URL` set to it, so every
+invite link carries that address. It takes the same options as `deploy.sh`.
+Ctrl-C stops the server and the tunnel together. It needs `cloudflared`
+and no Cloudflare account or domain.
 
-```
-SANDBOX_PUBLIC_URL=https://sandbox.example.org scripts/deploy.sh
-cloudflared tunnel --url http://localhost:8000   # or a named tunnel to the same port
-```
+A quick tunnel's address is new every time `cloudflared` starts, so share
+the new links each session. Cloudflare offers quick tunnels "for testing and
+development", with no uptime guarantee and up to 200 in-flight requests.
+Because the identity cookie belongs to the address it was issued on, someone
+returning to a room under a new address is a new participant. That suits a
+room used in one sitting; for a lasting address, use a named tunnel on a
+domain of your own and set `SANDBOX_PUBLIC_URL` to it.
 
-Cloudflare Tunnel carries websockets without extra settings. The machine
-must stay on, awake and online for the whole session, keep the same
-`SANDBOX_SECRET_KEY` and database file between runs (`deploy.sh` does), and
-run one copy of the server only.
+The machine must stay on, awake and online for the whole session, keep the
+same `SANDBOX_SECRET_KEY` and database file between runs (`deploy.sh` does),
+and run one copy of the server only. For a Windows desktop, see
+`docs/FACILITATING-ON-WINDOWS.md`.
 
 ### Showing an exercise without a group
 
