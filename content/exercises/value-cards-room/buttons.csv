@@ -1,8 +1,8 @@
 id,label,hint,confirm,announce
-setup,Set up,"Clear the table and lay out the cards, dice and markers again.",This clears the table and sets it up again. Continue?,{name} set up the table.
-deal,Deal 3 core cards,"Three cards from the core deck into each person's hand.",,{name} dealt three core cards to each person.
-deal_sidebar,Deal 3 sidebar cards,"Three cards from the sidebar into each person's hand.",,{name} dealt three sidebar cards to each person.
-reset,Reset,"Remove every card, every added deck and all ink.",This removes every piece and all ink from the table. Continue?,{name} cleared the table.
+setup,Set up,"Clear the table and lay out the cards, dice and markers again.","Are you sure? This clears the whole table, including every added deck and the cards of any activity that is running, and sets it up again.",{name} set up the table.
+deal,Deal 3 core cards,Three cards from the core deck into each person's hand.,,{name} dealt three core cards to each person.
+deal_sidebar,Deal 3 sidebar cards,Three cards from the sidebar into each person's hand.,,{name} dealt three sidebar cards to each person.
+reset,Reset,"Remove every card, every added deck and all ink.","Are you sure? This removes every piece on the table, including every added deck and the cards of any activity that is running, and all ink.",{name} cleared the table.
 shuffle,Shuffle decks,Shuffle the core deck and the sidebar.,,{name} shuffled the core deck and the sidebar.
 collect,Collect cards,"Every card back into the pile it came from, face down, shuffled.",,{name} collected every card back into its pile.
 clear_ink,Clear ink,,This erases everyone's ink. Continue?,{name} cleared all ink.

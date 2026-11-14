@@ -130,3 +130,30 @@ test("a card in an added deck offers to remove the deck", async ({ browser }) =>
   await expect(added).toHaveCount(0);
   await expect(page.locator(".toast")).toContainText("Ines removed Core deck 2.");
 });
+
+test("Reset asks “Are you sure?” first, and clears the whole table only if confirmed", async ({
+  browser,
+}) => {
+  const page = await openRoom(browser, "Value Cards", "Ines");
+  // Reset is the facilitator's.
+  await page.getByRole("button", { name: "Become facilitator" }).click();
+  await expect(page.getByRole("button", { name: "Reset", exact: true })).toBeVisible();
+  await page.locator(".pieces-menu summary").click();
+  await page.locator(".pieces-menu__row", { hasText: "Sidebar" }).getByRole("button", { name: "Add" }).click();
+  const cards = page.locator(".tabletop__pieces-layer .piece--card");
+  await expect(cards).toHaveCount(54);
+
+  let asked = "";
+  page.once("dialog", (dialog) => {
+    asked = dialog.message();
+    void dialog.dismiss();
+  });
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
+  await expect.poll(() => asked).toContain("Are you sure?");
+  await expect(cards).toHaveCount(54);
+
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
+  await expect(cards).toHaveCount(0);
+  await expect(page.locator('.zone[data-zone-id^="added-deck-"]')).toHaveCount(0);
+});
