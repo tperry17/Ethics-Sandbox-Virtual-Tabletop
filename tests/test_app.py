@@ -135,7 +135,7 @@ def test_exercise_page_opens_its_own_kind_of_room() -> None:
         run = response.text.split('id="run"', 1)[1].split("</section>", 1)[0]
         assert 'action="/rooms"' in run
         assert 'type="submit">Open a room</button>' in run
-        assert 'href="/join">Join a room</a>' in run
+        assert f'href="/join?exercise={exercise.slug}">Join a room</a>' in run
 
 
 def test_exercise_page_leads_with_the_premise_and_shows_the_overview() -> None:
