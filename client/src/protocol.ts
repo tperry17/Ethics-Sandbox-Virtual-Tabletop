@@ -207,10 +207,14 @@ export interface OfferView {
 }
 
 /** An activity this room can start. */
-/** One piece the room's Pieces menu adds, or ("deck") a whole pile of cards. */
+/**
+ * One piece the room's Pieces menu adds, or ("deck") a whole pile of cards,
+ * or ("added_deck") a pile already on the table, whose zone id is its
+ * `component_id`, offered for removal.
+ */
 export interface PieceMenuView {
   component_id: string;
-  kind: PieceKind | "deck";
+  kind: PieceKind | "deck" | "added_deck";
   title: string;
   /** A seat colour, for a player piece; none for a die. */
   tint_index?: number | null;

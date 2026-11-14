@@ -46,10 +46,13 @@ from sandbox.db.engine import SessionLocal, session_scope
 from sandbox.db.models import Participant, Room
 from sandbox.games import GAMES, Game
 from sandbox.games.engine import (
+    added_deck_zone,
+    added_decks,
     announcement,
     build_activity_start,
     build_add_piece,
     build_macro,
+    build_remove_deck,
     build_seat_move,
     build_shared_note,
     may_use_facilitator_button,
@@ -437,7 +440,9 @@ class ActivityOptionView(BaseModel):
 class PieceMenuView(BaseModel):
     """One piece the room's Pieces menu adds: what it is, and its colour.
 
-    ``kind`` "deck" is a whole pile of cards, added as a deck of its own.
+    ``kind`` "deck" is a whole pile of cards, added as a deck of its own;
+    ``kind`` "added_deck" is one such pile already on the table, which the
+    menu offers to remove, and its ``component_id`` is the pile's zone id.
     """
 
     component_id: str
@@ -697,27 +702,41 @@ CLASS_INTENT = "class"
 # The intent that adds a piece from the room's Pieces menu.
 ADD_PIECE_INTENT = "add_piece"
 
+# The intent that removes a pile added from the Pieces menu, cards and all.
+REMOVE_DECK_INTENT = "remove_deck"
 
-def pieces_menu(room_game: Game | None) -> list[PieceMenuView]:
-    """What the room's Pieces menu offers, in the order its definition lists."""
+
+def pieces_menu(room_game: Game | None, table: Table) -> list[PieceMenuView]:
+    """What the room's Pieces menu offers, in the order its definition lists.
+
+    After the pieces and decks it adds come the piles already added to
+    ``table``, so each can be removed, even once it is empty.
+    """
     if room_game is None or room_game.definition.room is None:
         return []
     room = room_game.definition.room
     specs = {piece.id: piece for piece in room_game.definition.components.pieces}
-    return [
-        PieceMenuView(
-            component_id=spec.id,
-            kind=spec.kind.value,
-            title=spec.title or spec.kind.value.capitalize(),
-            tint_index=spec.tint_index,
-        )
-        for component_id in room.pieces
-        if (spec := specs.get(component_id)) is not None
-    ] + [
-        # A further pile of cards: added by the same intent, as a whole deck.
-        PieceMenuView(component_id=deck.id, kind="deck", title=deck.title)
-        for deck in room.decks
-    ]
+    return (
+        [
+            PieceMenuView(
+                component_id=spec.id,
+                kind=spec.kind.value,
+                title=spec.title or spec.kind.value.capitalize(),
+                tint_index=spec.tint_index,
+            )
+            for component_id in room.pieces
+            if (spec := specs.get(component_id)) is not None
+        ]
+        + [
+            # A further pile of cards: added by the same intent, as a whole deck.
+            PieceMenuView(component_id=deck.id, kind="deck", title=deck.title)
+            for deck in room.decks
+        ]
+        + [
+            PieceMenuView(component_id=zone_id, kind="added_deck", title=label)
+            for zone_id, label in added_decks(table)
+        ]
+    )
 
 
 def chosen_options(
@@ -1400,6 +1419,9 @@ class RoomRuntime:
         if message.op_type == ADD_PIECE_INTENT:
             self._on_add_piece(connection, seat_id, message)
             return
+        if message.op_type == REMOVE_DECK_INTENT:
+            self._on_remove_deck(connection, seat_id, message)
+            return
         try:
             operation = decode_intent(message.op_type, message.payload)
         except IntentError as error:
@@ -1891,6 +1913,30 @@ class RoomRuntime:
             # never seen only from a whole table.
             self._resend_everyone()
 
+    def _on_remove_deck(
+        self, connection: Connection, seat_id: str, message: IntentMessage
+    ) -> None:
+        """An added pile taken off the table, with every card from it."""
+        zone_id = message.payload.get("zone_id")
+        if not isinstance(zone_id, str):
+            self._reject(connection, message.client_id, "Choose a deck to remove.")
+            return
+        label = self.table.zones[zone_id].label if zone_id in self.table.zones else ""
+        built = build_remove_deck(self.table, zone_id)
+        if not isinstance(built, Transaction):
+            self._reject(connection, message.client_id, built.reason)
+            return
+        # A drag still being coalesced lands first, as before a macro.
+        self._land_drags(list(self._pending_moves))
+        outcome = self._apply(seat_id, built, log=True)
+        if not isinstance(outcome, Ok):
+            self._reject(connection, message.client_id, outcome.reason)
+            return
+        connection.send(AckMessage(client_id=message.client_id))
+        self._notice(f"{connection.display_name} removed {label}.")
+        # The Pieces menu lists the piles on the table, so it changed too.
+        self._resend_everyone()
+
     def _on_menu_request(
         self, connection: Connection, message: MenuRequestMessage
     ) -> None:
@@ -1915,6 +1961,17 @@ class RoomRuntime:
                     group=entry.group,
                     op_type=op_type,
                     payload=payload,
+                )
+            )
+        pile = added_deck_zone(self.table, message.piece_id)
+        if seat_id is not None and pile is not None:
+            items.append(
+                MenuItemView(
+                    id="remove-deck",
+                    label="Remove this deck",
+                    group=None,
+                    op_type=REMOVE_DECK_INTENT,
+                    payload={"zone_id": pile},
                 )
             )
         connection.send(
@@ -2315,7 +2372,7 @@ class RoomRuntime:
             components=components,
             macros=self._macros_for(connection),
             activity_choices=activity_choices(self.game),
-            pieces_menu=pieces_menu(self.game),
+            pieces_menu=pieces_menu(self.game, self.table),
             classes=self._class_views(connection.is_facilitator, connection.seat_id),
         )
         connection.last_seq_sent = self.seq

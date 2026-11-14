@@ -37,7 +37,7 @@ test("hovering a card says what the keys do; Space enlarges it and F turns it ov
   browser,
 }) => {
   const page = await openRoom(browser, "Value Cards", "Ines");
-  await page.getByRole("button", { name: "Deal 3 each" }).click();
+  await page.getByRole("button", { name: "Deal 3 core cards" }).click();
   const card = page.locator(".hand-tray__fan .piece").first();
   await expect(card.locator(".piece__title")).toBeVisible();
 
@@ -109,5 +109,24 @@ test("the Value Cards room lays out the core deck and the sidebar, and the Piece
   await expect(cardsIn('^="added-deck-"')).toHaveCount(18);
   await expect(cardsIn('="sidebar"')).toHaveCount(18);
   // A pile of its own, outlined and named like the others.
-  await expect(page.locator('.zone[data-zone-id^="added-deck-"] .zone__label')).toHaveText("Sidebar");
+  await expect(page.locator('.zone[data-zone-id^="added-deck-"] .zone__label')).toHaveText("Sidebar 2");
+
+  // The menu, still open, now lists it; removing it takes the pile and its cards away.
+  await page.getByRole("button", { name: "Remove Sidebar 2" }).click();
+  await expect(cardsIn('^="added-deck-"')).toHaveCount(0);
+  await expect(page.locator('.zone[data-zone-id^="added-deck-"]')).toHaveCount(0);
+  await expect(cardsIn('="sidebar"')).toHaveCount(18);
+});
+
+test("a card in an added deck offers to remove the deck", async ({ browser }) => {
+  const page = await openRoom(browser, "Value Cards", "Ines");
+  await page.locator(".pieces-menu summary").click();
+  await page.locator(".pieces-menu__row", { hasText: "Core deck" }).getByRole("button", { name: "Add" }).click();
+  const added = page.locator('.tabletop__pieces-layer .piece--card[data-zone-id^="added-deck-"]');
+  await expect(added).toHaveCount(18);
+
+  await added.last().click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Remove this deck" }).click();
+  await expect(added).toHaveCount(0);
+  await expect(page.locator(".toast")).toContainText("Ines removed Core deck 2.");
 });

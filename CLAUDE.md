@@ -14,7 +14,7 @@ Facilitators—teachers, community organisers, and workshop leads—run groups o
 
 ## Rooms and activities
 
-A room belongs to one exercise, and it is that exercise's sandbox. Up to 30 people join it and use its table however they please: the free table and the exercise's own loose pieces. A Value Cards room holds the value cards as two face-down piles, the core deck (`group` "Deck") and the sidebar (`group` "Sidebar"); a Leadership and Knowledge in Popular Rule room holds the two cities' seals and a general account of each city (its own CSV under `content/exercises/democracy-simulation/`), with nothing about either scenario. Every room, whatever its exercise, has a "Pieces" menu that can be opened to add dice, cubes, meeples and tokens to the table; they are not laid out on it. A room type may also list decks in that menu (the Value Cards room lists the core deck and the sidebar): each one added is a further pile of its own, a deck zone that shuffles and deals like the first, until the room's reset or setup takes it away (at most 12 at once). Cubes, meeples and tokens are one set of player pieces, chosen in a seat colour, and a token can have one word or number written on it.
+A room belongs to one exercise, and it is that exercise's sandbox. Up to 30 people join it and use its table however they please: the free table and the exercise's own loose pieces. A Value Cards room holds the value cards as two face-down piles, the core deck (`group` "Deck") and the sidebar (`group` "Sidebar"); a Leadership and Knowledge in Popular Rule room holds the two cities' seals and a general account of each city (its own CSV under `content/exercises/democracy-simulation/`), with nothing about either scenario. Every room, whatever its exercise, has a "Pieces" menu that can be opened to add dice, cubes, meeples and tokens to the table; they are not laid out on it. A room type may also list decks in that menu (the Value Cards room lists the core deck and the sidebar): each one added is a further pile of its own ("Sidebar 2", "Sidebar 3"), a deck zone that shuffles and deals like the first (at most 15 at once). Anyone may add one, and anyone may remove one, from the Pieces menu or from the menu of a card lying in it; removing it takes every card that came from it, wherever it is, hands included. The room's reset or setup removes them all. Each of its cards remembers its pile in a server-side property, never sent to a client, so "Collect cards" puts it back there. Cubes, meeples and tokens are one set of player pieces, chosen in a seat colour, and a token can have one word or number written on it.
 
 A room is opened only from its exercise's page, with "Open a room", which opens that exercise's room directly; whoever opened it is then asked for a display name, as anyone joining is. Nothing is started by typing an address: there is no `/start` page, and no room, activity or class is opened by a URL alone. People reach a room from its invite link or by entering its code with "Join a room".
 
@@ -255,10 +255,11 @@ server do.
 Steps are `{op: ..., ...}`: `setup` (run the setup steps here),
 `spawn_deck`, `spawn`, `shuffle`, `deal` and `draw` (`from`, `to`,
 `count`, `face_up`), `collect` (`to`, optional `kinds`, `from`,
-`where`, `face_up`), `flip`, `reset_table`, `reset_zone`, `clear_ink`. Naming a
+`where`, `own_pile`, `face_up`), `flip`, `reset_table`, `reset_zone`, `clear_ink`. Naming a
 per-seat zone means every seat's copy, in seat order. A card dealt or
 drawn into its owner's private hand lands face up, so its owner can read
-it; anywhere else it stays as it came off the pile. `face_up` in the step
+it (the deal itself turns it, so anyone allowed to deal may press the
+button); anywhere else it stays as it came off the pile. `face_up` in the step
 overrides either.
 
 `sandbox/games/engine.py` turns a macro, a new seat, or a new table into

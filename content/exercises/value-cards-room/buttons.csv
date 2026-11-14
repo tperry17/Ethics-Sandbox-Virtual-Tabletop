@@ -1,7 +1,8 @@
 id,label,hint,confirm,announce
 setup,Set up,"Clear the table and lay out the cards, dice and markers again.",This clears the table and sets it up again. Continue?,{name} set up the table.
-deal,Deal 3 each,"Three cards from the core deck into each person's hand.",,{name} dealt three cards to each person.
+deal,Deal 3 core cards,"Three cards from the core deck into each person's hand.",,{name} dealt three core cards to each person.
+deal_sidebar,Deal 3 sidebar cards,"Three cards from the sidebar into each person's hand.",,{name} dealt three sidebar cards to each person.
 reset,Reset,"Remove every card, every added deck and all ink.",This removes every piece and all ink from the table. Continue?,{name} cleared the table.
 shuffle,Shuffle decks,Shuffle the core deck and the sidebar.,,{name} shuffled the core deck and the sidebar.
-collect,Collect cards,"Every card back into the core deck or the sidebar, face down, shuffled.",,{name} collected every card into the core deck and the sidebar.
+collect,Collect cards,"Every card back into the pile it came from, face down, shuffled.",,{name} collected every card back into its pile.
 clear_ink,Clear ink,,This erases everyone's ink. Continue?,{name} cleared all ink.

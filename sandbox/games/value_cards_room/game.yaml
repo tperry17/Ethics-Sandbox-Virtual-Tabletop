@@ -99,6 +99,10 @@ macros:
     who: anyone
     steps:
       - {op: deal, from: deck, to: hand, count: 3}
+  - id: deal_sidebar
+    who: anyone
+    steps:
+      - {op: deal, from: sidebar, to: hand, count: 3}
   - id: reset
     steps:
       - {op: reset_table}
@@ -110,9 +114,10 @@ macros:
   - id: collect
     who: anyone
     steps:
-      # Each card back to the pile its group belongs to.
-      - {op: collect, to: deck, kinds: [card], where: {group: Deck}, face_up: false}
-      - {op: collect, to: sidebar, kinds: [card], where: {group: Sidebar}, face_up: false}
+      # Each card back to its own pile: an added pile's to that pile, the
+      # rest to the core deck or the sidebar by their group.
+      - {op: collect, to: deck, kinds: [card], where: {group: Deck}, own_pile: true, face_up: false}
+      - {op: collect, to: sidebar, kinds: [card], where: {group: Sidebar}, own_pile: true, face_up: false}
       - {op: shuffle, zone: deck}
       - {op: shuffle, zone: sidebar}
   - id: clear_ink

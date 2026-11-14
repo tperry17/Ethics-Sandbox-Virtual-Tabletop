@@ -281,7 +281,9 @@ class CollectStep(_Strict):
     With no ``kinds`` every kind is collected; with no ``from`` every zone
     but ``to`` is collected from. ``where`` keeps only cards whose deck row
     has these column values, ignoring case, as in ``spawn_deck``: two piles
-    of one deck can each take back their own cards. Pieces end face up or
+    of one deck can each take back their own cards. ``own_pile`` sends a
+    card added with a pile from the room's Pieces menu back to that pile,
+    while it is on the table, rather than to ``to``. Pieces end face up or
     down as ``face_up`` says, or as their destination zone leaves them when
     it is omitted.
     """
@@ -291,6 +293,7 @@ class CollectStep(_Strict):
     kinds: tuple[PieceKind, ...] = ()
     from_zones: tuple[Identifier, ...] = Field(default=(), alias="from")
     where: dict[str, str] = Field(default_factory=dict)
+    own_pile: bool = False
     face_up: bool | None = None
 
 
