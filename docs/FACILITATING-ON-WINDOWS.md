@@ -54,16 +54,24 @@ Open PowerShell (not as administrator) for all of these.
 
 ## Each session
 
-1. Open PowerShell and run:
+1. Start the server and the tunnel, in either of two ways.
 
-   ```
-   cd $HOME\Ethics-Sandbox-Virtual-Tabletop
-   .\scripts\serve-tunnel.cmd
-   ```
+   - **From VS Code:** open the project folder itself (File, Open Folder,
+     the folder that holds `scripts`), then Terminal, Run Task, "Serve the
+     Ethics Sandbox". "Serve the Ethics Sandbox (skip checks)" starts
+     faster. The task runs in its own terminal panel.
+   - **From PowerShell:**
+
+     ```
+     cd $HOME\Ethics-Sandbox-Virtual-Tabletop
+     .\scripts\serve-tunnel.cmd
+     ```
+
+     Add `-SkipChecks` to start faster
+     (`.\scripts\serve-tunnel.cmd -SkipChecks`).
 
    The first run takes several minutes. When it is ready it prints
-   `Share this address: https://….trycloudflare.com`. Add `-SkipChecks`
-   to start faster (`.\scripts\serve-tunnel.cmd -SkipChecks`).
+   `Share this address: https://….trycloudflare.com`.
 
 2. Open `<address>/health` on a phone using mobile data (not the home
    Wi-Fi). If it says "You can reach the server", the address works from
@@ -72,8 +80,9 @@ Open PowerShell (not as administrator) for all of these.
 3. Open a room from an exercise page and share its invite link. The link
    carries the tunnel address.
 
-4. Leave the PowerShell window open for the whole session. Ctrl-C stops
-   the server and the tunnel; the address then stops working.
+4. Leave the window (or VS Code) open for the whole session. Click in its
+   terminal and press Ctrl-C to stop the server and the tunnel; the
+   address then stops working.
 
 ## If something goes wrong
 

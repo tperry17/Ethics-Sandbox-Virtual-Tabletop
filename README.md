@@ -61,7 +61,9 @@ and run one copy of the server only.
 On Windows, without WSL, `scripts\serve-tunnel.cmd` does the same: it runs
 `scripts/serve-tunnel.ps1`, the PowerShell counterpart of `deploy.sh` and
 `serve-tunnel.sh`, and serves on `127.0.0.1` only, since the tunnel is all
-that needs to reach it. See `docs/FACILITATING-ON-WINDOWS.md`.
+that needs to reach it. See `docs/FACILITATING-ON-WINDOWS.md`. In VS Code,
+Terminal, Run Task, "Serve the Ethics Sandbox" runs the right script for the
+platform (`.vscode/tasks.json`).
 
 ### Showing an exercise without a group
 

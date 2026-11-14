@@ -79,6 +79,7 @@ Do not substitute the stack.
 - `client/` — TypeScript table client built by Vite
 - `static/` — compiled client output, CSS, and fonts
 - `tests/` — automated tests
+- `.vscode/tasks.json` — VS Code's "Serve the Ethics Sandbox" tasks: `scripts\serve-tunnel.cmd` on Windows, `scripts/serve-tunnel.sh` elsewhere
 - `docs/BUILD-PLAN.md` — the build plan the project was built from; complete, kept as a record
 - `.github/workflows/ci.yml` — CI: Ruff (lint and format), mypy, pytest and the Playwright suite on every pull request and every push to `main`; `.github/workflows/windows.yml` — `scripts\serve-tunnel.cmd` run on Windows, when the scripts, `sandbox/dev.py` or the dependency lists change
 

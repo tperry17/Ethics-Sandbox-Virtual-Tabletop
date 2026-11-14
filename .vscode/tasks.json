@@ -1,0 +1,45 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Serve the Ethics Sandbox",
+      "detail": "Update main, run the checks, build, and serve through a Cloudflare quick tunnel. Click in the terminal and press Ctrl+C to stop.",
+      "type": "shell",
+      "command": "scripts/serve-tunnel.sh",
+      "windows": {
+        "command": ".\\scripts\\serve-tunnel.cmd"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "Serve the Ethics Sandbox (skip checks)",
+      "detail": "The same, without Ruff, mypy and pytest: faster to start.",
+      "type": "shell",
+      "command": "scripts/serve-tunnel.sh",
+      "args": ["--skip-checks"],
+      "windows": {
+        "command": ".\\scripts\\serve-tunnel.cmd",
+        "args": ["-SkipChecks"]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "clear": true
+      }
+    }
+  ]
+}
