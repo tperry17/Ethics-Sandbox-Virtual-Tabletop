@@ -131,6 +131,29 @@ if (-not $NoPull -and -not $Updated) {
     exit $LASTEXITCODE
 }
 
+Write-Step "Stopping anything an earlier run left on port $Port"
+# Closing the window or VS Code's "Terminate Task" can end this script
+# before it stops what it started. Its server and quick tunnel are known by
+# their command lines, which nothing else shares: the app's module and this
+# port, and the exact quick-tunnel arguments below. Another Cloudflare
+# tunnel on this computer does not match and is left alone.
+$tunnelArguments = "tunnel --no-autoupdate --url http://localhost:$Port"
+$leftovers = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+    $line = [string]$_.CommandLine
+    ($line -like '*sandbox.web.app:app*' -and $line -like "*--port $Port*") -or
+    ($_.Name -eq 'cloudflared.exe' -and $line -like "*$tunnelArguments*")
+})
+if ($leftovers.Count -eq 0) {
+    Write-Host 'Nothing left over.'
+}
+foreach ($leftover in $leftovers) {
+    Write-Host "Stopping an earlier run's $($leftover.Name) (process $($leftover.ProcessId))."
+    Stop-Process -Id $leftover.ProcessId -Force -ErrorAction SilentlyContinue
+}
+foreach ($leftover in $leftovers) {
+    Wait-Process -Id $leftover.ProcessId -Timeout 10 -ErrorAction SilentlyContinue
+}
+
 Write-Step "Checking that port $Port is free"
 if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
     $owners = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
@@ -138,7 +161,7 @@ if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
     foreach ($owner in $owners) {
         $process = Get-Process -Id $owner -ErrorAction SilentlyContinue
         $name = if ($process) { $process.ProcessName } else { 'an unknown program' }
-        throw "Port $Port is already in use by $name (process $owner). If that is an earlier run of this script, press Ctrl-C in its window or close it; otherwise run with -Port 8001."
+        throw "Port $Port is already in use by $name (process $owner), which is not an earlier run of this script. Close that program, or run with -Port 8001."
     }
 }
 Write-Host 'Free.'
@@ -197,7 +220,7 @@ $exitCode = 0
 try {
     Write-Step "Opening a Cloudflare quick tunnel to port $Port"
     $tunnel = Start-Process -FilePath (Get-Command cloudflared).Source `
-        -ArgumentList @('tunnel', '--no-autoupdate', '--url', "http://localhost:$Port") `
+        -ArgumentList ($tunnelArguments -split ' ') `
         -RedirectStandardError "$log.err" -RedirectStandardOutput "$log.out" `
         -NoNewWindow -PassThru
 

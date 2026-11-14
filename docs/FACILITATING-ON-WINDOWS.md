@@ -95,9 +95,14 @@ Open PowerShell (not as administrator) for all of these.
   the project folder, with no edits of your own to keep, run
   `git rm -r --cached -q .` and then `git reset --hard`; this rewrites the
   files with the repository's line endings.
-- **"Port 8000 is already in use".** An earlier run is still open in
-  another window: press Ctrl-C there or close it. Or serve on another port
-  with `-Port 8001`.
+- **Starting it stops an earlier run.** If the script (or the VS Code
+  task) is still serving from another window, starting it again stops that
+  run first, without asking, and serves at a new address: the old invite
+  links stop working. Don't start it during a session unless you mean to
+  restart.
+- **"Port 8000 is already in use … which is not an earlier run".** Some
+  other program holds the port. Close it, or serve on another port with
+  `-Port 8001`.
 - **The tunnel or the computer restarted mid-session.** Run the script
   again and send the new address. Rooms and tables are kept, so people can
   reach theirs by entering its code under "Join a room" at the new address,
