@@ -86,6 +86,19 @@ jobs:
           & .venv\Scripts\pytest.exe --version
           if ($LASTEXITCODE -eq 0) { Write-Error 'The moved .venv still works, so this step tests nothing.'; exit 1 }
           exit 0
+      # An earlier run's server and quick tunnel still running, as when a
+      # facilitator closes the window: the script must stop them and go on.
+      # The stand-in server listens on port 8000 under the command line the
+      # real one has; the tunnel is a real leftover quick tunnel.
+      - name: Leave an earlier run behind
+        shell: powershell
+        run: |
+          $server = Start-Process -FilePath python -ArgumentList '-c', '"import http.server as h; h.HTTPServer((''127.0.0.1'', 8000), h.SimpleHTTPRequestHandler).serve_forever()"', 'sandbox.web.app:app', '--host', '127.0.0.1', '--port', '8000' -PassThru
+          $tunnel = Start-Process -FilePath cloudflared -ArgumentList 'tunnel', '--no-autoupdate', '--url', 'http://localhost:8000' -PassThru
+          Start-Sleep -Seconds 5
+          if ($server.HasExited) { Write-Error 'The stand-in server did not start.'; exit 1 }
+          if (-not (Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue)) { Write-Error 'Nothing is listening on port 8000.'; exit 1 }
+          "$($server.Id) $($tunnel.Id)" | Set-Content (Join-Path $env:RUNNER_TEMP 'leftovers')
       - name: Serve through a quick tunnel
         shell: powershell
         run: |
@@ -108,5 +121,9 @@ jobs:
           taskkill /T /F /PID $server.Id | Out-Null
           if (-not $page) { Write-Error 'The server never answered /health.'; exit 1 }
           if (-not (Select-String -Path "$log.out" -SimpleMatch 'built for another folder; rebuilding it' -Quiet)) { Write-Error 'The script did not rebuild the moved .venv.'; exit 1 }
+          foreach ($id in (Get-Content (Join-Path $env:RUNNER_TEMP 'leftovers')).Split(' ')) {
+            if (Get-Process -Id $id -ErrorAction SilentlyContinue) { Write-Error "The earlier run's process $id is still running."; exit 1 }
+          }
+          if (-not (Select-String -Path "$log.out" -SimpleMatch "Stopping an earlier run's" -Quiet)) { Write-Error 'The script did not report stopping the earlier run.'; exit 1 }
           if (-not $address) { Write-Error '/health does not name a trycloudflare.com address.'; exit 1 }
           if ($reached) { "Reached $address/health through Cloudflare." } else { Write-Warning "Could not reach $address/health through Cloudflare within a minute." }
