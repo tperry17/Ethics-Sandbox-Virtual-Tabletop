@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import itertools
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -31,6 +32,7 @@ from sandbox.games.definition import (
     FlipStep,
     ResetTableStep,
     ResetZoneStep,
+    RoomDeck,
     SetupStep,
     ShuffleStep,
     SpawnDeckStep,
@@ -48,6 +50,7 @@ from sandbox.model import (
     ChangeActivitySeats,
     ClearInk,
     Deal,
+    Despawn,
     Draw,
     Flip,
     Lock,
@@ -56,6 +59,7 @@ from sandbox.model import (
     Operation,
     Rect,
     Reject,
+    RemoveZone,
     ResetTable,
     ResetZone,
     SetProp,
@@ -70,6 +74,22 @@ from sandbox.model import (
 from sandbox.model.types import PieceKind
 
 SEAT_TINTS = 6
+
+# A pile added from a room's Pieces menu is a zone of its own, named with
+# this prefix so the room's reset can take it away again.
+ADDED_DECK_PREFIX = "added-deck-"
+# How many such piles a table may hold at once.
+MAX_ADDED_DECKS = 15
+# The property naming the added pile a card came from. Props never reach a
+# client, so it does not tell anyone which pile a face-down card belongs to.
+HOME_PROP = "home"
+
+
+def _matches(fields: Mapping[str, str] | None, wanted: Mapping[str, str]) -> bool:
+    """Whether a deck row has every wanted column value, ignoring case."""
+    if fields is None:
+        return not wanted
+    return all(fields.get(c, "").casefold() == v.casefold() for c, v in wanted.items())
 
 
 class SetupFailedError(Exception):
@@ -246,9 +266,18 @@ class _Builder:
         return [zone for zone in found if zone in self.trial.zones]
 
     def scope_zones(self) -> list[str]:
-        """Every zone on the table that belongs to this builder's activity."""
+        """Every zone on the table that belongs to this builder's activity.
+
+        The room's own steps reach every zone but those of its activities:
+        a room's "Collect cards" leaves a running activity's cards alone.
+        """
         if self.scope is None:
-            return list(self.trial.zones)
+            owned = {
+                zone
+                for activity in self.trial.activities.values()
+                for zone in activity.zones
+            }
+            return [z for z in self.trial.zones if z not in owned]
         return [z for z in self.trial.zones if z.startswith(self.scope.prefix)]
 
     def call(self, function: GameFunction, context: GameContext) -> None:
@@ -357,6 +386,10 @@ class _Builder:
         elif isinstance(step, ResetTableStep):
             if self.scope is None:
                 self.run(ResetTable())
+                # Piles added from the Pieces menu go with what was on them.
+                for zone_id in list(self.trial.zones):
+                    if zone_id.startswith(ADDED_DECK_PREFIX):
+                        self.run(RemoveZone(zone_id=zone_id))
             else:
                 for zone in self.scope_zones():
                     self.run(ResetZone(zone_id=zone))
@@ -378,10 +411,7 @@ class _Builder:
         cards = [
             card
             for card in self._game().decks[step.deck]
-            if all(
-                card.fields.get(c, "").casefold() == v.casefold()
-                for c, v in wanted.items()
-            )
+            if _matches(card.fields, wanted)
         ]
         if not cards:
             raise _Refused(f"No cards in {step.deck!r} match {wanted}.")
@@ -446,16 +476,46 @@ class _Builder:
         # Deal takes from the top of the pile, so these are the pieces it
         # will move. Which card each one is does not matter here.
         dealt = [piece.id for piece in self.trial.pieces_in_zone(source)[-needed:]]
-        self.run(Deal(from_zone=source, to_zones=destinations, count_each=step.count))
-        self._land(dealt, step.face_up)
+        turn = self._turn_on_landing(destinations, step.face_up)
+        self.run(
+            Deal(
+                from_zone=source,
+                to_zones=destinations,
+                count_each=step.count,
+                face_up=turn,
+            )
+        )
+        if turn is None:
+            self._land(dealt, step.face_up)
 
     def _draw(
         self, source: str, destination: str, count: int, face_up: bool | None
     ) -> None:
         source = self.zone(source)
         drawn = [piece.id for piece in self.trial.pieces_in_zone(source)[-count:]]
-        self.run(Draw(count=count, from_zone=source, to_zone=destination))
-        self._land(drawn, face_up)
+        turn = self._turn_on_landing((destination,), face_up)
+        self.run(Draw(count=count, from_zone=source, to_zone=destination, face_up=turn))
+        if turn is None:
+            self._land(drawn, face_up)
+
+    def _turn_on_landing(
+        self, destinations: Sequence[str], face_up: bool | None
+    ) -> bool | None:
+        """Which way up a deal or draw itself lands its pieces, if it can say.
+
+        The deal turns them as it goes, so the person pressing the button
+        need not be allowed to turn over a card in someone else's hand. A
+        step's ``face_up`` decides; with none, a deal entirely into private
+        hands lands face up. Into a mix of zones it says nothing, and
+        ``_land`` turns each piece where it lands.
+        """
+        if face_up is not None:
+            return face_up
+        private = [
+            self.trial.zones[zone].visibility is Visibility.PRIVATE_TO_OWNER
+            for zone in destinations
+        ]
+        return True if private and all(private) else None
 
     def _land(self, piece_ids: Sequence[str], face_up: bool | None) -> None:
         """Turn dealt or drawn pieces as they land.
@@ -473,22 +533,45 @@ class _Builder:
                 self._turn([piece_id], True)
 
     def _collect(self, step: CollectStep) -> None:
+        target = self.zone(step.to)
         if step.from_zones:
             sources = [
                 zone for source in step.from_zones for zone in self.zones(source)
             ]
+        elif step.own_pile:
+            # A card from an added pile may be lying in the target itself.
+            sources = self.scope_zones()
         else:
-            target = self.zone(step.to)
             sources = [zone for zone in self.scope_zones() if zone != target]
-        target = self.zone(step.to)
+        cards = self._game().cards() if step.where else {}
         moved: list[str] = []
+        homes: list[str] = []
         for zone in sources:
             for piece in self.trial.pieces_in_zone(zone):
                 if step.kinds and piece.kind not in step.kinds:
                     continue
-                self.run(MoveToZone(piece_id=piece.id, zone_id=target))
+                if step.where and not _matches(
+                    cards.get(piece.component_id), step.where
+                ):
+                    continue
+                home = piece.props.get(HOME_PROP) if step.own_pile else None
+                destination = (
+                    home
+                    if isinstance(home, str) and home in self.trial.zones
+                    else target
+                )
+                if piece.zone_id == destination:
+                    continue
+                self.run(MoveToZone(piece_id=piece.id, zone_id=destination))
                 moved.append(piece.id)
+                if destination != target and destination not in homes:
+                    homes.append(destination)
         self._turn(moved, step.face_up)
+        # An added pile that took cards back is shuffled, as the target is
+        # by the steps that follow, so nobody can tell where a card went.
+        for home in homes:
+            if self.trial.zones[home].visibility is Visibility.HIDDEN:
+                self.run(Shuffle(zone_id=home))
 
 
 # -- what the room service and the live room ask for -------------------------
@@ -786,6 +869,13 @@ def build_add_piece(
     The new piece's id is random, like every spawned piece's.
     """
     room = game.definition.room
+    room_deck = (
+        None
+        if room is None
+        else next((d for d in room.decks if d.id == component_id), None)
+    )
+    if room_deck is not None:
+        return build_add_deck(game, table, room_deck, x, y)
     if room is None or component_id not in room.pieces:
         return Reject("That is not one of this room's pieces.")
     spec = next(p for p in game.definition.components.pieces if p.id == component_id)
@@ -810,6 +900,121 @@ def build_add_piece(
         ),
         name=f"add:{spec.id}",
         label=f"Add {(spec.title or spec.kind.value).lower()}",
+    )
+
+
+def build_add_deck(
+    game: Game, table: Table, room_deck: RoomDeck, x: float, y: float
+) -> Transaction | Reject:
+    """A further pile of cards from the room's Pieces menu, centred on ``x``, ``y``.
+
+    The pile is a zone of its own, made like the zone the room deck names
+    and kept inside the room's ``pieces_zone``, so it shuffles and deals as
+    any deck does. Its cards are spawned as ``spawn_deck`` would, shuffled
+    when the pile is hidden. The room's reset takes the zone away again.
+    """
+    room = game.definition.room
+    shape = game.definition.zone_spec(room_deck.shaped_like)
+    assert room is not None and shape is not None
+    bounds = table.zones.get(room.pieces_zone)
+    if bounds is None or not isinstance(bounds.geometry, Rect):
+        return Reject("This room has nowhere to put a deck.")
+    added = sum(1 for zone_id in table.zones if zone_id.startswith(ADDED_DECK_PREFIX))
+    if added >= MAX_ADDED_DECKS:
+        return Reject(
+            f"The table already has {MAX_ADDED_DECKS} added decks; "
+            "reset the table to clear them."
+        )
+    area = bounds.geometry
+    width, height = shape.rect[2], shape.rect[3]
+    left = min(max(x - width / 2, area.x), area.x + area.width - width)
+    top = min(max(y - height / 2, area.y), area.y + area.height - height)
+    zone_id = ADDED_DECK_PREFIX + new_op_id()
+    builder = _Builder(game, table, SYSTEM_SEAT)
+    # "Sidebar 2", "Sidebar 3": the base pile is the first of its name.
+    labels = {zone.label for zone in table.zones.values()}
+    number = next(
+        n for n in itertools.count(2) if f"{room_deck.title} {n}" not in labels
+    )
+    try:
+        builder.run(
+            AddZone(
+                zone_id=zone_id,
+                kind=shape.kind,
+                label=f"{room_deck.title} {number}",
+                geometry=Rect(x=left, y=top, width=width, height=height),
+                visibility=shape.visibility,
+                layout=shape.layout,
+                capacity=shape.capacity,
+                owner_moves_only=shape.owner_moves_only,
+            )
+        )
+        builder.step(
+            SpawnDeckStep(
+                op="spawn_deck",
+                deck=room_deck.deck,
+                zone=zone_id,
+                where=room_deck.where,
+            )
+        )
+        # Each card remembers its pile, so it can be collected back to it
+        # and removed with it.
+        for piece in builder.trial.pieces_in_zone(zone_id):
+            builder.run(SetProp(piece_id=piece.id, key=HOME_PROP, value=zone_id))
+    except _Refused as refusal:
+        return Reject(refusal.reason)
+    return dataclasses.replace(
+        builder.transaction(
+            name=f"add-deck:{room_deck.id}", label=f"Add {room_deck.title.lower()}"
+        ),
+        system=True,
+    )
+
+
+def added_deck_zone(table: Table, piece_id: str) -> str | None:
+    """The added pile ``piece_id`` lies in, if it lies in one."""
+    piece = table.pieces.get(piece_id)
+    if piece is None or not piece.zone_id.startswith(ADDED_DECK_PREFIX):
+        return None
+    return piece.zone_id
+
+
+def added_decks(table: Table) -> list[tuple[str, str]]:
+    """Every pile added from the Pieces menu: its zone id and its name."""
+    return [
+        (zone.id, zone.label)
+        for zone in table.zones.values()
+        if zone.id.startswith(ADDED_DECK_PREFIX)
+    ]
+
+
+def build_remove_deck(table: Table, zone_id: str) -> Transaction | Reject:
+    """Take an added pile off the table, with every card that came from it.
+
+    Anyone may, as anyone may add one: the cards go wherever they are, the
+    pile's own and those dealt or carried elsewhere, hands included. The
+    room's own piles, and anything an activity laid out, are not added
+    piles and cannot be removed this way.
+    """
+    zone = table.zones.get(zone_id)
+    if zone is None or not zone_id.startswith(ADDED_DECK_PREFIX):
+        return Reject("That is not a deck added to this table.")
+    cards = [
+        piece
+        for piece in table.pieces.values()
+        if piece.zone_id == zone_id or piece.props.get(HOME_PROP) == zone_id
+    ]
+    if any(piece.held_by is not None for piece in cards):
+        return Reject(f"Someone is holding a card from {zone.label}.")
+    steps: list[Operation] = []
+    if cards:
+        steps.append(Despawn(piece_ids=tuple(piece.id for piece in cards)))
+    steps.append(RemoveZone(zone_id=zone_id))
+    return Transaction(
+        steps=tuple(steps),
+        name="remove-deck",
+        label=f"Remove {zone.label}",
+        system=True,
     )
 
 
@@ -858,6 +1063,13 @@ def build_shared_note(game: Game, table: Table, text: str) -> Transaction | Reje
 
 
 __all__ = [
+    "ADDED_DECK_PREFIX",
+    "HOME_PROP",
+    "MAX_ADDED_DECKS",
+    "added_deck_zone",
+    "added_decks",
+    "build_add_deck",
+    "build_remove_deck",
     "build_add_piece",
     "build_shared_note",
     "may_use_facilitator_button",

@@ -55,3 +55,72 @@ async def test_only_the_menus_own_pieces_can_be_added() -> None:
         await room.settle(0.05)
         assert set(room.runtime.table.pieces) == before
         assert len(host.socket.of_type("reject")) == 3
+
+
+async def test_the_value_cards_menu_adds_a_core_deck_or_a_sidebar() -> None:
+    async with open_room(0, kind="value-cards-room") as (room, host, _guests):
+        await room.settle(0.05)
+        menu = _menu(host.socket.of_type("snapshot")[-1])
+        decks = [(e["component_id"], e["title"]) for e in menu if e["kind"] == "deck"]
+        assert decks == [("core-deck", "Core deck"), ("sidebar-deck", "Sidebar")]
+
+        before = set(room.runtime.table.zones)
+        snapshots = len(host.socket.of_type("snapshot"))
+        await room.intent(
+            host,
+            "add_piece",
+            {"component_id": "sidebar-deck", "x": 800, "y": 450},
+            client_id="d",
+        )
+        await room.settle(0.05)
+        (added,) = set(room.runtime.table.zones) - before
+        assert len(room.runtime.table.pieces_in_zone(added)) == 18
+        assert host.socket.of_type("ack")[-1]["client_id"] == "d"
+        # The new zone arrives in a whole table, which a client can draw.
+        latest = host.socket.of_type("snapshot")
+        assert len(latest) > snapshots
+        assert added in {zone["id"] for zone in latest[-1]["view_table"]["zones"]}
+
+
+async def test_an_added_deck_is_removed_from_its_menus_by_anyone() -> None:
+    async with open_room(1, kind="value-cards-room") as (room, host, guests):
+        guest = guests[0]
+        await room.intent(
+            host,
+            "add_piece",
+            {"component_id": "core-deck", "x": 800, "y": 450},
+            client_id="a",
+        )
+        await room.settle(0.05)
+        menu = _menu(host.socket.of_type("snapshot")[-1])
+        (listed,) = [e for e in menu if e["kind"] == "added_deck"]
+        assert listed["title"] == "Core deck 2"
+        pile = listed["component_id"]
+
+        # A card in the pile offers to remove it, to anyone seated.
+        card = room.runtime.table.pieces_in_zone(pile)[-1].id
+        await room.send(
+            guest, {"type": "menu_request", "client_id": "m", "piece_id": card}
+        )
+        await room.settle(0.05)
+        items = guest.socket.of_type("menu")[-1]["items"]
+        (entry,) = [item for item in items if item["id"] == "remove-deck"]
+        assert entry["label"] == "Remove this deck"
+
+        await room.intent(guest, entry["op_type"], entry["payload"], client_id="r")
+        await room.settle(0.05)
+        assert guest.socket.of_type("ack")[-1]["client_id"] == "r"
+        assert pile not in room.runtime.table.zones
+        assert not room.runtime.table.pieces_in_zone(pile)
+        latest = _menu(host.socket.of_type("snapshot")[-1])
+        assert not [e for e in latest if e["kind"] == "added_deck"]
+        notices = [n["text"] for n in host.socket.of_type("notice")]
+        assert any("removed Core deck 2" in text for text in notices)
+
+
+async def test_the_rooms_own_piles_cannot_be_removed_as_decks() -> None:
+    async with open_room(0, kind="value-cards-room") as (room, host, _guests):
+        await room.intent(host, "remove_deck", {"zone_id": "deck"}, client_id="r")
+        await room.settle(0.05)
+        assert host.socket.of_type("reject")[-1]["client_id"] == "r"
+        assert "deck" in room.runtime.table.zones

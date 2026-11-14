@@ -784,6 +784,7 @@ export class TableRenderer {
         const step = (this.piecesAdded++ % 6) * 60;
         this.intents.send("add_piece", { component_id: componentId, x: x + step, y: y + step / 3 });
       },
+      (zoneId) => this.intents.send("remove_deck", { zone_id: zoneId }),
       wasOpen,
     );
     this.piecesSlot.replaceChildren(...(menu === null ? [] : [menu]));

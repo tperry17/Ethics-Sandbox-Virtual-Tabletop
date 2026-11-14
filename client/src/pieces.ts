@@ -1,6 +1,7 @@
 /**
- * The room's Pieces menu: dice and a set of player pieces in one colour,
- * added to the table where the person is looking. What the menu offers, and
+ * The room's Pieces menu: dice, further decks of the room's cards, and a set
+ * of player pieces in one colour, added to the table where the person is
+ * looking; and the decks already added, each of which can be removed. What the menu offers, and
  * whether a piece may be added, is the server's; this only draws the list
  * it was sent and reports which piece was chosen.
  */
@@ -20,12 +21,14 @@ function button(label: string, onClick: () => void, className = "button button--
 }
 
 /**
- * The menu as a disclosure: closed, a "Pieces" button; open, the die and
- * the player pieces with a row of colours. Null when the room has none.
+ * The menu as a disclosure: closed, a "Pieces" button; open, the die, the
+ * decks and the player pieces with a row of colours, then the decks added to
+ * the table. Null when the room has none.
  */
 export function renderPiecesMenu(
   menu: PieceMenuView[],
   add: (componentId: string) => void,
+  remove: (zoneId: string) => void,
   wasOpen: boolean,
 ): HTMLElement | null {
   if (menu.length === 0) return null;
@@ -42,8 +45,9 @@ export function renderPiecesMenu(
   panel.setAttribute("role", "group");
   panel.setAttribute("aria-label", "Add a piece");
 
-  // Pieces with no colour of their own: each its own row.
-  for (const entry of menu.filter((each) => each.tint_index === null || each.tint_index === undefined)) {
+  // Pieces with no colour of their own, and decks: each its own row.
+  const untinted = (each: PieceMenuView) => each.tint_index === null || each.tint_index === undefined;
+  for (const entry of menu.filter((each) => untinted(each) && each.kind !== "added_deck")) {
     const row = document.createElement("div");
     row.className = "pieces-menu__row";
     const name = document.createElement("span");
@@ -92,6 +96,24 @@ export function renderPiecesMenu(
           add(chosen.component_id);
         }),
       );
+      panel.append(row);
+    }
+  }
+  // Decks already added: each can be taken off the table, cards and all.
+  const added = menu.filter((each) => each.kind === "added_deck");
+  if (added.length > 0) {
+    const heading = document.createElement("p");
+    heading.className = "pieces-menu__heading";
+    heading.textContent = "Decks added to the table";
+    panel.append(heading);
+    for (const entry of added) {
+      const row = document.createElement("div");
+      row.className = "pieces-menu__row";
+      const name = document.createElement("span");
+      name.textContent = entry.title;
+      const removeButton = button("Remove", () => remove(entry.component_id));
+      removeButton.setAttribute("aria-label", `Remove ${entry.title}`);
+      row.append(name, removeButton);
       panel.append(row);
     }
   }

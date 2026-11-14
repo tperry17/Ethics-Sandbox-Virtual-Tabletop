@@ -279,14 +279,21 @@ class CollectStep(_Strict):
     """Every piece of the given kinds, from the given zones, into ``to``.
 
     With no ``kinds`` every kind is collected; with no ``from`` every zone
-    but ``to`` is collected from. Pieces end face up or down as ``face_up``
-    says, or as their destination zone leaves them when it is omitted.
+    but ``to`` is collected from. ``where`` keeps only cards whose deck row
+    has these column values, ignoring case, as in ``spawn_deck``: two piles
+    of one deck can each take back their own cards. ``own_pile`` sends a
+    card added with a pile from the room's Pieces menu back to that pile,
+    while it is on the table, rather than to ``to``. Pieces end face up or
+    down as ``face_up`` says, or as their destination zone leaves them when
+    it is omitted.
     """
 
     op: Literal["collect"]
     to: Identifier
     kinds: tuple[PieceKind, ...] = ()
     from_zones: tuple[Identifier, ...] = Field(default=(), alias="from")
+    where: dict[str, str] = Field(default_factory=dict)
+    own_pile: bool = False
     face_up: bool | None = None
 
 
@@ -412,18 +419,36 @@ class RoomActivity(_Strict):
     debrief: bool = False
 
 
+class RoomDeck(_Strict):
+    """A deck the room's "Pieces" menu can add as a pile of its own.
+
+    ``deck`` names one of the definition's decks and ``where`` keeps only
+    some of its rows, as in ``spawn_deck``. The new pile is a zone made like
+    ``shaped_like`` - its size, kind, visibility and layout - put down where
+    the person is looking, and named ``title``.
+    """
+
+    id: Identifier
+    title: str = Field(min_length=1)
+    deck: Identifier
+    where: dict[str, str] = Field(default_factory=dict)
+    shaped_like: Identifier
+
+
 class RoomSpec(_Strict):
     """What makes a definition a room type: one exercise's sandbox.
 
     ``exercise`` is the catalog slug whose page opens this room;
     ``activities`` are all the room offers, and ``pieces`` are the
     components its "Pieces" menu adds to the table, into ``pieces_zone``.
+    ``decks`` are the further piles of cards the same menu can add there.
     """
 
     exercise: Identifier
     label: str = Field(min_length=1)
     activities: tuple[RoomActivity, ...] = Field(min_length=1)
     pieces: tuple[Identifier, ...] = ()
+    decks: tuple[RoomDeck, ...] = ()
     pieces_zone: Identifier = "table"
 
 
@@ -476,11 +501,30 @@ class GameDefinition(_Strict):
             )
             if unknown:
                 raise ValueError(f"the room's pieces are not pieces: {unknown}")
-            if self.room.pieces and self.zone_spec(self.room.pieces_zone) is None:
+            if (self.room.pieces or self.room.decks) and self.zone_spec(
+                self.room.pieces_zone
+            ) is None:
                 raise ValueError(
                     f"the room's pieces go into {self.room.pieces_zone!r}, "
                     "which is not one of its zones"
                 )
+            repeated = duplicates(
+                [deck.id for deck in self.room.decks] + list(self.room.pieces)
+            )
+            if repeated:
+                raise ValueError(f"the room's Pieces menu repeats {repeated}")
+            for room_deck in self.room.decks:
+                if room_deck.deck not in {deck.id for deck in self.components.decks}:
+                    raise ValueError(
+                        f"the room's deck {room_deck.id!r} names a deck "
+                        f"{room_deck.deck!r} that is not one of its components"
+                    )
+                shape = self.zone_spec(room_deck.shaped_like)
+                if shape is None or shape.per_seat:
+                    raise ValueError(
+                        f"the room's deck {room_deck.id!r} is shaped like "
+                        f"{room_deck.shaped_like!r}, which is not a shared zone"
+                    )
         missing = [
             macro_id
             for macro_id in (ROOM_MACROS if self.room else STANDARD_MACROS)
