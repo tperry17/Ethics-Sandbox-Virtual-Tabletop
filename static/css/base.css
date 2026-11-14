@@ -46,6 +46,16 @@ textarea:focus-visible,
   box-shadow: var(--focus-ring);
 }
 
+a {
+  color: var(--accent-rubric);
+  text-decoration-thickness: var(--line-hairline);
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  text-decoration-thickness: var(--line-strong);
+}
+
 h1,
 h2,
 h3,
