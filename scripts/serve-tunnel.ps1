@@ -143,10 +143,13 @@ if ($SetUpNamedTunnel) {
     Write-Host 'is not shown as you paste it):'
     $secure = Read-Host -AsSecureString
     $token = [System.Net.NetworkCredential]::new('', $secure).Password
-    $token = ($token -replace '\s', '')
-    # Accept the whole "cloudflared.exe service install <token>" line as well.
-    if ($token -match 'cloudflared.*serviceinstall(.+)$') { $token = $Matches[1] }
-    if (-not $token) { throw 'No token given; nothing changed.' }
+    # A tunnel token is base64 of a JSON object, so it begins "eyJ". Take it
+    # out of whatever was pasted: the token alone, or any of the commands
+    # Cloudflare shows around it ("cloudflared.exe service install <token>",
+    # "cloudflared tunnel run --token <token>", the docker line).
+    $found = [regex]::Match(($token -replace '\s', ''), 'eyJ[A-Za-z0-9+/_=-]{20,}')
+    if (-not $found.Success) { throw 'That has no tunnel token in it (a token begins "eyJ"); nothing changed.' }
+    $token = $found.Value
     [System.IO.File]::WriteAllText($urlFile, $address)
     [System.IO.File]::WriteAllText($tokenFile, $token)
     Write-Host "Saved $urlFile and $tokenFile."

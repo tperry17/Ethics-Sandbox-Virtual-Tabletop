@@ -45,13 +45,13 @@ set_up_named_tunnel() {
     echo "is not echoed):"
     read -rs token
     echo
-    token="$(printf '%s' "$token" | tr -d '[:space:]')"
-    # Accept the whole "cloudflared service install <token>" line as well.
-    case "$token" in
-        *cloudflared*serviceinstall*) token="${token##*serviceinstall}" ;;
-    esac
+    # A tunnel token is base64 of a JSON object, so it begins "eyJ". Take it
+    # out of whatever was pasted: the token alone, or any of the commands
+    # Cloudflare shows around it ("cloudflared service install <token>",
+    # "cloudflared tunnel run --token <token>", the docker line).
+    token="$(printf '%s' "$token" | tr -d '[:space:]' | grep -oE 'eyJ[A-Za-z0-9+/_=-]{20,}' | head -n 1 || true)"
     if [ -z "$token" ]; then
-        echo "No token given; nothing changed." >&2
+        echo "That has no tunnel token in it (a token begins \"eyJ\"); nothing changed." >&2
         exit 1
     fi
     printf '%s\n' "$address" > "$URL_FILE"
