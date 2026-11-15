@@ -3,7 +3,9 @@
 Seats A and B drag cards around, two more take turns grabbing and flipping,
 and the remaining people are observers. Memory must be flat and no
 connection's outbound queue may back up. The run lasts
-``SANDBOX_LOAD_SECONDS`` (default 8); CI's scheduled load job sets 600, the
+``SANDBOX_LOAD_SECONDS`` (default 8), which pytest runs on every pull
+request. The "Load check" workflow (``.github/workflows/load.yml``), started
+by hand from the Actions tab before a big change is merged, sets 600: the
 ten minutes the build plan asks for.
 """
 

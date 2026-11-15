@@ -81,7 +81,7 @@ Do not substitute the stack.
 - `tests/` — automated tests
 - `.vscode/tasks.json` — VS Code's "Serve the Ethics Sandbox" tasks: `scripts\serve-tunnel.cmd` on Windows, `scripts/serve-tunnel.sh` elsewhere
 - `docs/BUILD-PLAN.md` — the build plan the project was built from; complete, kept as a record
-- `.github/workflows/ci.yml` — CI: Ruff (lint and format), mypy, pytest and the Playwright suite on every pull request and every push to `main`; `.github/workflows/windows.yml` — `scripts\serve-tunnel.cmd` run on Windows, when the scripts, `sandbox/dev.py` or the dependency lists change
+- `.github/workflows/ci.yml` — CI: Ruff (lint and format), mypy, pytest and the Playwright suite on every pull request and every push to `main`; `.github/workflows/windows.yml` — `scripts\serve-tunnel.cmd` run on Windows, when the scripts, `sandbox/dev.py` or the dependency lists change; `.github/workflows/load.yml` — the ten-minute load check (`tests/test_load.py`), run by hand from the Actions tab before merging a big change; pytest runs the same test for eight seconds on every pull request
 
 ## Identity without sign-in
 

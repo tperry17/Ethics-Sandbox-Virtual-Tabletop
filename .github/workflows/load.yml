@@ -1,0 +1,29 @@
+# The ten-minute load check: eight people, 300 pieces, ten minutes of
+# continuous activity, memory flat and no outbound queue backing up. Run it
+# by hand from the Actions tab (Load check, "Run workflow", choosing the
+# branch) before merging a big change to the live room, the hub or the model.
+# The same test runs for eight seconds in CI's pytest step on every pull
+# request.
+name: Load check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  load:
+    name: Load check (ten minutes)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run pytest tests/test_load.py
+        env:
+          SANDBOX_LOAD_SECONDS: "600"
