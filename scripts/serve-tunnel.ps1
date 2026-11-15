@@ -143,10 +143,13 @@ if ($SetUpNamedTunnel) {
     Write-Host 'is not shown as you paste it):'
     $secure = Read-Host -AsSecureString
     $token = [System.Net.NetworkCredential]::new('', $secure).Password
-    $token = ($token -replace '\s', '')
-    # Accept the whole "cloudflared.exe service install <token>" line as well.
-    if ($token -match 'cloudflared.*serviceinstall(.+)$') { $token = $Matches[1] }
-    if (-not $token) { throw 'No token given; nothing changed.' }
+    # A tunnel token is base64 of a JSON object, so it begins "eyJ". Take it
+    # out of whatever was pasted: the token alone, or any of the commands
+    # Cloudflare shows around it ("cloudflared.exe service install <token>",
+    # "cloudflared tunnel run --token <token>", the docker line).
+    $found = [regex]::Match(($token -replace '\s', ''), 'eyJ[A-Za-z0-9+/_=-]{20,}')
+    if (-not $found.Success) { throw 'That has no tunnel token in it (a token begins "eyJ"); nothing changed.' }
+    $token = $found.Value
     [System.IO.File]::WriteAllText($urlFile, $address)
     [System.IO.File]::WriteAllText($tokenFile, $token)
     Write-Host "Saved $urlFile and $tokenFile."
@@ -184,17 +187,19 @@ Write-Step "Stopping anything an earlier run left on port $Port"
 # Closing the window or VS Code's "Terminate Task" can end this script
 # before it stops what it started. Its server and quick tunnel are known by
 # their command lines, which nothing else shares: the app's module and this
-# port, the exact quick-tunnel arguments below, and this checkout's token
+# port, the exact quick-tunnel arguments below, and this checkout's pid
 # file. Another Cloudflare tunnel on this computer does not match and is
-# left alone.
+# left alone. The named tunnel's token goes to cloudflared in its
+# TUNNEL_TOKEN environment variable, which every cloudflared that runs a
+# tunnel by token reads, and so stays out of the command line.
 $quickArguments = "tunnel --no-autoupdate --url http://localhost:$Port"
-$pidFile = Join-Path ([System.IO.Path]::GetTempPath()) ('sandbox-tunnel-pid-' + [guid]::NewGuid().ToString('N'))
-$namedArguments = "tunnel --no-autoupdate run --token-file `"$tokenFile`" --pidfile `"$pidFile`""
+$pidFile = Join-Path $ProjectRoot '.sandbox-tunnel.pid'
+$namedArguments = "tunnel --no-autoupdate run --pidfile `"$pidFile`""
 $leftovers = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
     $line = [string]$_.CommandLine
     ($line -like '*sandbox.web.app:app*' -and $line -like "*--port $Port*") -or
     ($_.Name -eq 'cloudflared.exe' -and $line -like "*$quickArguments*") -or
-    ($_.Name -eq 'cloudflared.exe' -and $line.Contains("--token-file `"$tokenFile`""))
+    ($_.Name -eq 'cloudflared.exe' -and $line.Contains("--pidfile `"$pidFile`""))
 })
 if ($leftovers.Count -eq 0) {
     Write-Host 'Nothing left over.'
@@ -275,6 +280,10 @@ try {
         $address = ([System.IO.File]::ReadAllText($urlFile)).Trim().TrimEnd('/')
         Write-Step "Opening the named Cloudflare tunnel for $address"
         $tunnelArguments = $namedArguments
+        Remove-Item $pidFile -ErrorAction SilentlyContinue
+        # Read by cloudflared as it starts; removed again below, so the
+        # server never sees it.
+        $env:TUNNEL_TOKEN = ([System.IO.File]::ReadAllText($tokenFile)).Trim()
     } else {
         Write-Step "Opening a Cloudflare quick tunnel to port $Port"
         if (-not $Quick) {
@@ -289,6 +298,7 @@ try {
         -ArgumentList $tunnelArguments `
         -RedirectStandardError "$log.err" -RedirectStandardOutput "$log.out" `
         -NoNewWindow -PassThru
+    Remove-Item Env:TUNNEL_TOKEN -ErrorAction SilentlyContinue
 
     # A named tunnel is ready once cloudflared writes its pid file, which it
     # does after its first connection to Cloudflare; a quick one once it
@@ -305,10 +315,13 @@ try {
         }
         if ($ready) { break }
         if ($tunnel.HasExited) {
+            Write-Host (Read-SharedText "$log.out")
             Write-Host (Read-SharedText "$log.err")
+            Write-Host "cloudflared version: $(& cloudflared --version 2>&1)"
             throw 'cloudflared stopped before connecting. Its output is above.'
         }
         if ((Get-Date) -gt $deadline) {
+            Write-Host (Read-SharedText "$log.out")
             Write-Host (Read-SharedText "$log.err")
             throw 'cloudflared did not connect within 30 seconds. Its output is above.'
         }
@@ -337,6 +350,7 @@ try {
     if ($tunnel -and -not $tunnel.HasExited) {
         Stop-Process -Id $tunnel.Id -Force -ErrorAction SilentlyContinue
     }
+    Remove-Item Env:TUNNEL_TOKEN -ErrorAction SilentlyContinue
     Remove-Item "$log.err", "$log.out", $pidFile -ErrorAction SilentlyContinue
     Write-Host ''
     if ($named) {
