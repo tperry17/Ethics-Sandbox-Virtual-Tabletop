@@ -139,17 +139,21 @@ if ($SetUpNamedTunnel) {
     if (-not $address) { throw 'No address given; nothing changed.' }
     if ($address -like 'http://*') { throw 'The address must start with https://.' }
     if ($address -notlike 'https://*') { $address = "https://$address" }
-    Write-Host "The tunnel's token (Cloudflare shows it when the tunnel is made; it"
-    Write-Host 'is not shown as you paste it):'
-    $secure = Read-Host -AsSecureString
-    $token = [System.Net.NetworkCredential]::new('', $secure).Password
+    # The token is read from the clipboard, not typed: pasting into a hidden
+    # prompt (Read-Host -AsSecureString) can deliver a single character, and
+    # a visible prompt would leave the token on screen.
+    Write-Host "In Cloudflare, copy the tunnel's install command (or just its token),"
+    Write-Host 'then press Enter here.'
+    [void](Read-Host)
+    $clipboard = (@(Get-Clipboard) -join '')
     # A tunnel token is base64 of a JSON object, so it begins "eyJ". Take it
-    # out of whatever was pasted: the token alone, or any of the commands
+    # out of whatever was copied: the token alone, or any of the commands
     # Cloudflare shows around it ("cloudflared.exe service install <token>",
     # "cloudflared tunnel run --token <token>", the docker line).
-    $found = [regex]::Match(($token -replace '\s', ''), 'eyJ[A-Za-z0-9+/_=-]{20,}')
-    if (-not $found.Success) { throw 'That has no tunnel token in it (a token begins "eyJ"); nothing changed.' }
+    $found = [regex]::Match(($clipboard -replace '\s', ''), 'eyJ[A-Za-z0-9+/_=-]{20,}')
+    if (-not $found.Success) { throw 'The clipboard has no tunnel token in it (a token begins "eyJ"); nothing changed. Copy the command in Cloudflare and run this again.' }
     $token = $found.Value
+    Write-Host "Found a token of $($token.Length) characters."
     [System.IO.File]::WriteAllText($urlFile, $address)
     [System.IO.File]::WriteAllText($tokenFile, $token)
     Write-Host "Saved $urlFile and $tokenFile."
