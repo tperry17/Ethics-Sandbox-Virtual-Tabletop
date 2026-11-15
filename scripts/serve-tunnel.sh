@@ -104,10 +104,12 @@ if [ "$NAMED" -eq 1 ]; then
     TUNNEL_URL="$(tr -d '[:space:]' < "$URL_FILE")"
     TUNNEL_URL="${TUNNEL_URL%/}"
     printf '\n==> %s\n' "Opening the named Cloudflare tunnel for $TUNNEL_URL"
-    # The token is read from its file, so it never appears in a process list.
-    # cloudflared writes the pid file once it has a connection to Cloudflare.
-    cloudflared tunnel --no-autoupdate run --token-file "$TOKEN_FILE" \
-        --pidfile "$PIDFILE" >"$LOG" 2>&1 &
+    # The token goes in cloudflared's TUNNEL_TOKEN environment variable, which
+    # every cloudflared that runs a tunnel by token reads, so it never appears
+    # in a process list. cloudflared writes the pid file once it has a
+    # connection to Cloudflare.
+    TUNNEL_TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE")" \
+        cloudflared tunnel --no-autoupdate run --pidfile "$PIDFILE" >"$LOG" 2>&1 &
     TUNNEL_PID=$!
 else
     printf '\n==> %s\n' "Opening a Cloudflare quick tunnel to port $PORT"
@@ -125,6 +127,7 @@ until { [ "$NAMED" -eq 1 ] && [ -s "$PIDFILE" ]; } || { [ "$NAMED" -eq 0 ] && [ 
     if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
         echo "cloudflared stopped before connecting. Its output:" >&2
         cat "$LOG" >&2
+        echo "cloudflared version: $(cloudflared --version 2>&1)" >&2
         exit 1
     fi
     if [ "$waited" -ge 60 ]; then

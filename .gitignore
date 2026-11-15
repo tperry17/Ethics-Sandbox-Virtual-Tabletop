@@ -12,3 +12,4 @@ test-results/
 .sandbox-secret
 .sandbox-tunnel-url
 .sandbox-tunnel-token
+.sandbox-tunnel.pid
