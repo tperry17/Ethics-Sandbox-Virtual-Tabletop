@@ -75,8 +75,10 @@ Open PowerShell (not as administrator) for all of these.
       .\scripts\serve-tunnel.cmd -SetUpNamedTunnel
       ```
 
-      Paste the address (`https://sandbox.example.org`) and then the token
-      (or any command Cloudflare shows with the token in it). They are saved in
+      Type or paste the address (`https://sandbox.example.org`). Then copy
+      the install command in Cloudflare (or just its token) and press
+      Enter: the script reads the token from the clipboard, so it never
+      appears on screen. They are saved in
       `.sandbox-tunnel-url` and `.sandbox-tunnel-token` in the project
       folder, which git ignores. Anyone holding the token can serve on
       that address, so keep the folder off shared drives; if the token
