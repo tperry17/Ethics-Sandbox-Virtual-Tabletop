@@ -43,7 +43,9 @@ aside until asked for.
 runs `scripts/deploy.sh` with `SANDBOX_PUBLIC_URL` set to the tunnel's
 address, so every invite link carries that address. It takes the same
 options as `deploy.sh`. Ctrl-C stops the server and the tunnel together. It
-needs `cloudflared`, and opens one of two kinds of tunnel.
+needs `cloudflared`, and opens one of two kinds of tunnel. A named tunnel is
+the default way to serve; the quick tunnel is the fallback until one is set
+up.
 
 **A named tunnel: the same address every time.** Once it is set up, every
 start serves on that address, invite links keep working from one session to

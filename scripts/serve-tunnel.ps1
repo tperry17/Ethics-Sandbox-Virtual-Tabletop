@@ -277,6 +277,10 @@ try {
         $tunnelArguments = $namedArguments
     } else {
         Write-Step "Opening a Cloudflare quick tunnel to port $Port"
+        if (-not $Quick) {
+            Write-Host 'No named tunnel is set up, so the address will be new. For a permanent one,'
+            Write-Host 'see docs\FACILITATING-ON-WINDOWS.md, step 5, and run -SetUpNamedTunnel.'
+        }
         $address = $null
         $tunnelArguments = $quickArguments
     }

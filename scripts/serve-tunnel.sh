@@ -111,6 +111,10 @@ if [ "$NAMED" -eq 1 ]; then
     TUNNEL_PID=$!
 else
     printf '\n==> %s\n' "Opening a Cloudflare quick tunnel to port $PORT"
+    if [ "$QUICK" -eq 0 ]; then
+        echo "No named tunnel is set up, so the address will be new. For a permanent one,"
+        echo "see \"Serving it publicly\" in README.md and run --set-up-named-tunnel."
+    fi
     cloudflared tunnel --no-autoupdate --url "http://localhost:$PORT" >"$LOG" 2>&1 &
     TUNNEL_PID=$!
     TUNNEL_URL=""

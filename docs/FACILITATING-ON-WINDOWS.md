@@ -2,12 +2,13 @@
 
 The server runs directly on Windows and reaches the internet through a
 Cloudflare tunnel, which gives it an `https://` address anyone can open.
-Out of the box it is a quick tunnel, whose address is new every time it
-starts, so each session gets fresh links; that needs no Cloudflare account,
-domain or change to the router. With a Cloudflare account and a domain, a
-named tunnel gives it the same address every time (see "Optional: a
-permanent address" below). Either runs beside any other Cloudflare tunnel
-the computer already has.
+The usual set-up is a named tunnel on your own domain, set up once (step 5
+below): the address is the same every session, invite links keep working,
+and people who come back reclaim their seat. Until it is set up, or with
+`-Quick`, the script falls back to a quick tunnel, whose address is new
+every time and which needs no Cloudflare account or domain. Neither needs
+any change to the router, and either runs beside any other Cloudflare
+tunnel the computer already has.
 
 `scripts\serve-tunnel.cmd` does everything: it updates to the latest
 `main`, installs dependencies, runs the checks, builds the table client,
@@ -54,38 +55,35 @@ Open PowerShell (not as administrator) for all of these.
    script keeps Windows awake while it runs, but a setting is the surer
    guard.
 
-## Optional: a permanent address
+5. Set up the permanent address: a named tunnel. It needs a Cloudflare
+   account (the free plan is enough) and a domain whose DNS Cloudflare
+   manages.
 
-With a named tunnel, the address is the same every session: invite links
-keep working, and people who come back reclaim their seat. It needs a
-Cloudflare account (the free plan is enough) and a domain whose DNS
-Cloudflare manages.
+   1. In the Cloudflare dashboard, under Zero Trust, Networks, Tunnels, create
+      a tunnel of type Cloudflared with a name of its own (for example
+      `ethics-sandbox`). Don't reuse the tunnel this computer already
+      runs. Cloudflare shows an install command ending in a long token:
+      copy it, but don't run it, since the script starts the tunnel itself.
+   2. Give the tunnel a public hostname (also called a published
+      application route): a subdomain such as `sandbox.example.org`,
+      service type HTTP, URL `localhost:8000`.
+   3. In PowerShell, in the project folder:
 
-1. In the Cloudflare dashboard, under Zero Trust, Networks, Tunnels, create
-   a tunnel of type Cloudflared with a name of its own (for example
-   `ethics-sandbox`). Don't reuse the tunnel this computer already runs.
-   Cloudflare shows an install command ending in a long token: copy it,
-   but don't run it, since the script starts the tunnel itself.
-2. Give the tunnel a public hostname (also called a published application
-   route): a subdomain such as `sandbox.example.org`, service type HTTP,
-   URL `localhost:8000`.
-3. In PowerShell, in the project folder:
+      ```
+      .\scripts\serve-tunnel.cmd -SetUpNamedTunnel
+      ```
 
-   ```
-   .\scripts\serve-tunnel.cmd -SetUpNamedTunnel
-   ```
+      Paste the address (`https://sandbox.example.org`) and then the token
+      (pasting the whole install command works too). They are saved in
+      `.sandbox-tunnel-url` and `.sandbox-tunnel-token` in the project
+      folder, which git ignores. Anyone holding the token can serve on
+      that address, so keep the folder off shared drives; if the token
+      leaks, refresh it in Cloudflare and run this step again.
 
-   Paste the address (`https://sandbox.example.org`) and then the token
-   (pasting the whole install command works too). They are saved in
-   `.sandbox-tunnel-url` and `.sandbox-tunnel-token` in the project folder,
-   which git ignores. Anyone holding the token can serve on that address,
-   so keep the folder off shared drives; if the token leaks, refresh it in
-   Cloudflare and run this step again.
-
-From then on every start uses that address. Add `-Quick` for a quick tunnel
-instead, for one start; delete the two files to stop using the named tunnel.
-The dashboard renames these screens from time to time; the steps are the
-same under the new names.
+   From then on every start uses that address. Add `-Quick` for a quick
+   tunnel instead, for one start; delete the two files to stop using the
+   named tunnel. The dashboard renames these screens from time to time;
+   the steps are the same under the new names.
 
 ## Each session
 
@@ -106,8 +104,8 @@ same under the new names.
      (`.\scripts\serve-tunnel.cmd -SkipChecks`).
 
    The first run takes several minutes. When it is ready it prints
-   `Share this address: https://…`: the named tunnel's address, or a new
-   `….trycloudflare.com` one.
+   `Share this address: https://…`, your named tunnel's address. If step 5
+   has not been done, it is a new `….trycloudflare.com` address instead.
 
 2. Open `<address>/health` on a phone using mobile data (not the home
    Wi-Fi). If it says "You can reach the server", the address works from
