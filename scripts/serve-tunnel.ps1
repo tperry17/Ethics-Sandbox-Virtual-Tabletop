@@ -1,15 +1,19 @@
 <#
 .SYNOPSIS
 Serve the Ethics Sandbox from this Windows computer to anyone on the
-internet, through a Cloudflare quick tunnel.
+internet, through a Cloudflare tunnel.
 
 .DESCRIPTION
 The Windows counterpart of scripts/deploy.sh and scripts/serve-tunnel.sh.
 It updates to the latest main, installs dependencies, runs the checks,
-builds the table client, migrates its own database, opens a quick tunnel,
-and serves on that tunnel's https://<random words>.trycloudflare.com
-address, which every invite link carries. The address is new every time
-this starts. Ctrl-C stops the server and the tunnel together.
+builds the table client, migrates its own database, opens a tunnel, and
+serves on the tunnel's address, which every invite link carries. Ctrl-C
+stops the server and the tunnel together.
+
+With a named tunnel set up (-SetUpNamedTunnel, which writes
+.sandbox-tunnel-url and .sandbox-tunnel-token), the address is the same
+every time. Without one, it opens a quick tunnel, whose
+https://<random words>.trycloudflare.com address is new every time.
 
 Like deploy.sh, it keeps its own database (ethics-sandbox-live.db) and
 cookie secret (.sandbox-secret), so a restart keeps every room.
@@ -25,12 +29,21 @@ Serve the checkout as it is, without switching to and updating main.
 
 .PARAMETER Port
 The local port to serve on (default 8000).
+
+.PARAMETER Quick
+Open a quick tunnel even when a named tunnel is set up.
+
+.PARAMETER SetUpNamedTunnel
+Ask for a named tunnel's address and token, store them, and stop. Every
+later start then uses that tunnel.
 #>
 [CmdletBinding()]
 param(
     [switch]$SkipChecks,
     [switch]$NoPull,
     [int]$Port = 8000,
+    [switch]$Quick,
+    [switch]$SetUpNamedTunnel,
     # Set when the script restarts itself after updating main.
     [switch]$Updated
 )
@@ -114,6 +127,41 @@ Assert-Command uv 'winget install --id astral-sh.uv'
 Assert-Command npm.cmd 'winget install --id OpenJS.NodeJS.LTS'
 Assert-Command cloudflared 'winget install --id Cloudflare.cloudflared'
 
+# A named tunnel: its address, and its token, which cloudflared reads from
+# the file so that it never appears in a process list.
+$urlFile = Join-Path $ProjectRoot '.sandbox-tunnel-url'
+$tokenFile = Join-Path $ProjectRoot '.sandbox-tunnel-token'
+
+if ($SetUpNamedTunnel) {
+    Write-Host 'The address people will open, as set up in Cloudflare (for example'
+    Write-Host 'https://sandbox.example.org):'
+    $address = ([string](Read-Host)).Trim().TrimEnd('/')
+    if (-not $address) { throw 'No address given; nothing changed.' }
+    if ($address -like 'http://*') { throw 'The address must start with https://.' }
+    if ($address -notlike 'https://*') { $address = "https://$address" }
+    Write-Host "The tunnel's token (Cloudflare shows it when the tunnel is made; it"
+    Write-Host 'is not shown as you paste it):'
+    $secure = Read-Host -AsSecureString
+    $token = [System.Net.NetworkCredential]::new('', $secure).Password
+    $token = ($token -replace '\s', '')
+    # Accept the whole "cloudflared.exe service install <token>" line as well.
+    if ($token -match 'cloudflared.*serviceinstall(.+)$') { $token = $Matches[1] }
+    if (-not $token) { throw 'No token given; nothing changed.' }
+    [System.IO.File]::WriteAllText($urlFile, $address)
+    [System.IO.File]::WriteAllText($tokenFile, $token)
+    Write-Host "Saved $urlFile and $tokenFile."
+    Write-Host "In Cloudflare, the tunnel's published application route must point to http://localhost:$Port."
+    exit 0
+}
+
+$named = $false
+if (-not $Quick -and ((Test-Path $urlFile) -or (Test-Path $tokenFile))) {
+    if (-not ((Test-Path $urlFile) -and (Test-Path $tokenFile))) {
+        throw "A named tunnel needs both $urlFile and $tokenFile. Run scripts\serve-tunnel.cmd -SetUpNamedTunnel, or add -Quick for a quick tunnel."
+    }
+    $named = $true
+}
+
 if (-not $NoPull -and -not $Updated) {
     Write-Step 'Updating to the latest main'
     $changes = git status --porcelain --untracked-files=no
@@ -127,6 +175,7 @@ if (-not $NoPull -and -not $Updated) {
     # Run the version of this script that just arrived, not the one in memory.
     $again = @{ Port = $Port; Updated = $true }
     if ($SkipChecks) { $again['SkipChecks'] = $true }
+    if ($Quick) { $again['Quick'] = $true }
     & $PSCommandPath @again
     exit $LASTEXITCODE
 }
@@ -135,13 +184,17 @@ Write-Step "Stopping anything an earlier run left on port $Port"
 # Closing the window or VS Code's "Terminate Task" can end this script
 # before it stops what it started. Its server and quick tunnel are known by
 # their command lines, which nothing else shares: the app's module and this
-# port, and the exact quick-tunnel arguments below. Another Cloudflare
-# tunnel on this computer does not match and is left alone.
-$tunnelArguments = "tunnel --no-autoupdate --url http://localhost:$Port"
+# port, the exact quick-tunnel arguments below, and this checkout's token
+# file. Another Cloudflare tunnel on this computer does not match and is
+# left alone.
+$quickArguments = "tunnel --no-autoupdate --url http://localhost:$Port"
+$pidFile = Join-Path ([System.IO.Path]::GetTempPath()) ('sandbox-tunnel-pid-' + [guid]::NewGuid().ToString('N'))
+$namedArguments = "tunnel --no-autoupdate run --token-file `"$tokenFile`" --pidfile `"$pidFile`""
 $leftovers = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
     $line = [string]$_.CommandLine
     ($line -like '*sandbox.web.app:app*' -and $line -like "*--port $Port*") -or
-    ($_.Name -eq 'cloudflared.exe' -and $line -like "*$tunnelArguments*")
+    ($_.Name -eq 'cloudflared.exe' -and $line -like "*$quickArguments*") -or
+    ($_.Name -eq 'cloudflared.exe' -and $line.Contains("--token-file `"$tokenFile`""))
 })
 if ($leftovers.Count -eq 0) {
     Write-Host 'Nothing left over.'
@@ -218,25 +271,46 @@ $log = Join-Path ([System.IO.Path]::GetTempPath()) ('sandbox-tunnel-' + [guid]::
 $tunnel = $null
 $exitCode = 0
 try {
-    Write-Step "Opening a Cloudflare quick tunnel to port $Port"
+    if ($named) {
+        $address = ([System.IO.File]::ReadAllText($urlFile)).Trim().TrimEnd('/')
+        Write-Step "Opening the named Cloudflare tunnel for $address"
+        $tunnelArguments = $namedArguments
+    } else {
+        Write-Step "Opening a Cloudflare quick tunnel to port $Port"
+        if (-not $Quick) {
+            Write-Host 'No named tunnel is set up, so the address will be new. For a permanent one,'
+            Write-Host 'see docs\FACILITATING-ON-WINDOWS.md, step 5, and run -SetUpNamedTunnel.'
+        }
+        $address = $null
+        $tunnelArguments = $quickArguments
+    }
+    # One string, so that paths with spaces stay quoted.
     $tunnel = Start-Process -FilePath (Get-Command cloudflared).Source `
-        -ArgumentList ($tunnelArguments -split ' ') `
+        -ArgumentList $tunnelArguments `
         -RedirectStandardError "$log.err" -RedirectStandardOutput "$log.out" `
         -NoNewWindow -PassThru
 
-    $address = $null
+    # A named tunnel is ready once cloudflared writes its pid file, which it
+    # does after its first connection to Cloudflare; a quick one once it
+    # prints its address.
+    $ready = $false
     $deadline = (Get-Date).AddSeconds(30)
-    while (-not $address) {
-        $found = [regex]::Match((Read-SharedText "$log.err") + (Read-SharedText "$log.out"),
-            'https://[a-z0-9-]+\.trycloudflare\.com')
-        if ($found.Success) { $address = $found.Value; break }
+    while (-not $ready) {
+        if ($named) {
+            $ready = (Test-Path $pidFile) -and ((Get-Item $pidFile).Length -gt 0)
+        } else {
+            $found = [regex]::Match((Read-SharedText "$log.err") + (Read-SharedText "$log.out"),
+                'https://[a-z0-9-]+\.trycloudflare\.com')
+            if ($found.Success) { $address = $found.Value; $ready = $true }
+        }
+        if ($ready) { break }
         if ($tunnel.HasExited) {
             Write-Host (Read-SharedText "$log.err")
-            throw 'cloudflared stopped before giving an address. Its output is above.'
+            throw 'cloudflared stopped before connecting. Its output is above.'
         }
         if ((Get-Date) -gt $deadline) {
             Write-Host (Read-SharedText "$log.err")
-            throw 'cloudflared gave no address within 30 seconds. Its output is above.'
+            throw 'cloudflared did not connect within 30 seconds. Its output is above.'
         }
         Start-Sleep -Milliseconds 500
     }
@@ -247,6 +321,9 @@ try {
     Write-Step 'Serving'
     Write-Host "Share this address:  $address"
     Write-Host "Check from a phone:  $address/health  (it can take a minute to answer)"
+    if ($named) {
+        Write-Host "In Cloudflare, its published application route must point to http://localhost:$Port."
+    }
     Write-Host 'Press Ctrl-C to stop the server and the tunnel.'
 
     Set-KeepAwake $true
@@ -260,8 +337,12 @@ try {
     if ($tunnel -and -not $tunnel.HasExited) {
         Stop-Process -Id $tunnel.Id -Force -ErrorAction SilentlyContinue
     }
-    Remove-Item "$log.err", "$log.out" -ErrorAction SilentlyContinue
+    Remove-Item "$log.err", "$log.out", $pidFile -ErrorAction SilentlyContinue
     Write-Host ''
-    Write-Host 'The server and the tunnel have stopped; the address no longer works.'
+    if ($named) {
+        Write-Host 'The server and the tunnel have stopped; the address answers again when this is next started.'
+    } else {
+        Write-Host 'The server and the tunnel have stopped; the address no longer works.'
+    }
 }
 exit $exitCode

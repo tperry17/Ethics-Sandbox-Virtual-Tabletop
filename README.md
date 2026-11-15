@@ -37,22 +37,50 @@ will drop every table's connections. Hosting is the Mac on the local
 network for now; Fly.io or Render, with staging and production, is set
 aside until asked for.
 
-### Serving it publicly through a Cloudflare quick tunnel
+### Serving it publicly through a Cloudflare tunnel
 
-`scripts/serve-tunnel.sh` opens a Cloudflare quick tunnel to the server's
-port, waits for its `https://<random words>.trycloudflare.com` address, and
-runs `scripts/deploy.sh` with `SANDBOX_PUBLIC_URL` set to it, so every
-invite link carries that address. It takes the same options as `deploy.sh`.
-Ctrl-C stops the server and the tunnel together. It needs `cloudflared`
-and no Cloudflare account or domain.
+`scripts/serve-tunnel.sh` opens a Cloudflare tunnel to the server's port and
+runs `scripts/deploy.sh` with `SANDBOX_PUBLIC_URL` set to the tunnel's
+address, so every invite link carries that address. It takes the same
+options as `deploy.sh`. Ctrl-C stops the server and the tunnel together. It
+needs `cloudflared`, and opens one of two kinds of tunnel. A named tunnel is
+the default way to serve; the quick tunnel is the fallback until one is set
+up.
 
-A quick tunnel's address is new every time `cloudflared` starts, so share
-the new links each session. Cloudflare offers quick tunnels "for testing and
+**A named tunnel: the same address every time.** Once it is set up, every
+start serves on that address, invite links keep working from one session to
+the next, and someone who comes back to a room reclaims their seat, because
+their identity cookie belongs to that address. It needs a Cloudflare account
+(the free plan is enough) and a domain whose DNS Cloudflare manages. Set it
+up once:
+
+1. In the Cloudflare dashboard, under Networking, Tunnels, choose "Create a
+   tunnel" and give it a name of its own (for example `ethics-sandbox`);
+   don't reuse another tunnel. Choose the operating system, and Cloudflare
+   shows an install command ending in a long token. Copy the token; don't
+   run the command, since the script starts the tunnel itself.
+2. On the tunnel's Routes tab, choose "Add route", then "Published
+   application": a subdomain (for example `sandbox`), your domain, and
+   Service URL `http://localhost:8000`. Cloudflare makes the DNS record. If
+   you serve on another port, use that port here.
+3. In the project folder, run `scripts/serve-tunnel.sh --set-up-named-tunnel`
+   and paste the address (`https://sandbox.example.org`) and the token. They
+   are saved in `.sandbox-tunnel-url` and `.sandbox-tunnel-token`, which git
+   ignores. The token lets anyone holding it serve on that address: keep it
+   off shared drives, and if it leaks, refresh it in Cloudflare and run the
+   setup again.
+
+The Cloudflare dashboard renames these screens from time to time; the
+steps are the same under the new names. To go back to a quick tunnel for one
+start, add `--quick`; to stop using the named tunnel, delete the two files.
+
+**A quick tunnel: a new address every time.** With no named tunnel set up,
+the script opens a quick tunnel, which needs no Cloudflare account or
+domain, and serves on its `https://<random words>.trycloudflare.com`
+address. That address is new every time `cloudflared` starts, so share the
+new links each session; someone returning to a room under a new address is a
+new participant. Cloudflare offers quick tunnels "for testing and
 development", with no uptime guarantee and up to 200 in-flight requests.
-Because the identity cookie belongs to the address it was issued on, someone
-returning to a room under a new address is a new participant. That suits a
-room used in one sitting; for a lasting address, use a named tunnel on a
-domain of your own and set `SANDBOX_PUBLIC_URL` to it.
 
 The machine must stay on, awake and online for the whole session, keep the
 same `SANDBOX_SECRET_KEY` and database file between runs (`deploy.sh` does),
@@ -61,7 +89,8 @@ and run one copy of the server only.
 On Windows, without WSL, `scripts\serve-tunnel.cmd` does the same: it runs
 `scripts/serve-tunnel.ps1`, the PowerShell counterpart of `deploy.sh` and
 `serve-tunnel.sh`, and serves on `127.0.0.1` only, since the tunnel is all
-that needs to reach it. See `docs/FACILITATING-ON-WINDOWS.md`. In VS Code,
+that needs to reach it; `-SetUpNamedTunnel` and `-Quick` work as above.
+See `docs/FACILITATING-ON-WINDOWS.md`. In VS Code,
 Terminal, Run Task, "Serve the Ethics Sandbox" runs the right script for the
 platform (`.vscode/tasks.json`).
 

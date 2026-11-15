@@ -3,7 +3,7 @@
   "tasks": [
     {
       "label": "Serve the Ethics Sandbox",
-      "detail": "Update main, run the checks, build, and serve through a Cloudflare quick tunnel. Click in the terminal and press Ctrl+C to stop.",
+      "detail": "Update main, run the checks, build, and serve through a Cloudflare tunnel (the named one if set up, otherwise a quick one). Click in the terminal and press Ctrl+C to stop.",
       "type": "shell",
       "command": "scripts/serve-tunnel.sh",
       "windows": {

@@ -10,3 +10,5 @@ test-results/
 *.db
 *.db-journal
 .sandbox-secret
+.sandbox-tunnel-url
+.sandbox-tunnel-token
