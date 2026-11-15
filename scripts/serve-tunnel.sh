@@ -87,7 +87,6 @@ if [ "$QUICK" -eq 0 ] && { [ -s "$URL_FILE" ] || [ -s "$TOKEN_FILE" ]; }; then
 fi
 
 LOG="$(mktemp -t sandbox-tunnel.XXXXXX)"
-PIDFILE="$(mktemp -u -t sandbox-tunnel-pid.XXXXXX)"
 TUNNEL_PID=""
 
 stop_tunnel() {
@@ -95,7 +94,7 @@ stop_tunnel() {
         kill "$TUNNEL_PID" 2>/dev/null || true
         wait "$TUNNEL_PID" 2>/dev/null || true
     fi
-    rm -f "$LOG" "$PIDFILE"
+    rm -f "$LOG"
 }
 trap stop_tunnel EXIT
 trap 'exit 130' INT TERM
@@ -106,10 +105,10 @@ if [ "$NAMED" -eq 1 ]; then
     printf '\n==> %s\n' "Opening the named Cloudflare tunnel for $TUNNEL_URL"
     # The token goes in cloudflared's TUNNEL_TOKEN environment variable, which
     # every cloudflared that runs a tunnel by token reads, so it never appears
-    # in a process list. cloudflared writes the pid file once it has a
-    # connection to Cloudflare.
+    # in a process list. It is ready once it logs its first connection to
+    # Cloudflare (its --pidfile option is missing from some builds).
     TUNNEL_TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE")" \
-        cloudflared tunnel --no-autoupdate run --pidfile "$PIDFILE" >"$LOG" 2>&1 &
+        cloudflared tunnel --no-autoupdate run >"$LOG" 2>&1 &
     TUNNEL_PID=$!
 else
     printf '\n==> %s\n' "Opening a Cloudflare quick tunnel to port $PORT"
@@ -123,7 +122,7 @@ else
 fi
 
 waited=0
-until { [ "$NAMED" -eq 1 ] && [ -s "$PIDFILE" ]; } || { [ "$NAMED" -eq 0 ] && [ -n "$TUNNEL_URL" ]; }; do
+until { [ "$NAMED" -eq 1 ] && grep -q 'Registered tunnel connection' "$LOG"; } || { [ "$NAMED" -eq 0 ] && [ -n "$TUNNEL_URL" ]; }; do
     if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
         echo "cloudflared stopped before connecting. Its output:" >&2
         cat "$LOG" >&2
