@@ -98,7 +98,9 @@ jobs:
           Start-Sleep -Seconds 5
           if ($server.HasExited) { Write-Error 'The stand-in server did not start.'; exit 1 }
           if (-not (Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue)) { Write-Error 'Nothing is listening on port 8000.'; exit 1 }
-          "$($server.Id) $($tunnel.Id)" | Set-Content (Join-Path $env:RUNNER_TEMP 'leftovers')
+          # Each process's id and start time: Windows reuses ids quickly, and
+          # the script starts many processes before the check below.
+          "$($server.Id):$($server.StartTime.Ticks) $($tunnel.Id):$($tunnel.StartTime.Ticks)" | Set-Content (Join-Path $env:RUNNER_TEMP 'leftovers')
       - name: Serve through a quick tunnel
         shell: powershell
         run: |
@@ -121,8 +123,10 @@ jobs:
           taskkill /T /F /PID $server.Id | Out-Null
           if (-not $page) { Write-Error 'The server never answered /health.'; exit 1 }
           if (-not (Select-String -Path "$log.out" -SimpleMatch 'built for another folder; rebuilding it' -Quiet)) { Write-Error 'The script did not rebuild the moved .venv.'; exit 1 }
-          foreach ($id in (Get-Content (Join-Path $env:RUNNER_TEMP 'leftovers')).Split(' ')) {
-            if (Get-Process -Id $id -ErrorAction SilentlyContinue) { Write-Error "The earlier run's process $id is still running."; exit 1 }
+          foreach ($entry in (Get-Content (Join-Path $env:RUNNER_TEMP 'leftovers')).Split(' ')) {
+            $id, $ticks = $entry.Split(':')
+            $process = Get-Process -Id $id -ErrorAction SilentlyContinue
+            if ($process -and [string]$process.StartTime.Ticks -eq $ticks) { Write-Error "The earlier run's process $id is still running."; exit 1 }
           }
           if (-not (Select-String -Path "$log.out" -SimpleMatch "Stopping an earlier run's" -Quiet)) { Write-Error 'The script did not report stopping the earlier run.'; exit 1 }
           if (-not $address) { Write-Error '/health does not name a trycloudflare.com address.'; exit 1 }

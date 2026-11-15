@@ -191,19 +191,27 @@ Write-Step "Stopping anything an earlier run left on port $Port"
 # Closing the window or VS Code's "Terminate Task" can end this script
 # before it stops what it started. Its server and quick tunnel are known by
 # their command lines, which nothing else shares: the app's module and this
-# port, the exact quick-tunnel arguments below, and this checkout's pid
-# file. Another Cloudflare tunnel on this computer does not match and is
-# left alone. The named tunnel's token goes to cloudflared in its
-# TUNNEL_TOKEN environment variable, which every cloudflared that runs a
-# tunnel by token reads, and so stays out of the command line.
+# port, and the exact quick-tunnel arguments below. A named tunnel's
+# cloudflared is known by the process id this script writes to
+# .sandbox-tunnel.pid when it starts one (cloudflared's own --pidfile is
+# not available on Windows), and is stopped only if that process is still a
+# cloudflared running these arguments. Another Cloudflare tunnel on this
+# computer does not match and is left alone. The named tunnel's token goes
+# to cloudflared in its TUNNEL_TOKEN environment variable, and so stays out
+# of the command line.
 $quickArguments = "tunnel --no-autoupdate --url http://localhost:$Port"
+$namedArguments = 'tunnel --no-autoupdate run'
 $pidFile = Join-Path $ProjectRoot '.sandbox-tunnel.pid'
-$namedArguments = "tunnel --no-autoupdate run --pidfile `"$pidFile`""
+$earlierNamed = $null
+if (Test-Path $pidFile) {
+    $earlierNamed = ([System.IO.File]::ReadAllText($pidFile)).Trim()
+}
 $leftovers = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
     $line = [string]$_.CommandLine
     ($line -like '*sandbox.web.app:app*' -and $line -like "*--port $Port*") -or
     ($_.Name -eq 'cloudflared.exe' -and $line -like "*$quickArguments*") -or
-    ($_.Name -eq 'cloudflared.exe' -and $line.Contains("--pidfile `"$pidFile`""))
+    ($_.Name -eq 'cloudflared.exe' -and [string]$_.ProcessId -eq $earlierNamed -and
+        $line.TrimEnd().EndsWith($namedArguments))
 })
 if ($leftovers.Count -eq 0) {
     Write-Host 'Nothing left over.'
@@ -284,7 +292,6 @@ try {
         $address = ([System.IO.File]::ReadAllText($urlFile)).Trim().TrimEnd('/')
         Write-Step "Opening the named Cloudflare tunnel for $address"
         $tunnelArguments = $namedArguments
-        Remove-Item $pidFile -ErrorAction SilentlyContinue
         # Read by cloudflared as it starts; removed again below, so the
         # server never sees it.
         $env:TUNNEL_TOKEN = ([System.IO.File]::ReadAllText($tokenFile)).Trim()
@@ -303,15 +310,17 @@ try {
         -RedirectStandardError "$log.err" -RedirectStandardOutput "$log.out" `
         -NoNewWindow -PassThru
     Remove-Item Env:TUNNEL_TOKEN -ErrorAction SilentlyContinue
+    if ($named) {
+        [System.IO.File]::WriteAllText($pidFile, [string]$tunnel.Id)
+    }
 
-    # A named tunnel is ready once cloudflared writes its pid file, which it
-    # does after its first connection to Cloudflare; a quick one once it
-    # prints its address.
+    # A named tunnel is ready once cloudflared logs its first connection to
+    # Cloudflare; a quick one once it prints its address.
     $ready = $false
     $deadline = (Get-Date).AddSeconds(30)
     while (-not $ready) {
         if ($named) {
-            $ready = (Test-Path $pidFile) -and ((Get-Item $pidFile).Length -gt 0)
+            $ready = ((Read-SharedText "$log.err") + (Read-SharedText "$log.out")).Contains('Registered tunnel connection')
         } else {
             $found = [regex]::Match((Read-SharedText "$log.err") + (Read-SharedText "$log.out"),
                 'https://[a-z0-9-]+\.trycloudflare\.com')
