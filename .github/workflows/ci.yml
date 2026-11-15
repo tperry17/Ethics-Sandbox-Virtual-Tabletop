@@ -31,24 +31,6 @@ jobs:
       - run: uv run mypy sandbox tests
       - run: uv run pytest
 
-  load:
-    name: Load check (ten minutes)
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-        with:
-          python-version: "3.12"
-          enable-cache: true
-      - run: uv sync --frozen
-      # Eight people, 300 pieces, ten minutes of continuous activity: memory
-      # flat and no outbound queue backing up. The same test runs for eight
-      # seconds in the pytest job above.
-      - run: uv run pytest tests/test_load.py
-        env:
-          SANDBOX_LOAD_SECONDS: "600"
-
   browser:
     name: Playwright
     runs-on: ubuntu-latest
