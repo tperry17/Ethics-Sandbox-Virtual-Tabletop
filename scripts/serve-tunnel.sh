@@ -57,7 +57,7 @@ set_up_named_tunnel() {
     printf '%s\n' "$address" > "$URL_FILE"
     (umask 077; printf '%s' "$token" > "$TOKEN_FILE")
     echo "Saved $URL_FILE and $TOKEN_FILE."
-    echo "In Cloudflare, the tunnel's public hostname must point to http://localhost:$PORT."
+    echo "In Cloudflare, the tunnel's published application route must point to http://localhost:$PORT."
 }
 
 QUICK=0
@@ -141,7 +141,7 @@ done
 
 echo "Tunnel address: $TUNNEL_URL"
 if [ "$NAMED" -eq 1 ]; then
-    echo "In Cloudflare, its public hostname must point to http://localhost:$PORT."
+    echo "In Cloudflare, its published application route must point to http://localhost:$PORT."
 else
     echo "It can take a minute before the address answers."
 fi

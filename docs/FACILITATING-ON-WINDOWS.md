@@ -59,14 +59,16 @@ Open PowerShell (not as administrator) for all of these.
    account (the free plan is enough) and a domain whose DNS Cloudflare
    manages.
 
-   1. In the Cloudflare dashboard, under Zero Trust, Networks, Tunnels, create
-      a tunnel of type Cloudflared with a name of its own (for example
+   1. In the Cloudflare dashboard, under Networking, Tunnels, choose
+      "Create a tunnel" and give it a name of its own (for example
       `ethics-sandbox`). Don't reuse the tunnel this computer already
-      runs. Cloudflare shows an install command ending in a long token:
-      copy it, but don't run it, since the script starts the tunnel itself.
-   2. Give the tunnel a public hostname (also called a published
-      application route): a subdomain such as `sandbox.example.org`,
-      service type HTTP, URL `localhost:8000`.
+      runs. Choose Windows as the operating system; Cloudflare shows an
+      install command ending in a long token. Copy it, but don't run it,
+      since the script starts the tunnel itself.
+   2. On the tunnel's Routes tab, choose "Add route", then "Published
+      application": a subdomain (for example `sandbox`), your domain, and
+      Service URL `http://localhost:8000`. Cloudflare makes the DNS
+      record.
    3. In PowerShell, in the project folder:
 
       ```
@@ -149,7 +151,7 @@ Open PowerShell (not as administrator) for all of these.
   `.\scripts\serve-tunnel.cmd -SetUpNamedTunnel` again, or add `-Quick`
   to serve on a quick tunnel for now.
 - **The named address shows a Cloudflare error page (502 or 1033).** The
-  script is not running, or the public hostname in Cloudflare points to a
+  script is not running, or the published application route in Cloudflare points to a
   port other than the one served (8000 unless `-Port` was given).
 - **cloudflared complains about a configuration file.** The other tunnel's
   settings may be getting in the way of the quick tunnel. Send the message

@@ -54,16 +54,15 @@ their identity cookie belongs to that address. It needs a Cloudflare account
 (the free plan is enough) and a domain whose DNS Cloudflare manages. Set it
 up once:
 
-1. In the Cloudflare dashboard, under Zero Trust, Networks, Tunnels, create
-   a tunnel of type Cloudflared and give it a name of its own (for example
-   `ethics-sandbox`); don't reuse another tunnel. Cloudflare then shows an
-   install command ending in a long token. Copy the token; don't run the
-   command, since the script starts the tunnel itself.
-2. Give the tunnel a public hostname (Cloudflare also calls it a published
-   application route): a subdomain on your domain, such as
-   `sandbox.example.org`, with service type HTTP and URL `localhost:8000`.
-   Cloudflare makes the DNS record. If you serve on another port, use that
-   port here.
+1. In the Cloudflare dashboard, under Networking, Tunnels, choose "Create a
+   tunnel" and give it a name of its own (for example `ethics-sandbox`);
+   don't reuse another tunnel. Choose the operating system, and Cloudflare
+   shows an install command ending in a long token. Copy the token; don't
+   run the command, since the script starts the tunnel itself.
+2. On the tunnel's Routes tab, choose "Add route", then "Published
+   application": a subdomain (for example `sandbox`), your domain, and
+   Service URL `http://localhost:8000`. Cloudflare makes the DNS record. If
+   you serve on another port, use that port here.
 3. In the project folder, run `scripts/serve-tunnel.sh --set-up-named-tunnel`
    and paste the address (`https://sandbox.example.org`) and the token. They
    are saved in `.sandbox-tunnel-url` and `.sandbox-tunnel-token`, which git

@@ -150,7 +150,7 @@ if ($SetUpNamedTunnel) {
     [System.IO.File]::WriteAllText($urlFile, $address)
     [System.IO.File]::WriteAllText($tokenFile, $token)
     Write-Host "Saved $urlFile and $tokenFile."
-    Write-Host "In Cloudflare, the tunnel's public hostname must point to http://localhost:$Port."
+    Write-Host "In Cloudflare, the tunnel's published application route must point to http://localhost:$Port."
     exit 0
 }
 
@@ -322,7 +322,7 @@ try {
     Write-Host "Share this address:  $address"
     Write-Host "Check from a phone:  $address/health  (it can take a minute to answer)"
     if ($named) {
-        Write-Host "In Cloudflare, its public hostname must point to http://localhost:$Port."
+        Write-Host "In Cloudflare, its published application route must point to http://localhost:$Port."
     }
     Write-Host 'Press Ctrl-C to stop the server and the tunnel.'
 
