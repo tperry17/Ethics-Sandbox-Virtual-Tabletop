@@ -374,8 +374,8 @@ def join_form(
 @app.post("/join", response_class=HTMLResponse)
 def join_room_route(
     request: Request,
-    room_code: str = Form(...),
-    display_name: str = Form(...),
+    room_code: str = Form(""),
+    display_name: str = Form(""),
     as_facilitator: bool = Form(False),
     exercise: str = Form(""),
     session: Session = Depends(get_session),
