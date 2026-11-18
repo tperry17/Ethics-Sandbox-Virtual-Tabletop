@@ -479,7 +479,7 @@ def debrief_settings(
 @router.post("/t/{code}/debrief/{key}/note")
 def debrief_note(
     key: str,
-    text: str = Form(...),
+    text: str = Form(""),
     outcome: str = Form(""),
     is_class: bool = Form(False),
     who: Viewer = Depends(viewer),
@@ -645,7 +645,7 @@ def reflect_page(
 
 @router.post("/t/{code}/reflect")
 def reflect_save(
-    body: str = Form(...),
+    body: str = Form(""),
     scope_prompt: str = Form(FREE_WRITING),
     share: bool = Form(False),
     who: Viewer = Depends(viewer),

@@ -166,6 +166,28 @@ def test_joining_an_unknown_code_shows_an_error(client: TestClient) -> None:
     assert "no room" in response.text
 
 
+def test_joining_with_no_name_asks_for_one(client: TestClient) -> None:
+    opened = client.post("/rooms", data={"kind": "value-cards-room"})
+    code = opened.headers["location"].removeprefix("/join?code=")
+
+    for name in ("", "   "):
+        response = client.post("/join", data={"room_code": code, "display_name": name})
+
+        assert response.status_code == 400
+        assert "text/html" in response.headers["content-type"]
+        assert "Enter a name to join with." in response.text
+        assert f'value="{code}"' in response.text
+
+
+def test_joining_with_no_code_asks_for_one(client: TestClient) -> None:
+    response = client.post("/join", data={"room_code": "", "display_name": "Bo"})
+
+    assert response.status_code == 400
+    assert "text/html" in response.headers["content-type"]
+    assert "Enter a room code." in response.text
+    assert 'value="Bo"' in response.text
+
+
 def test_a_closed_room_says_it_is_closed_and_what_to_do(client: TestClient) -> None:
     from sandbox.web.rooms import close_room, get_room_by_code
 

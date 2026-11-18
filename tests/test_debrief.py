@@ -278,6 +278,22 @@ def test_only_the_facilitator_adds_notes_and_they_are_kept_in_the_log(
     assert "Cy asked what Bea meant" in with_text
 
 
+def test_an_empty_note_or_reflection_goes_back_to_its_page(
+    factory: sessionmaker[Session],
+) -> None:
+    played, aid = _value_cards(factory)
+
+    note = played.clients["Ada"].post(
+        f"/t/{played.code}/debrief/{aid}/note", data={"text": "", "outcome": ""}
+    )
+    reflection = played.clients["Bea"].post(
+        f"/t/{played.code}/reflect", data={"scope_prompt": "", "body": ""}
+    )
+
+    assert note.status_code == 303
+    assert reflection.status_code == 303
+
+
 # -- reflection ----------------------------------------------------------------------
 
 
