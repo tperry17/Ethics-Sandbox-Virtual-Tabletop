@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { openFromLanding, openPanel } from "./rooms";
+import { openFromLanding, openControls } from "./rooms";
 
 /**
  * A class: one activity at several tables, run by whoever starts it. Pairs
@@ -12,7 +12,7 @@ async function openRoom(browser: Browser, name: string): Promise<{ page: Page; c
   await page.getByLabel("Your name").fill(name);
   await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
-  await openPanel(page);
+  await openControls(page);
   return { page, code: page.url().split("/t/")[1]! };
 }
 
@@ -22,7 +22,7 @@ async function join(browser: Browser, code: string, name: string): Promise<Page>
   await page.locator('input[name="display_name"]').fill(name);
   await page.locator('form button[type="submit"]').click();
   await page.waitForURL(new RegExp(`/t/${code}$`));
-  await openPanel(page);
+  await openControls(page);
   return page;
 }
 

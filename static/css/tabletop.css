@@ -403,7 +403,10 @@
   position: absolute;
   z-index: 3;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--space-2);
+  max-width: calc(100% - 2 * var(--space-3));
   inset-block-start: var(--space-3);
   inset-inline-end: var(--space-3);
 }
@@ -868,12 +871,20 @@
 
 /* The Pieces menu, among the camera controls. */
 .tabletop__pieces-slot:empty { display: none; }
-.pieces-menu { position: relative; }
-.pieces-menu > summary { list-style: none; cursor: pointer; }
-.pieces-menu > summary::-webkit-details-marker { display: none; }
-.pieces-menu[open] > summary { background: var(--text-primary); color: var(--surface-page); }
-.pieces-menu__panel {
+/* Static, so each drop-down hangs from the right edge of the whole row of
+   controls, not from its own button, and stays on a narrow table. */
+.pieces-menu,
+.table-buttons { position: static; }
+.pieces-menu > summary,
+.table-buttons > summary { list-style: none; cursor: pointer; }
+.pieces-menu > summary::-webkit-details-marker,
+.table-buttons > summary::-webkit-details-marker { display: none; }
+.pieces-menu[open] > summary,
+.table-buttons[open] > summary { background: var(--text-primary); color: var(--surface-page); }
+.pieces-menu__panel,
+.table-buttons__panel {
   position: absolute;
+  max-width: calc(100vw - 2 * var(--space-3));
   z-index: 5;
   top: calc(100% + var(--space-2));
   right: 0;
@@ -889,6 +900,9 @@
   font-family: var(--font-ui);
   font-size: var(--text-sm);
 }
+/* The table's buttons: the same disclosure, its buttons two to a row. */
+.table-buttons__panel { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 18rem; }
+.table-buttons__panel .button { justify-content: center; }
 .pieces-menu__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .pieces-menu__heading { margin: var(--space-2) 0 0; font-weight: 600; color: var(--text-secondary); }
 .pieces-menu__swatches { display: flex; flex-wrap: wrap; gap: var(--space-2); }
@@ -1141,6 +1155,9 @@
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
+  /* The room page has no gutter for the phone's full-bleed rule (site.css)
+     to reach into; pulled out, the table scrolled the page sideways. */
+  margin-inline: 0;
   border: 0;
   box-shadow: none;
 }

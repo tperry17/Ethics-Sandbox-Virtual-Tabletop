@@ -660,7 +660,7 @@ test.describe("pointing and ink", () => {
   test("the pen draws one stroke, and ink can be cleared", async ({ page }) => {
     await page.goto(PREVIEW);
     await page.getByRole("button", { name: "Pen" }).click();
-    await drag(page, await onScreen(page, 100, 850), await onScreen(page, 300, 900));
+    await drag(page, await onScreen(page, 100, 250), await onScreen(page, 300, 300));
 
     const ink = (await intents(page)).filter((intent) => intent.op_type.startsWith("ink_"));
     expect(ink[0]!.op_type).toBe("ink_begin");

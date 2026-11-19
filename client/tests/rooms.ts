@@ -22,12 +22,25 @@ export async function newRoom(browser: Browser, kind: RoomKind): Promise<string>
 }
 
 /**
- * Open the room's side panel, where the activities and the table's buttons
- * are. On a laptop or tablet it starts closed behind "Activities"; on a phone
- * it is always open, below the table, and there is no button.
+ * Open the room's controls: the side panel, where the activities are, and the
+ * "Table buttons" menu among the table's controls, where the table's buttons
+ * are. On a laptop or tablet the panel starts closed behind "Activities"; on a
+ * phone it is always open, below the table, and there is no button. The menu
+ * starts closed everywhere, and stays open while the toolbar redraws.
  */
-export async function openPanel(page: Page): Promise<void> {
+export async function openControls(page: Page): Promise<void> {
   const toggle = page.locator("#room-panel-toggle");
-  if (!(await toggle.isVisible())) return;
-  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") {
+    await toggle.click();
+  }
+  await openTableButtons(page);
+}
+
+/** Open the "Table buttons" menu, once the table has sent its buttons. */
+export async function openTableButtons(page: Page): Promise<void> {
+  const menu = page.locator("details.table-buttons");
+  await menu.waitFor({ timeout: 10_000 });
+  if (!(await menu.evaluate((node) => (node as HTMLDetailsElement).open))) {
+    await menu.locator("summary").click();
+  }
 }

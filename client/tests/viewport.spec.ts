@@ -47,4 +47,13 @@ test.describe("viewport arithmetic", () => {
     expect((left + right) / 2).toBeCloseTo(600, 3);
     expect((top + bottom) / 2).toBeCloseTo(400, 3);
   });
+
+  test("puts a table too wide for the smallest zoom at its left edge, not cut in half", () => {
+    const bounds = { minX: 0, minY: 0, maxX: 1400, maxY: 1000 };
+    const viewport = fitBounds(bounds, { width: 390, height: 400 }, 16);
+    expect(viewport.scale).toBe(MIN_SCALE);
+    const [left, top] = worldToScreen(viewport, bounds.minX, bounds.minY);
+    expect(left).toBeCloseTo(16, 3);
+    expect(top).toBeCloseTo(16, 3);
+  });
 });

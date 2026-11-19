@@ -97,12 +97,16 @@ export function fitBounds(bounds: Bounds, size: Size, padding = 48): Viewport {
   const usableWidth = Math.max(size.width - padding * 2, 1);
   const usableHeight = Math.max(size.height - padding * 2, 1);
   const scale = clampScale(Math.min(usableWidth / width, usableHeight / height));
-  const centreX = (bounds.minX + bounds.maxX) / 2;
-  const centreY = (bounds.minY + bounds.maxY) / 2;
+  // Centred on each axis where the table fits; where even the smallest
+  // readable zoom leaves it wider (or taller) than the window, its start edge
+  // is put at the padding instead, so what lies at its left or top - where
+  // the decks are laid - is on screen rather than cut in half.
+  const place = (min: number, extent: number, usable: number, screen: number): number =>
+    extent * scale > usable ? padding - min * scale : screen / 2 - (min + extent / 2) * scale;
   return {
     scale,
-    offsetX: size.width / 2 - centreX * scale,
-    offsetY: size.height / 2 - centreY * scale,
+    offsetX: place(bounds.minX, width, usableWidth, size.width),
+    offsetY: place(bounds.minY, height, usableHeight, size.height),
   };
 }
 

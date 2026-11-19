@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
-import { newRoom, openPanel } from "./rooms";
+import { newRoom, openControls } from "./rooms";
 
 /**
  * Whole sessions, one per exercise, with several browsers in one room: a
@@ -32,7 +32,7 @@ async function open(browser: Browser, path: string, name: string): Promise<Perso
   await page.locator('input[name="display_name"]').fill(name);
   await page.locator('form button[type="submit"]').click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
-  await openPanel(page);
+  await openControls(page);
   return {
     page,
     context,

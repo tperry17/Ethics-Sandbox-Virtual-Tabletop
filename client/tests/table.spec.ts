@@ -47,8 +47,12 @@ test.describe("the table client renders a recorded session", () => {
   test("builds the toolbar from the macros the server sent", async ({ page }) => {
     await page.goto(PREVIEW);
 
-    const buttons = page.locator("#table-toolbar [data-macro-id]");
+    const buttons = page.locator(".table-buttons [data-macro-id]");
     await expect(buttons).toHaveCount(3);
+    // In their own menu, closed until it is opened.
+    await expect(buttons.first()).toBeHidden();
+    await page.getByText("Table buttons", { exact: true }).click();
+    await expect(buttons.first()).toBeVisible();
     await expect(buttons.first()).toHaveText("Set up");
   });
 

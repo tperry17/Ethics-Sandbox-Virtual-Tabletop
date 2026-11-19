@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { newRoom, openFromLanding, type RoomKind, openPanel } from "./rooms";
+import { newRoom, openFromLanding, type RoomKind, openControls } from "./rooms";
 
 /** Accessibility, touch and small screens. */
 
@@ -15,7 +15,7 @@ async function openRoom(
   await page.getByLabel("Your name").fill(name);
   await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
-  await openPanel(page);
+  await openControls(page);
   await expect(page.locator("html[data-table-client='ready']")).toHaveCount(1);
   return page;
 }
@@ -119,6 +119,11 @@ test("the side panel starts closed on a laptop or tablet, and sits below the tab
   expect(table).not.toBeNull();
   expect(panel).not.toBeNull();
   expect(panel!.y).toBeGreaterThanOrEqual(table!.y + table!.height - 1);
+  // Nothing scrolls the page sideways.
+  const overflow = await phone.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
 });
 
 test("pages work with text at 200 percent", async ({ page }) => {
@@ -191,7 +196,7 @@ async function startTrading(browser: Browser, touch: boolean) {
     await page.locator('input[name="display_name"]').fill(name);
     await page.locator('form button[type="submit"]').click();
     await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
-    await openPanel(page);
+    await openControls(page);
     return page;
   };
   const ines = await person(await newRoom(browser, "Value Cards"), "Ines");
@@ -270,7 +275,7 @@ test("a card goes out of the hand and back into it with the keyboard alone", asy
     await page.locator('input[name="display_name"]').fill(name);
     await page.locator('form button[type="submit"]').click();
     await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
-    await openPanel(page);
+    await openControls(page);
     return page;
   };
   const host = await person(await newRoom(browser, "Test room"), "Ines");

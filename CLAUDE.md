@@ -29,8 +29,11 @@ A class is an activity run as several tables at once. Someone presses "Start a c
 
 Scenario 2 of Leadership and Knowledge in Popular Rule always runs as a class, in one room, with one table per city. It is best with two paired cities; it can be run with one, and then the other city is hypothetical: the facilitator may choose its decision, and if nobody does, the facilitator sees all three possible results. On the call the group splits into breakout groups, one per table, so each table is self-contained: its own notes, its own votes, its own list of participants.
 
-The room's side panel holds its activities, its debrief, a class and the
-table's buttons. On a laptop or tablet (wider than 48rem) it starts closed
+The table's buttons (the room's macros, and those of any activity running
+for you) are in their own "Table buttons" menu among the table's controls,
+beside "Pieces", closed until it is opened; opening either menu closes the
+other. The room's side panel holds its activities, its debrief and a class.
+On a laptop or tablet (wider than 48rem) it starts closed
 behind an "Activities" button in the room bar, which opens and closes it; the
 tab remembers the choice across a reload, and a new visit starts closed. On a
 phone it is always open, below the table, with no button.
@@ -148,6 +151,11 @@ takes the same share of every card, so a deck shows its pictures at one size.
 
 `/table-preview` replays the recorded session with no room behind it, and
 `?pieces=300&measure=1` is the frame-rate harness.
+
+"Fit table" (and the first view of a table nobody has moved) centres the
+table where it fits. Where even the smallest readable zoom (0.4) leaves it
+wider or taller than the window, it lines its left or top edge up with the
+window's instead, so the decks laid at the table's left are never cut off.
 
 ### Interaction
 
