@@ -52,6 +52,7 @@ from sandbox.model import (
     Transaction,
 )
 from sandbox.model.entities import MAX_TEXT
+from sandbox.web.assets import version_static_links
 from sandbox.web.deps import get_session
 from sandbox.web.identity import read_participant_cookie
 from sandbox.web.live import hub
@@ -68,6 +69,7 @@ from sandbox.web.rooms import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 templates = Jinja2Templates(directory=PROJECT_ROOT / "sandbox" / "web" / "templates")
+version_static_links(templates)
 router = APIRouter()
 
 OBSERVATION = "observation"
