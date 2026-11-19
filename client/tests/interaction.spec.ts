@@ -16,6 +16,10 @@ import type { ServerMessage } from "../src/protocol.js";
 
 const PREVIEW = "/table-preview";
 
+// "Fit table" fills the window's width, so a wide, short window shows only the
+// top of the recorded table. These tests aim at spots across all of it.
+test.use({ viewport: { width: 900, height: 1600 } });
+
 interface SentIntent {
   type: "intent";
   client_id: string;

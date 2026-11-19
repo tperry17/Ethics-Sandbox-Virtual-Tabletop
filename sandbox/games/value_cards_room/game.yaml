@@ -32,6 +32,7 @@ components:
       body: definition
       folio: number
       image: art
+      face_image: face          # the printed card, frame and all
       group: group               # the printed card's frame
       badge: schwartz            # and the icon in its corner
   pieces:
