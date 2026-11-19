@@ -152,11 +152,11 @@ takes the same share of every card, so a deck shows its pictures at one size.
 `/table-preview` replays the recorded session with no room behind it, and
 `?pieces=300&measure=1` is the frame-rate harness.
 
-"Fit table" (and the first view of a table nobody has moved) puts the whole
-table on screen against the window's left edge, so no felt is wasted beside
-it there; any width left over is on the right. Up and down it is centred,
-unless even the smallest readable zoom (0.4) leaves it taller than the
-window, when its top edge is lined up with the window's.
+"Fit table" (and the first view of a table nobody has moved) zooms the
+table to fill the window's width, 16px (`FIT_PADDING`) from each side, so no
+felt is wasted beside it. Up and down it is centred in the room below the
+row of table controls (`FIT_TOP`, 64px) where it fits; where it is taller,
+its top edge is put just below the controls and the rest is a pan away.
 
 ### Interaction
 

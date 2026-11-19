@@ -35,22 +35,28 @@ test.describe("viewport arithmetic", () => {
     expect(tiny.scale).toBe(MIN_SCALE);
   });
 
-  test("fits a table into a window against its left edge, centred up and down", () => {
+  test("fills the window's width with the table, its top at the top when it is taller", () => {
     const bounds = { minX: 0, minY: 0, maxX: 1400, maxY: 1000 };
-    const viewport = fitBounds(bounds, { width: 1200, height: 800 }, 48);
+    const viewport = fitBounds(bounds, { width: 1200, height: 800 }, 48, 64);
     const [left, top] = worldToScreen(viewport, bounds.minX, bounds.minY);
-    const [right, bottom] = worldToScreen(viewport, bounds.maxX, bounds.maxY);
-    expect(left).toBeGreaterThanOrEqual(0);
-    expect(top).toBeGreaterThanOrEqual(0);
-    expect(right).toBeLessThanOrEqual(1200);
-    expect(bottom).toBeLessThanOrEqual(800);
+    const [right] = worldToScreen(viewport, bounds.maxX, bounds.maxY);
     expect(left).toBeCloseTo(48, 3);
-    expect((top + bottom) / 2).toBeCloseTo(400, 3);
+    expect(right).toBeCloseTo(1200 - 48, 3);
+    expect(top).toBeCloseTo(64, 3);
+  });
+
+  test("centres a table that fills the width and is shorter than the window", () => {
+    const bounds = { minX: 0, minY: 0, maxX: 1400, maxY: 400 };
+    const viewport = fitBounds(bounds, { width: 1200, height: 800 }, 48, 64);
+    const [, top] = worldToScreen(viewport, bounds.minX, bounds.minY);
+    const [, bottom] = worldToScreen(viewport, bounds.maxX, bounds.maxY);
+    // Centred in the room left below the controls: 64 to 800 - 48.
+    expect((top + bottom) / 2).toBeCloseTo((64 + 800 - 48) / 2, 3);
   });
 
   test("puts a table too wide for the smallest zoom at its left edge, not cut in half", () => {
     const bounds = { minX: 0, minY: 0, maxX: 1400, maxY: 1000 };
-    const viewport = fitBounds(bounds, { width: 390, height: 400 }, 16);
+    const viewport = fitBounds(bounds, { width: 390, height: 400 }, 16, 16);
     expect(viewport.scale).toBe(MIN_SCALE);
     const [left, top] = worldToScreen(viewport, bounds.minX, bounds.minY);
     expect(left).toBeCloseTo(16, 3);
