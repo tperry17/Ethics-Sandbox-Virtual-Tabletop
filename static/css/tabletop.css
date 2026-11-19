@@ -451,20 +451,23 @@
 .toast--compact .toast__message { margin: 0; }
 .toast--compact[data-level="warning"] { border-color: var(--accent-rubric); }
 
+/* The label is a row of its own above the fan, so a card never covers it. */
 .hand-tray {
   position: relative;
+  display: flex;
+  flex-direction: column;
   flex: none;
-  block-size: min(14rem, 30vh);
+  block-size: min(15.5rem, 34vh);
   overflow: hidden;
   border-block-start: var(--line-hairline) solid var(--surface-border);
   background: var(--surface-page);
 }
 
 .hand-tray__head {
-  position: absolute;
+  position: relative;
   z-index: 1;
-  inset-block-start: var(--space-2);
-  inset-inline-start: var(--space-4);
+  flex: none;
+  padding: var(--space-2) var(--space-4) 0;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -508,8 +511,9 @@
    hand is drawn small enough to sit in the tray. */
 .hand-tray__fan {
   position: relative;
+  flex: 1 1 auto;
+  min-block-size: 0;
   zoom: 0.62;
-  block-size: 100%;
   inline-size: 100%;
 }
 

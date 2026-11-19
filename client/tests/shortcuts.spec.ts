@@ -28,6 +28,12 @@ test("the deck's menu deals to everyone and shuffles", async ({ browser }) => {
   await page.getByRole("menuitem", { name: "3 cards each", exact: true }).click();
   // Dealt face up into the person's own hand, so they can read what they hold.
   await expect(page.locator(".hand-tray__fan .piece .piece__title")).toHaveCount(3);
+  // The tray's label sits above the cards, never under one.
+  const head = await page.locator(".hand-tray__head").boundingBox();
+  for (const card of await page.locator(".hand-tray__fan .piece").all()) {
+    const box = await card.boundingBox();
+    expect(box!.y).toBeGreaterThanOrEqual(head!.y + head!.height);
+  }
 
   await deckCard(page).hover();
   await page.keyboard.press("s");
