@@ -20,7 +20,6 @@ from fastapi import (
     WebSocket,
 )
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -30,6 +29,7 @@ from sandbox.db import Room, init_db, session_scope
 from sandbox.games import EXERCISES, EXERCISES_BY_SLUG, GAMES, Exercise
 from sandbox.games.loader import IMAGE_SUFFIXES, Card, Game
 from sandbox.games.room_types import room_for_exercise, room_types
+from sandbox.web.assets import StaticAssets, version_static_links
 from sandbox.web.content import HELP_RECORDS, SITE_COPY
 from sandbox.web.debrief import router as debrief_router
 from sandbox.web.deps import get_session as get_session
@@ -90,8 +90,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Ethics Sandbox", lifespan=lifespan)
 app.include_router(debrief_router)
-app.mount("/static", StaticFiles(directory=PROJECT_ROOT / "static"), name="static")
+app.mount("/static", StaticAssets(directory=PROJECT_ROOT / "static"), name="static")
 templates = Jinja2Templates(directory=PROJECT_ROOT / "sandbox" / "web" / "templates")
+version_static_links(templates)
 
 
 def _public_base(request: Request) -> str:

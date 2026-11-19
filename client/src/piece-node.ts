@@ -225,6 +225,7 @@ export class PieceNode {
             component?.body ?? "",
             component?.folio ?? "",
             component?.image ?? "",
+            component?.face_image ?? "",
             component?.group ?? "",
             component?.badge ?? "",
             piece.value ?? "",
@@ -313,8 +314,21 @@ function appendTileBack(container: HTMLElement, component: ComponentView): void 
   if (component.title !== null) container.append(span("piece__title", component.title));
 }
 
-/** A component's face - image, title, body, folio - appended to `container`. */
+/**
+ * A component's face - image, title, body, folio - appended to `container`.
+ * A component with a picture of its whole printed face is drawn as that
+ * picture alone, its title and body as the picture's text alternative.
+ */
 export function appendFace(container: HTMLElement, component: ComponentView): void {
+  if (component.face_image) {
+    const face = document.createElement("img");
+    face.className = "piece__face";
+    face.src = component.face_image;
+    face.alt = [component.title, component.body].filter((part) => part).join(". ");
+    face.draggable = false;
+    container.append(face);
+    return;
+  }
   if (component.image !== null) {
     const image = document.createElement("img");
     image.className = "piece__image";

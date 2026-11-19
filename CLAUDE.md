@@ -138,7 +138,9 @@ person did: no rule, no deck, and no face it was not given.
 - `announcer.ts` — the live region that says what happened, in words
 
 Pieces are DOM elements positioned with `translate3d` inside a single
-transformed world layer, so card text is real text at any zoom. Rendering
+transformed world layer, so card text is real text at any zoom (a deck
+with `face_image`, such as the Value Cards, is drawn from pictures of its
+printed cards instead, its text as their alt text). Rendering
 reconciles from state, never from events: a message folds into the model and
 records what changed, and one animation frame later only those nodes are
 rewritten. Z-order is the model's — the zone's place in the server's list,
@@ -169,6 +171,14 @@ a visible rollback (the piece glides back and is marked) and the sentence
 is shown in a toast. An intent with no answer within eight seconds is
 treated as refused. Each intent's `client_id` doubles as its `op_id`, so a
 repeat is applied once.
+
+A card taken off a deck (into anything but another deck) lands face up, and
+so does a card put into a hand or onto a discard pile, wherever it came from
+(a macro's `draw` onto a discard pile too, unless its step sets `face_up`); the hand's
+visibility still shows its face to the owner alone. A card going into a
+deck, or into a zone that hides every face, is left as it was. This is
+`MoveToZone` and `StackOnto` in `sandbox/model/ops.py`, so a macro's moves
+follow it too.
 
 The client never decides legality. Where a piece was let go - over a zone,
 over another piece, over the hand tray - is input; it becomes
@@ -246,7 +256,9 @@ server do.
   `content/site/exercises.csv`, and its title there must match.
 - `components` — `decks`, each the rows of a CSV under `content/` (`key`
   names the unique column, `title`/`body`/`folio` the columns on the face,
-  `image` the column naming a file in that folder's `images/`; `kind: tile`
+  `image` the column naming a file in that folder's `images/`,
+  `face_image` one naming a picture of the whole printed face there, drawn
+  alone in place of the text; `kind: tile`
   makes its cards tiles, whose two sides are both public, the back showing
   only the picture and the title at the front's size; `locked: true` lays
   them out locked), and

@@ -114,6 +114,8 @@ export interface ComponentView {
   body: string | null;
   folio: string | null;
   image: string | null;
+  /** A picture of the whole printed face; drawn alone when present. */
+  face_image?: string | null;
   /** A card's group, drawn as a frame colour. */
   group?: string | null;
   /** An icon drawn beside the folio. */

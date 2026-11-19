@@ -402,6 +402,7 @@ class ComponentView(BaseModel):
     body: str | None = None
     folio: str | None = None
     image: str | None = None
+    face_image: str | None = None
     group: str | None = None
     badge: str | None = None
     tint_index: int | None = None
@@ -803,6 +804,7 @@ def component_views(game: Game | None) -> dict[str, ComponentView]:
             body=face.body,
             folio=face.folio,
             image=face.image,
+            face_image=face.face_image,
             group=face.group,
             badge=face.badge,
             tint_index=face.tint_index,

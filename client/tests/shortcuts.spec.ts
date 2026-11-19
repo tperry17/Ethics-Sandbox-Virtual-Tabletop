@@ -27,7 +27,20 @@ test("the deck's menu deals to everyone and shuffles", async ({ browser }) => {
   await expect(page.getByRole("menuitem", { name: "Shuffle the deck" })).toBeVisible();
   await page.getByRole("menuitem", { name: "3 cards each", exact: true }).click();
   // Dealt face up into the person's own hand, so they can read what they hold.
-  await expect(page.locator(".hand-tray__fan .piece .piece__title")).toHaveCount(3);
+  await expect(page.locator(".hand-tray__fan .piece .piece__face")).toHaveCount(3);
+  // Each face is the printed card's picture, read out as its name and definition.
+  const face = page.locator(".hand-tray__fan .piece .piece__face").first();
+  await expect(face).toHaveAttribute("alt", /^[A-Z][a-z]+\. \S/);
+  expect(await face.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  // The tray's label sits above the cards, never under one, and each card
+  // ends inside the tray.
+  const head = await page.locator(".hand-tray__head").boundingBox();
+  const tray = await page.locator(".hand-tray").boundingBox();
+  for (const card of await page.locator(".hand-tray__fan .piece").all()) {
+    const box = await card.boundingBox();
+    expect(box!.y).toBeGreaterThanOrEqual(head!.y + head!.height);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(tray!.y + tray!.height);
+  }
 
   await deckCard(page).hover();
   await page.keyboard.press("s");
@@ -40,7 +53,7 @@ test("hovering a card says what the keys do; Space enlarges it and F turns it ov
   const page = await openRoom(browser, "Value Cards", "Ines");
   await page.getByRole("button", { name: "Deal 3 core cards" }).click();
   const card = page.locator(".hand-tray__fan .piece").first();
-  await expect(card.locator(".piece__title")).toBeVisible();
+  await expect(card.locator(".piece__face")).toBeVisible();
 
   await card.hover();
   await expect(page.locator(".piece-hint")).toContainText("Space hold to enlarge");

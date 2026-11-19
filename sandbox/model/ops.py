@@ -199,6 +199,31 @@ def _piece_patch(piece: Piece) -> Patch:
     )
 
 
+def _turn_up_on_arrival(piece: Piece, source: Zone | None, destination: Zone) -> None:
+    """A card drawn off a deck, or put into a hand or a discard pile, lands face up.
+
+    Drawn off a deck (into anything but another deck) it is turned over, as
+    a card picked off a pile is; put into a private hand it is turned so its
+    owner can read it, as a dealt card is; a discard pile is always face up.
+    Who may see the face is still the zone's visibility: a card face up in
+    someone's hand shows only to them. A card going into a deck, or into a
+    zone that hides every face, is left as it is.
+    """
+    if piece.kind is not PieceKind.CARD:
+        return
+    if destination.kind is ZoneKind.DECK or destination.visibility is Visibility.HIDDEN:
+        return
+    drawn = source is not None and source.kind is ZoneKind.DECK
+    into_hand = destination.visibility is Visibility.PRIVATE_TO_OWNER
+    if drawn or into_hand or _always_face_up(destination):
+        piece.face_up = True
+
+
+def _always_face_up(zone: Zone) -> bool:
+    """A discard pile shows every card in it face up, however it got there."""
+    return zone.kind is ZoneKind.DISCARD and zone.visibility is not Visibility.HIDDEN
+
+
 def _clear_reveal(piece: Piece) -> None:
     """End any reveal in progress: a piece that moves is no longer being shown."""
     piece.revealed_to = frozenset()
@@ -335,6 +360,8 @@ class MoveToZone:
         piece = table.pieces[self.piece_id]
         zone = table.zones[self.zone_id]
         _take_from_holder(piece, actor_seat)
+        if piece.zone_id != zone.id:
+            _turn_up_on_arrival(piece, table.zones.get(piece.zone_id), zone)
         piece.zone_id = zone.id
         piece.z = table.next_z_in_zone(zone.id)
         _clear_reveal(piece)
@@ -391,6 +418,9 @@ class StackOnto:
         _take_from_holder(piece, actor_seat)
         if piece.zone_id != onto.zone_id:
             _clear_reveal(piece)
+            _turn_up_on_arrival(
+                piece, table.zones.get(piece.zone_id), table.zones[onto.zone_id]
+            )
         piece.zone_id = onto.zone_id
         piece.z = (
             max(p.z for p in table.pieces_in_zone(onto.zone_id) if p.id != piece.id) + 1
@@ -554,6 +584,8 @@ class Draw:
             piece.x, piece.y, piece.rotation = x, y, rotation
             if self.face_up is not None:
                 piece.face_up = self.face_up
+            elif piece.kind is PieceKind.CARD and _always_face_up(destination):
+                piece.face_up = True
             _clear_reveal(piece)
             patches.append(_piece_patch(piece))
         return patches
