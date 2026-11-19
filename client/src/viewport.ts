@@ -90,24 +90,35 @@ export function unionBounds(bounds: Bounds[]): Bounds | null {
   return { minX, minY, maxX, maxY };
 }
 
-/** The viewport that shows all of `bounds` inside `size`, centred. */
-export function fitBounds(bounds: Bounds, size: Size, padding = 48): Viewport {
+/** The gap "Fit table" leaves between the table and the window's sides. */
+export const FIT_PADDING = 16;
+/** The gap above it, clear of the row of table controls along the top. */
+export const FIT_TOP = 64;
+
+/**
+ * The viewport that fills the window's width with `bounds`: the table runs
+ * from the window's left edge to its right, where the side panel opens and
+ * the decks are laid, and no felt is wasted beside it.
+ */
+export function fitBounds(
+  bounds: Bounds,
+  size: Size,
+  padding = FIT_PADDING,
+  top = FIT_TOP,
+): Viewport {
   const width = Math.max(bounds.maxX - bounds.minX, 1);
   const height = Math.max(bounds.maxY - bounds.minY, 1);
   const usableWidth = Math.max(size.width - padding * 2, 1);
-  const usableHeight = Math.max(size.height - padding * 2, 1);
-  const scale = clampScale(Math.min(usableWidth / width, usableHeight / height));
-  // Centred on each axis where the table fits; where even the smallest
-  // readable zoom leaves it wider (or taller) than the window, its start edge
-  // is put at the padding instead, so what lies at its left or top - where
-  // the decks are laid - is on screen rather than cut in half.
-  const place = (min: number, extent: number, usable: number, screen: number): number =>
-    extent * scale > usable ? padding - min * scale : screen / 2 - (min + extent / 2) * scale;
-  return {
-    scale,
-    offsetX: place(bounds.minX, width, usableWidth, size.width),
-    offsetY: place(bounds.minY, height, usableHeight, size.height),
-  };
+  const usableHeight = Math.max(size.height - top - padding, 1);
+  const scale = clampScale(usableWidth / width);
+  // Up and down it is centred where it fits; where it is taller than the
+  // window, its top edge is put at the padding, so what lies at its top is
+  // on screen and the rest is a scroll away.
+  const offsetY =
+    height * scale > usableHeight
+      ? top - bounds.minY * scale
+      : top + usableHeight / 2 - (bounds.minY + height / 2) * scale;
+  return { scale, offsetX: padding - bounds.minX * scale, offsetY };
 }
 
 /**
