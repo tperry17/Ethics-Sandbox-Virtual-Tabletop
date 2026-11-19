@@ -66,6 +66,8 @@ export interface Override {
 export interface RendererOptions {
   root: HTMLElement;
   toolbar: HTMLElement | null;
+  /** The room page's button that opens and closes the side panel, if any. */
+  panelToggle?: HTMLElement | null;
   link: ServerLink;
   roomCode: string;
 }
@@ -123,6 +125,8 @@ export class TableRenderer {
   private readonly toolGroup = element("div", "tabletop__palette");
   private readonly piecesSlot = element("div", "tabletop__pieces-slot");
   private readonly buttonsSlot = element("div", "tabletop__pieces-slot");
+  /** Sign-ups this person has seen with the side panel open. */
+  private readonly seenSignups = new Set<string>();
   private piecesAdded = 0;
   private lastNotice = { text: "", at: 0 };
 
@@ -223,6 +227,8 @@ export class TableRenderer {
   }
 
   start(): void {
+    // Opening the panel shows every sign-up, so its mark goes.
+    this.options.panelToggle?.addEventListener("click", () => this.markActivitiesButton());
     this.controller.attach();
     this.observeSize();
     this.options.link.onMessage((message) => this.receive(message));
@@ -806,13 +812,16 @@ export class TableRenderer {
   }
 
   /**
-   * The table's buttons (the room's and any running activity's), in their
-   * own menu among the camera controls, closed until it is opened; it stays
-   * open or closed as it was while the toolbar redraws.
+   * The room's buttons, in their own menu among the camera controls, closed
+   * until it is opened; it stays open or closed as it was while the toolbar
+   * redraws. An activity's buttons are drawn in that activity's own row of
+   * the side panel instead; only those whose activity has no row there are
+   * kept here, so none is lost.
    */
-  private renderButtonsMenu(): void {
+  private renderButtonsMenu(placed: ReadonlySet<MacroView>): void {
     const wasOpen = this.buttonsSlot.querySelector("details")?.open ?? false;
-    if (this.model.macros.length === 0) {
+    const macros = this.model.macros.filter((macro) => !placed.has(macro));
+    if (macros.length === 0) {
       this.buttonsSlot.replaceChildren();
       return;
     }
@@ -823,9 +832,57 @@ export class TableRenderer {
     const panel = element("div", "table-buttons__panel");
     panel.setAttribute("role", "group");
     panel.setAttribute("aria-label", "Table buttons");
-    for (const macro of this.model.macros) panel.append(this.macroButton(macro));
+    for (const macro of macros) panel.append(this.macroButton(macro));
     root.append(summary, panel);
     this.buttonsSlot.replaceChildren(root);
+  }
+
+  /**
+   * Put each activity's buttons in that activity's row of the side panel (a
+   * running activity, or a class's table), and say which went there.
+   */
+  private placeActivityButtons(toolbar: HTMLElement): Set<MacroView> {
+    const placed = new Set<MacroView>();
+    for (const macro of this.model.macros) {
+      if (!macro.activity_id) continue;
+      const row = [...toolbar.querySelectorAll<HTMLElement>("[data-activity-id]")].find(
+        (candidate) =>
+          candidate.dataset.activityId === macro.activity_id && candidate.tagName !== "BUTTON",
+      );
+      if (row === undefined) continue;
+      let buttons = row.querySelector<HTMLElement>(":scope > .toolbar__activity-buttons");
+      if (buttons === null) {
+        buttons = element("div", "toolbar__activity-buttons room-panel__buttons");
+        row.append(buttons);
+      }
+      buttons.append(this.macroButton(macro));
+      placed.add(macro);
+    }
+    return placed;
+  }
+
+  /**
+   * Mark the side panel's "Activities" button while the panel is closed and
+   * a sign-up has opened that this person has not seen with it open.
+   */
+  private markActivitiesButton(): void {
+    const toggle = this.options.panelToggle ?? null;
+    if (toggle === null) return;
+    const signups = [...this.model.activities.values()]
+      .filter((activity) => activity.status === "signup")
+      .map((activity) => activity.id);
+    if (toggle.getAttribute("aria-expanded") === "true") {
+      for (const id of signups) this.seenSignups.add(id);
+    }
+    const unseen = signups.some((id) => !this.seenSignups.has(id));
+    let mark = toggle.querySelector<HTMLElement>(".room__panel-toggle-mark-new");
+    if (unseen && mark === null) {
+      mark = element("span", "room__panel-toggle-mark-new");
+      mark.append(element("span", "visually-hidden", ": a new sign-up"));
+      toggle.append(mark);
+    } else if (!unseen && mark !== null) {
+      mark.remove();
+    }
   }
 
   private renderToolbar(): void {
@@ -851,7 +908,8 @@ export class TableRenderer {
       () => this.renderToolbar(),
     );
     if (classes !== null) toolbar.append(panelSection("Run a class", classes, "room-panel__class"));
-    this.renderButtonsMenu();
+    this.renderButtonsMenu(this.placeActivityButtons(toolbar));
+    this.markActivitiesButton();
     const trades = renderTrades(this.model, () => this.selection, (opType, payload) =>
       this.intents.send(opType, payload),
     );
