@@ -16,8 +16,13 @@
         <p class="eyebrow">Printable deck</p>
         <h1>{{ game.title }}</h1>
         <div class="prose site__lede">
+          {% if decks|map("first")|map(attribute="face.face_image")|select|first %}
+          <p>Print this page and cut out the cards along their edges. Cards
+          1&ndash;18 are the core deck and 19&ndash;36 the sidebar.</p>
+          {% else %}
           <p>Print this page and cut out the cards. A crimson frame marks a
           Deck card and a navy one a Sidebar card.</p>
+          {% endif %}
         </div>
       </header>
       {% for cards in decks %}
@@ -25,6 +30,12 @@
         {% for card in cards %}
         {% set group = card.fields.get("group", "") %}
         {% set schwartz = card.fields.get("schwartz", "") %}
+        {% if card.face.face_image %}
+        <li class="deck-card deck-card--printed deck-card--{{ group|lower or 'plain' }}">
+          <img class="deck-card__face" src="{{ card.face.face_image }}"
+               alt="{{ card.face.title }}. {{ card.face.body }}">
+        </li>
+        {% else %}
         <li class="deck-card deck-card--{{ group|lower or 'plain' }}">
           <h2 class="deck-card__title">{{ card.face.title }}</h2>
           <p class="deck-card__body">{{ card.face.body }}</p>
@@ -38,6 +49,7 @@
             {% endif %}
           </p>
         </li>
+        {% endif %}
         {% endfor %}
       </ol>
       {% endfor %}
