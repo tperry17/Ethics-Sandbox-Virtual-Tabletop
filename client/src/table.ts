@@ -98,6 +98,8 @@ export class TableRenderer {
   private readonly tray: HTMLElement;
   private readonly trayFan: HTMLElement;
   private readonly trayLabel: HTMLElement;
+  private readonly trayToggle: HTMLButtonElement;
+  private readonly trayBody: HTMLElement;
   private readonly trayEmpty: HTMLElement;
   private readonly status: HTMLElement;
   private readonly banner: HTMLElement;
@@ -173,16 +175,35 @@ export class TableRenderer {
     // Docked below the table, for anyone who has a private hand: it is
     // there before the first card arrives, so there is always somewhere to
     // drop one.
+    // It starts closed on every load, a single row naming the hand; its
+    // name is a button that opens and closes it. Closed, it is still
+    // somewhere to drop a card.
     const trayHead = element("div", "hand-tray__head");
-    this.trayLabel = element("p", "hand-tray__label");
-    trayHead.append(this.trayLabel, element("p", "hand-tray__note", "Only you see these faces"));
+    this.trayToggle = document.createElement("button");
+    this.trayToggle.type = "button";
+    this.trayToggle.className = "hand-tray__toggle";
+    this.trayToggle.id = "hand-tray-toggle";
+    this.trayToggle.setAttribute("aria-controls", "hand-tray-body");
+    this.trayToggle.title = "Only you see the faces of the cards in your hand";
+    this.trayLabel = element("span", "hand-tray__label");
+    this.trayToggle.append(element("span", "hand-tray__chevron"), this.trayLabel);
+    this.trayToggle.addEventListener("click", () =>
+      this.setTrayOpen(this.trayToggle.getAttribute("aria-expanded") !== "true"),
+    );
+    trayHead.append(this.trayToggle);
     this.trayEmpty = element(
       "p",
       "hand-tray__empty",
-      "Cards dealt to you land here. Drag a card here to take it into your hand.",
+      "Cards dealt to you land here, and only you see their faces. Drag a card here to take it into your hand.",
     );
     this.trayFan = element("div", "hand-tray__fan");
-    this.tray.append(trayHead, this.trayEmpty, this.trayFan);
+    this.trayBody = element("div", "hand-tray__body");
+    this.trayBody.id = "hand-tray-body";
+    this.trayBody.append(this.trayEmpty, this.trayFan);
+    this.tray.append(trayHead, this.trayBody);
+    this.trayToggle.setAttribute("aria-expanded", "false");
+    this.tray.classList.add("is-collapsed");
+    this.trayBody.hidden = true;
 
     this.intents = new IntentTracker(options.link, (reason) =>
       this.notice(reason, "warning"),
@@ -417,6 +438,8 @@ export class TableRenderer {
       for (const id of diff.removedPieces) this.dropPiece(id);
       for (const id of diff.pieces) this.syncPiece(id, now);
       if (diff.catalog) this.renderToolbar();
+      // A deck's label carries its count, which any move may change.
+      if (diff.pieces.size > 0 || diff.removedPieces.size > 0) this.syncDeckLabels();
     }
 
     if (diff.seats) {
@@ -545,9 +568,26 @@ export class TableRenderer {
     if (node.hidden !== docked) node.hidden = docked;
 
     const label = node.firstElementChild;
-    const text = this.zoneLabel(zone.label, zone.owner_seat);
+    let text = this.zoneLabel(zone.label, zone.owner_seat);
+    // A deck says how many cards it holds ("Core deck – 18"): the count of
+    // backs the server sent, never anything about their faces.
+    if (zone.kind === "deck") text = `${text} – ${this.piecesIn(id)}`;
     if (label instanceof HTMLElement && label.textContent !== text) {
       label.textContent = text;
+    }
+  }
+
+  private piecesIn(zoneId: string): number {
+    let count = 0;
+    for (const piece of this.model.pieces.values()) {
+      if (piece.zone_id === zoneId) count += 1;
+    }
+    return count;
+  }
+
+  private syncDeckLabels(): void {
+    for (const zone of this.model.zones.values()) {
+      if (zone.kind === "deck") this.syncZone(zone.id);
     }
   }
 
@@ -717,13 +757,10 @@ export class TableRenderer {
     );
     this.tray.hidden = zone === undefined && ids.length === 0;
     this.trayEmpty.hidden = ids.length > 0;
-    const name = zone?.label ?? "Your hand";
-    if (ids.length === 0) {
-      this.trayLabel.textContent = name;
-      return;
-    }
-    const noun = ids.length === 1 ? "piece" : "pieces";
-    this.trayLabel.textContent = `${name} · ${ids.length} ${noun}`;
+    // A per-seat zone's label names its seat ("Hand · Seat 1"); the tray
+    // is only ever this viewer's own, so it gives the hand's name alone.
+    this.trayLabel.textContent = zone === undefined ? "Your hand" : handName(zone.label);
+    if (ids.length === 0) return;
 
     const widest = Math.max(
       ...ids.map((id) => {
@@ -1054,6 +1091,16 @@ export class TableRenderer {
     if (id !== null) this.syncHolder(id);
   }
 
+  /** Open or close the hand tray. Closed, only its name shows. */
+  private setTrayOpen(open: boolean): void {
+    this.trayToggle.setAttribute("aria-expanded", String(open));
+    this.tray.classList.toggle("is-collapsed", !open);
+    this.trayBody.hidden = !open;
+    // The fan is measured to lay it out, and it has no width while closed.
+    this.trayDirty = true;
+    this.schedule();
+  }
+
   /** Light the hand tray up as somewhere a held piece could be let go. */
   setTrayTarget(on: boolean): void {
     this.tray.classList.toggle("is-drop-target", on);
@@ -1366,6 +1413,12 @@ function pointInPolygon(x: number, y: number, points: Array<[number, number]>): 
     if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
   }
   return inside;
+}
+
+/** A per-seat zone's own name, without the seat the engine adds after " · ". */
+function handName(label: string): string {
+  const cut = label.lastIndexOf(" · ");
+  return cut === -1 ? label : label.slice(0, cut);
 }
 
 function element(tag: string, className: string, text?: string): HTMLElement {

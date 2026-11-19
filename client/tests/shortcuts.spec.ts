@@ -25,9 +25,14 @@ test("the deck's menu deals to everyone and shuffles", async ({ browser }) => {
 
   await deckCard(page).click({ button: "right" });
   await expect(page.getByRole("menuitem", { name: "Shuffle the deck" })).toBeVisible();
+  const deckLabel = page.locator('.zone[data-zone-id="deck"] .zone__label');
+  await expect(deckLabel).toHaveText("Core deck – 18");
   await page.getByRole("menuitem", { name: "3 cards each", exact: true }).click();
   // Dealt face up into the person's own hand, so they can read what they hold.
   await expect(page.locator(".hand-tray__fan .piece .piece__face")).toHaveCount(3);
+  // The deck's label counts what is left in it.
+  await expect(deckLabel).toHaveText("Core deck – 15");
+  await page.getByRole("button", { name: "Hand", exact: true }).click();
   // Each face is the printed card's picture, read out as its name and definition.
   const face = page.locator(".hand-tray__fan .piece .piece__face").first();
   await expect(face).toHaveAttribute("alt", /^[A-Z][a-z]+\. \S/);
@@ -55,6 +60,7 @@ test("hovering a card says what the keys do; Space enlarges it and F turns it ov
 }) => {
   const page = await openRoom(browser, "Value Cards", "Ines");
   await page.getByRole("button", { name: "Deal 3 core cards" }).click();
+  await page.getByRole("button", { name: "Hand", exact: true }).click();
   const card = page.locator(".hand-tray__fan .piece").first();
   await expect(card.locator(".piece__face")).toBeVisible();
 
@@ -126,7 +132,7 @@ test("the Value Cards room lays out the core deck and the sidebar, and the Piece
   await expect(cardsIn('^="added-deck-"')).toHaveCount(18);
   await expect(cardsIn('="sidebar"')).toHaveCount(18);
   // A pile of its own, outlined and named like the others.
-  await expect(page.locator('.zone[data-zone-id^="added-deck-"] .zone__label')).toHaveText("Sidebar 2");
+  await expect(page.locator('.zone[data-zone-id^="added-deck-"] .zone__label')).toHaveText("Sidebar 2 – 18");
 
   // The menu, still open, now lists it; removing it takes the pile and its cards away.
   await page.getByRole("button", { name: "Remove Sidebar 2" }).click();

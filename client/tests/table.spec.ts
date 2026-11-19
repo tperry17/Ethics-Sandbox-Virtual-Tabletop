@@ -33,7 +33,20 @@ test.describe("the table client renders a recorded session", () => {
     await expect(page.locator(".hand-tray")).toBeVisible();
     await expect(page.locator(".hand-tray__fan .piece")).toHaveCount(3);
     await expect(page.locator('.tabletop__pieces-layer [data-piece-id="hand-1-a"]')).toHaveCount(0);
-    await expect(page.locator(".hand-tray__label")).toContainText("Your hand");
+    await expect(page.locator(".hand-tray__label")).toHaveText("Your hand");
+  });
+
+  test("keeps the hand tray closed until its name is pressed", async ({ page }) => {
+    await page.goto(PREVIEW);
+
+    const toggle = page.getByRole("button", { name: "Your hand" });
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator(".hand-tray__fan .piece").first()).toBeHidden();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(page.locator(".hand-tray__fan .piece").first()).toBeVisible();
+    await toggle.click();
+    await expect(page.locator(".hand-tray__fan .piece").first()).toBeHidden();
   });
 
   test("shows another seat's hand on the table with its faces withheld", async ({ page }) => {
