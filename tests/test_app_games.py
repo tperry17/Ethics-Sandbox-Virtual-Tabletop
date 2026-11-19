@@ -120,8 +120,10 @@ def test_the_value_cards_deck_page_shows_every_printed_card(
     page = client.get("/exercises/value-cards-trading/deck").text
 
     assert page.count('class="deck-card ') == 36
+    assert page.count("deck-card--printed") == 36
     assert "deck-card--sidebar" in page
-    assert "/content/decks/value-cards/images/Community.png" in page
+    assert "/content/decks/value-cards/images/faces/Community.jpg" in page
+    assert 'alt="Community. Feeling of belonging' in page
 
 
 def test_an_exercise_without_a_deck_has_no_deck_page(client: TestClient) -> None:

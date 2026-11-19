@@ -16,6 +16,7 @@ components:
       body: definition
       folio: number
       image: art
+      face_image: face          # the printed card, frame and all
       group: group
       badge: schwartz
       width: 150

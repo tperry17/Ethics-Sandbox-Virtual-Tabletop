@@ -76,7 +76,11 @@ Google Docs, with typos corrected (listed in `docs/BUILD-PLAN.md`, Prompt
 from the "deck" sheet of the author's "values cards - the spreadsheet".
 It sits under `decks/` rather than under one exercise because several
 exercises will use it. `art` names the card's picture and `schwartz` the
-category whose icon is printed in its corner.
+category whose icon is printed in its corner. `face` names the picture of
+the whole printed card in `images/faces/`, which is what the table draws:
+the Drive folder "Value Cards" files "valuecards with frames_NN.jpg" (NN is
+the number printed on the card), with the printed frame painted out by
+`scripts/unframe-card-faces.py`.
 
 A game's buttons CSV (for example `exercises/<exercise>/buttons.csv`) has
 one row per button: `id` (which button; it matches the game definition),
