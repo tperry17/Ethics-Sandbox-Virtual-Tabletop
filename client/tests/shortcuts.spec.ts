@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { openFromLanding, type RoomKind } from "./rooms";
+import { openFromLanding, type RoomKind, openControls, openTableButtons } from "./rooms";
 
 /**
  * The single-key shortcuts on the piece under the pointer, the deck's own
@@ -12,6 +12,7 @@ async function openRoom(browser: Browser, kind: RoomKind, name: string): Promise
   await page.getByLabel("Your name").fill(name);
   await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+  await openControls(page);
   await expect(page.locator(".tabletop__pieces-layer .piece").first()).toBeVisible();
   return page;
 }
@@ -148,6 +149,9 @@ test("Reset asks “Are you sure?” first, and clears the whole table only if c
     asked = dialog.message();
     void dialog.dismiss();
   });
+  // Opening the Pieces menu closed the Table buttons menu.
+  await expect(page.locator("details.table-buttons[open]")).toHaveCount(0);
+  await openTableButtons(page);
   await page.getByRole("button", { name: "Reset", exact: true }).click();
   await expect.poll(() => asked).toContain("Are you sure?");
   await expect(cards).toHaveCount(54);

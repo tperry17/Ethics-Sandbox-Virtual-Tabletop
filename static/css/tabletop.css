@@ -403,7 +403,10 @@
   position: absolute;
   z-index: 3;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--space-2);
+  max-width: calc(100% - 2 * var(--space-3));
   inset-block-start: var(--space-3);
   inset-inline-end: var(--space-3);
 }
@@ -868,12 +871,20 @@
 
 /* The Pieces menu, among the camera controls. */
 .tabletop__pieces-slot:empty { display: none; }
-.pieces-menu { position: relative; }
-.pieces-menu > summary { list-style: none; cursor: pointer; }
-.pieces-menu > summary::-webkit-details-marker { display: none; }
-.pieces-menu[open] > summary { background: var(--text-primary); color: var(--surface-page); }
-.pieces-menu__panel {
+/* Static, so each drop-down hangs from the right edge of the whole row of
+   controls, not from its own button, and stays on a narrow table. */
+.pieces-menu,
+.table-buttons { position: static; }
+.pieces-menu > summary,
+.table-buttons > summary { list-style: none; cursor: pointer; }
+.pieces-menu > summary::-webkit-details-marker,
+.table-buttons > summary::-webkit-details-marker { display: none; }
+.pieces-menu[open] > summary,
+.table-buttons[open] > summary { background: var(--text-primary); color: var(--surface-page); }
+.pieces-menu__panel,
+.table-buttons__panel {
   position: absolute;
+  max-width: calc(100vw - 2 * var(--space-3));
   z-index: 5;
   top: calc(100% + var(--space-2));
   right: 0;
@@ -889,6 +900,9 @@
   font-family: var(--font-ui);
   font-size: var(--text-sm);
 }
+/* The table's buttons: the same disclosure, its buttons two to a row. */
+.table-buttons__panel { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 18rem; }
+.table-buttons__panel .button { justify-content: center; }
 .pieces-menu__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .pieces-menu__heading { margin: var(--space-2) 0 0; font-weight: 600; color: var(--text-secondary); }
 .pieces-menu__swatches { display: flex; flex-wrap: wrap; gap: var(--space-2); }
@@ -1013,6 +1027,18 @@
 .room__actions { display: flex; gap: var(--space-2); }
 .room__actions:empty { display: none; }
 
+/* The side panel's button: the panel is closed until it is pressed. */
+.room__panel-toggle { gap: var(--space-2); }
+.room__panel-toggle-mark {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-block-end: var(--line-strong) solid currentColor;
+  border-inline-end: var(--line-strong) solid currentColor;
+  transform: rotate(-45deg);
+}
+.room__panel-toggle[aria-expanded="true"] .room__panel-toggle-mark { transform: rotate(135deg); }
+.room--panel-closed .room__panel { display: none; }
+
 .room__body {
   display: flex;
   min-height: 0;
@@ -1129,6 +1155,9 @@
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
+  /* The room page has no gutter for the phone's full-bleed rule (site.css)
+     to reach into; pulled out, the table scrolled the page sideways. */
+  margin-inline: 0;
   border: 0;
   box-shadow: none;
 }
@@ -1160,7 +1189,11 @@
 @media (max-width: 48rem) {
   .room { height: auto; min-height: 100vh; }
   .room__body { flex-wrap: wrap; overflow: visible; }
-  .room__panel { flex-basis: 100%; max-width: none; overflow: visible; border-inline-end: 0; border-block-end: var(--line-hairline) solid var(--surface-border); }
+  /* On a phone the panel is always there, below the table, and has no button. */
+  .room__panel,
+  .room--panel-closed .room__panel { display: flex; order: 2; flex-basis: 100%; max-width: none; overflow: visible; border-inline-end: 0; border-block-start: var(--line-hairline) solid var(--surface-border); }
+  .room__table { order: 1; }
+  .room__panel-toggle { display: none; }
   .room__table > .tabletop--live { height: auto; min-height: 34rem; }
   .room__people { margin-inline-start: 0; }
 }

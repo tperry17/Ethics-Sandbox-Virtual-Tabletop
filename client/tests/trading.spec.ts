@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { newRoom } from "./rooms";
+import { newRoom, openControls } from "./rooms";
 
 /** Three people trade value cards: an offer, its answer, and the checklist. */
 
@@ -9,6 +9,7 @@ async function person(browser: Browser, path: string, name: string): Promise<Pag
   await page.locator('input[name="display_name"]').fill(name);
   await page.locator('form button[type="submit"]').click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+  await openControls(page);
   return page;
 }
 

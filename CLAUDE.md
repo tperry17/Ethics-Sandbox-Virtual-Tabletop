@@ -29,6 +29,15 @@ A class is an activity run as several tables at once. Someone presses "Start a c
 
 Scenario 2 of Leadership and Knowledge in Popular Rule always runs as a class, in one room, with one table per city. It is best with two paired cities; it can be run with one, and then the other city is hypothetical: the facilitator may choose its decision, and if nobody does, the facilitator sees all three possible results. On the call the group splits into breakout groups, one per table, so each table is self-contained: its own notes, its own votes, its own list of participants.
 
+The table's buttons (the room's macros, and those of any activity running
+for you) are in their own "Table buttons" menu among the table's controls,
+beside "Pieces", closed until it is opened; opening either menu closes the
+other. The room's side panel holds its activities, its debrief and a class.
+On a laptop or tablet (wider than 48rem) it starts closed
+behind an "Activities" button in the room bar, which opens and closes it; the
+tab remembers the choice across a reload, and a new visit starts closed. On a
+phone it is always open, below the table, with no button.
+
 Every room's side panel has "Write a reflection": a private page
 (`/t/{code}/reflect`, `sandbox/web/debrief.py`) with free writing that is
 always open, and the debrief questions once an activity that has a debrief
@@ -142,6 +151,11 @@ takes the same share of every card, so a deck shows its pictures at one size.
 
 `/table-preview` replays the recorded session with no room behind it, and
 `?pieces=300&measure=1` is the frame-rate harness.
+
+"Fit table" (and the first view of a table nobody has moved) centres the
+table where it fits. Where even the smallest readable zoom (0.4) leaves it
+wider or taller than the window, it lines its left or top edge up with the
+window's instead, so the decks laid at the table's left are never cut off.
 
 ### Interaction
 
@@ -340,6 +354,13 @@ after committing, and a live room's snapshots never overwrite it.
 ## Rules of engagement
 
 - Every change must keep Ruff, mypy strict, and pytest green before it is called done.
+- Every UI change is shown to the author as screenshots in the conversation
+  they are working in (in a Claude Code session, sent with `SendUserFile`),
+  taken of the changed page in the real app at three sizes: desktop
+  (1440 × 900), tablet (Playwright's "iPad (gen 7)", portrait) and mobile
+  (Playwright's "iPhone 13", full page). Show each state the change adds, such
+  as a panel open and closed, and the same views from `main` when the change
+  alters an existing layout.
 - No exercise-specific logic may enter `sandbox/model/` or `sandbox/web/`.
 - Every new dependency must be justified in one line in this file.
 - Commits must stay scoped to one prompt.

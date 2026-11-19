@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { newRoom, openFromLanding, type RoomKind } from "./rooms";
+import { newRoom, openFromLanding, type RoomKind, openControls } from "./rooms";
 
 /** Accessibility, touch and small screens. */
 
@@ -15,6 +15,7 @@ async function openRoom(
   await page.getByLabel("Your name").fill(name);
   await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+  await openControls(page);
   await expect(page.locator("html[data-table-client='ready']")).toHaveCount(1);
   return page;
 }
@@ -80,6 +81,49 @@ test("reduced motion removes transitions and animations", async ({ page }) => {
     return longest;
   });
   expect(longest).toBeLessThan(0.01);
+});
+
+test("the side panel starts closed on a laptop or tablet, and sits below the table on a phone", async ({
+  browser,
+}) => {
+  const wide = await (await browser.newContext()).newPage();
+  await openFromLanding(wide, "Test room");
+  await wide.getByLabel("Your name").fill("Ines");
+  await wide.getByRole("button", { name: "Join table" }).click();
+  await wide.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+  const toggle = wide.getByRole("button", { name: "Activities" });
+  const viewport = wide.viewportSize();
+  if (viewport !== null && viewport.width > 768) {
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(wide.locator("#room-panel")).toBeHidden();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(wide.getByRole("button", { name: "Start Pairs", exact: true })).toBeVisible();
+    // A reload keeps it open; closing it hides it again.
+    await wide.reload();
+    await expect(wide.getByRole("button", { name: "Start Pairs", exact: true })).toBeVisible();
+    await wide.getByRole("button", { name: "Activities" }).click();
+    await expect(wide.locator("#room-panel")).toBeHidden();
+  }
+
+  const phone = await openRoom(browser, "Tomas", {
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 800 },
+  });
+  await expect(phone.getByRole("button", { name: "Activities" })).toBeHidden();
+  const start = phone.getByRole("button", { name: "Start Pairs", exact: true });
+  await expect(start).toBeAttached();
+  const table = await phone.locator(".room__table").boundingBox();
+  const panel = await phone.locator("#room-panel").boundingBox();
+  expect(table).not.toBeNull();
+  expect(panel).not.toBeNull();
+  expect(panel!.y).toBeGreaterThanOrEqual(table!.y + table!.height - 1);
+  // Nothing scrolls the page sideways.
+  const overflow = await phone.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
 });
 
 test("pages work with text at 200 percent", async ({ page }) => {
@@ -152,6 +196,7 @@ async function startTrading(browser: Browser, touch: boolean) {
     await page.locator('input[name="display_name"]').fill(name);
     await page.locator('form button[type="submit"]').click();
     await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+    await openControls(page);
     return page;
   };
   const ines = await person(await newRoom(browser, "Value Cards"), "Ines");
@@ -230,6 +275,7 @@ test("a card goes out of the hand and back into it with the keyboard alone", asy
     await page.locator('input[name="display_name"]').fill(name);
     await page.locator('form button[type="submit"]').click();
     await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+    await openControls(page);
     return page;
   };
   const host = await person(await newRoom(browser, "Test room"), "Ines");

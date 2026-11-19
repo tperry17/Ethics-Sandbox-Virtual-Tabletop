@@ -122,6 +122,7 @@ export class TableRenderer {
   private readonly controlsElement: HTMLElement;
   private readonly toolGroup = element("div", "tabletop__palette");
   private readonly piecesSlot = element("div", "tabletop__pieces-slot");
+  private readonly buttonsSlot = element("div", "tabletop__pieces-slot");
   private piecesAdded = 0;
   private lastNotice = { text: "", at: 0 };
 
@@ -753,7 +754,21 @@ export class TableRenderer {
 
   private controls(): HTMLElement {
     const controls = element("div", "tabletop__controls");
+    // The Table buttons and Pieces menus drop down over the same corner, so
+    // opening one closes the other. "toggle" does not bubble; capture it.
+    controls.addEventListener(
+      "toggle",
+      (event) => {
+        const opened = event.target;
+        if (!(opened instanceof HTMLDetailsElement) || !opened.open) return;
+        for (const other of controls.querySelectorAll("details")) {
+          if (other !== opened) other.open = false;
+        }
+      },
+      true,
+    );
     controls.append(
+      this.buttonsSlot,
       this.piecesSlot,
       button("Fit table", () => this.controller.fit(true)),
       button("Zoom out", () => this.controller.zoomBy(1 / 1.2), "−"),
@@ -790,6 +805,29 @@ export class TableRenderer {
     this.piecesSlot.replaceChildren(...(menu === null ? [] : [menu]));
   }
 
+  /**
+   * The table's buttons (the room's and any running activity's), in their
+   * own menu among the camera controls, closed until it is opened; it stays
+   * open or closed as it was while the toolbar redraws.
+   */
+  private renderButtonsMenu(): void {
+    const wasOpen = this.buttonsSlot.querySelector("details")?.open ?? false;
+    if (this.model.macros.length === 0) {
+      this.buttonsSlot.replaceChildren();
+      return;
+    }
+    const root = element("details", "table-buttons");
+    (root as HTMLDetailsElement).open = wasOpen;
+    const summary = element("summary", "button button--secondary button--sm");
+    summary.textContent = "Table buttons";
+    const panel = element("div", "table-buttons__panel");
+    panel.setAttribute("role", "group");
+    panel.setAttribute("aria-label", "Table buttons");
+    for (const macro of this.model.macros) panel.append(this.macroButton(macro));
+    root.append(summary, panel);
+    this.buttonsSlot.replaceChildren(root);
+  }
+
   private renderToolbar(): void {
     this.renderPiecesMenu();
     const toolbar = this.options.toolbar;
@@ -813,11 +851,7 @@ export class TableRenderer {
       () => this.renderToolbar(),
     );
     if (classes !== null) toolbar.append(panelSection("Run a class", classes, "room-panel__class"));
-    if (this.model.macros.length > 0) {
-      const buttons = element("div", "room-panel__buttons");
-      for (const macro of this.model.macros) buttons.append(this.macroButton(macro));
-      toolbar.append(panelSection("The table", buttons));
-    }
+    this.renderButtonsMenu();
     const trades = renderTrades(this.model, () => this.selection, (opType, payload) =>
       this.intents.send(opType, payload),
     );
