@@ -20,3 +20,14 @@ export async function newRoom(browser: Browser, kind: RoomKind): Promise<string>
   await context.close();
   return path;
 }
+
+/**
+ * Open the room's side panel, where the activities and the table's buttons
+ * are. On a laptop or tablet it starts closed behind "Activities"; on a phone
+ * it is always open, below the table, and there is no button.
+ */
+export async function openPanel(page: Page): Promise<void> {
+  const toggle = page.locator("#room-panel-toggle");
+  if (!(await toggle.isVisible())) return;
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+}

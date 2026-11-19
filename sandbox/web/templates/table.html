@@ -11,10 +11,20 @@
     <link rel="apple-touch-icon" href="{{ url_for('static', path='/icons/apple-touch-icon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='/css/site.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='/css/tabletop.css') }}">
+    {# Without JavaScript nothing can open the panel, so it is never closed. #}
+    <noscript><style>.room--panel-closed .room__panel { display: flex; } .room__panel-toggle { display: none; }</style></noscript>
   </head>
   <body>
-    <div class="room">
+    {# On a laptop or tablet the side panel starts closed, behind the
+       "Activities" button; on a phone it sits below the table and the button
+       is not shown. #}
+    <div class="room room--panel-closed" id="room">
       <header class="room__bar">
+        <button class="button button--secondary button--sm room__panel-toggle" type="button"
+                id="room-panel-toggle" aria-expanded="false" aria-controls="room-panel">
+          <span class="room__panel-toggle-mark" aria-hidden="true"></span>
+          Activities
+        </button>
         <div class="room__identity">
           <p class="eyebrow"><a class="room__home" href="/">Ethics Sandbox</a></p>
           <p class="room__title">{{ title }}</p>
@@ -46,9 +56,28 @@
         {# The client puts "Become facilitator" here. #}
         <div class="room__actions" id="room-bar-actions"></div>
       </header>
+      <script>
+        // Open or close the side panel. It starts closed; a tab remembers the
+        // choice across a reload, and a new visit starts closed again.
+        (function () {
+          var room = document.getElementById("room");
+          var toggle = document.getElementById("room-panel-toggle");
+          var key = "room-panel-open";
+          function set(open) {
+            room.classList.toggle("room--panel-closed", !open);
+            toggle.setAttribute("aria-expanded", open ? "true" : "false");
+          }
+          try { if (window.sessionStorage.getItem(key) === "1") set(true); } catch (e) {}
+          toggle.addEventListener("click", function () {
+            var open = toggle.getAttribute("aria-expanded") !== "true";
+            set(open);
+            try { window.sessionStorage.setItem(key, open ? "1" : "0"); } catch (e) {}
+          });
+        })();
+      </script>
 
       <div class="room__body">
-        <aside class="room__panel" aria-label="Room controls">
+        <aside class="room__panel" id="room-panel" aria-label="Room controls">
           {# The client fills this from what the server sends: the room's
              activities, a class, the table's buttons, trades. #}
           {% call ui.toolbar("Table controls", id="table-toolbar") %}

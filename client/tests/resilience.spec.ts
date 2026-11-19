@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page, type WebSocketRoute } from "@playwright/test";
-import { openFromLanding } from "./rooms";
+import { openFromLanding, openPanel } from "./rooms";
 
 /**
  * A flaky network, a locked iPad, a refresh, two hands on one piece. The
@@ -57,6 +57,7 @@ async function openRoom(
   await page.getByLabel("Your name").fill(name);
   await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+  await openPanel(page);
   await expect(page.locator(".tabletop__pieces-layer .piece").first()).toBeAttached();
   return { page, code: page.url().split("/t/")[1]!, wire };
 }
@@ -67,6 +68,7 @@ async function join(browser: Browser, code: string, name: string): Promise<Page>
   await page.locator('input[name="display_name"]').fill(name);
   await page.locator('form button[type="submit"]').click();
   await page.waitForURL(new RegExp(`/t/${code}$`));
+  await openPanel(page);
   await expect(page.locator(".tabletop__pieces-layer .piece").first()).toBeAttached();
   return page;
 }
@@ -182,6 +184,7 @@ test("a view kept in storage that cannot be read does not break the table", asyn
   await page.getByLabel("Your name").fill("Ines");
   await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+  await openPanel(page);
   await expect(page.locator(".tabletop__pieces-layer .piece").first()).toBeAttached();
   expect(errors).toEqual([]);
 });

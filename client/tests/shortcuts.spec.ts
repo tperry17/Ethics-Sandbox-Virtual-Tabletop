@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { openFromLanding, type RoomKind } from "./rooms";
+import { openFromLanding, type RoomKind, openPanel } from "./rooms";
 
 /**
  * The single-key shortcuts on the piece under the pointer, the deck's own
@@ -12,6 +12,7 @@ async function openRoom(browser: Browser, kind: RoomKind, name: string): Promise
   await page.getByLabel("Your name").fill(name);
   await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+  await openPanel(page);
   await expect(page.locator(".tabletop__pieces-layer .piece").first()).toBeVisible();
   return page;
 }

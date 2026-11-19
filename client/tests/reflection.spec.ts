@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { openFromLanding } from "./rooms";
+import { openFromLanding, openPanel } from "./rooms";
 
 /** The reflection page and the side panel's debrief links. */
 
@@ -11,6 +11,7 @@ test("a reflection can be written before any activity, and no debrief link leads
   await page.getByLabel("Your name").fill("Ines");
   await page.getByRole("button", { name: "Join table" }).click();
   await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+  await openPanel(page);
   const code = page.url().split("/t/")[1]!;
 
   await expect(page.getByRole("link", { name: "Write a reflection" })).toBeVisible();
@@ -58,6 +59,7 @@ test("once an activity with questions is played, the panel offers to respond to 
     await page.getByLabel("Your name").fill(name);
     await page.getByRole("button", { name: "Join table" }).click();
     await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+    await openPanel(page);
     return page;
   };
   const ines = await person("", "Ines");

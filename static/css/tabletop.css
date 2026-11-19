@@ -1013,6 +1013,18 @@
 .room__actions { display: flex; gap: var(--space-2); }
 .room__actions:empty { display: none; }
 
+/* The side panel's button: the panel is closed until it is pressed. */
+.room__panel-toggle { gap: var(--space-2); }
+.room__panel-toggle-mark {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-block-end: var(--line-strong) solid currentColor;
+  border-inline-end: var(--line-strong) solid currentColor;
+  transform: rotate(-45deg);
+}
+.room__panel-toggle[aria-expanded="true"] .room__panel-toggle-mark { transform: rotate(135deg); }
+.room--panel-closed .room__panel { display: none; }
+
 .room__body {
   display: flex;
   min-height: 0;
@@ -1160,7 +1172,11 @@
 @media (max-width: 48rem) {
   .room { height: auto; min-height: 100vh; }
   .room__body { flex-wrap: wrap; overflow: visible; }
-  .room__panel { flex-basis: 100%; max-width: none; overflow: visible; border-inline-end: 0; border-block-end: var(--line-hairline) solid var(--surface-border); }
+  /* On a phone the panel is always there, below the table, and has no button. */
+  .room__panel,
+  .room--panel-closed .room__panel { display: flex; order: 2; flex-basis: 100%; max-width: none; overflow: visible; border-inline-end: 0; border-block-start: var(--line-hairline) solid var(--surface-border); }
+  .room__table { order: 1; }
+  .room__panel-toggle { display: none; }
   .room__table > .tabletop--live { height: auto; min-height: 34rem; }
   .room__people { margin-inline-start: 0; }
 }
