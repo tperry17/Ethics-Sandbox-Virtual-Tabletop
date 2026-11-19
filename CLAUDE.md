@@ -169,6 +169,14 @@ is shown in a toast. An intent with no answer within eight seconds is
 treated as refused. Each intent's `client_id` doubles as its `op_id`, so a
 repeat is applied once.
 
+A card taken off a deck (into anything but another deck) lands face up, and
+so does a card put into a hand or onto a discard pile, wherever it came from
+(a macro's `draw` onto a discard pile too, unless its step sets `face_up`); the hand's
+visibility still shows its face to the owner alone. A card going into a
+deck, or into a zone that hides every face, is left as it was. This is
+`MoveToZone` and `StackOnto` in `sandbox/model/ops.py`, so a macro's moves
+follow it too.
+
 The client never decides legality. Where a piece was let go - over a zone,
 over another piece, over the hand tray - is input; it becomes
 `move_to_zone`, `stack_onto` or a plain `move`, and the server judges it.
