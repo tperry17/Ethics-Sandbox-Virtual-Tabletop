@@ -35,7 +35,7 @@ test.describe("viewport arithmetic", () => {
     expect(tiny.scale).toBe(MIN_SCALE);
   });
 
-  test("fits a table into a window, centred", () => {
+  test("fits a table into a window against its left edge, centred up and down", () => {
     const bounds = { minX: 0, minY: 0, maxX: 1400, maxY: 1000 };
     const viewport = fitBounds(bounds, { width: 1200, height: 800 }, 48);
     const [left, top] = worldToScreen(viewport, bounds.minX, bounds.minY);
@@ -44,7 +44,7 @@ test.describe("viewport arithmetic", () => {
     expect(top).toBeGreaterThanOrEqual(0);
     expect(right).toBeLessThanOrEqual(1200);
     expect(bottom).toBeLessThanOrEqual(800);
-    expect((left + right) / 2).toBeCloseTo(600, 3);
+    expect(left).toBeCloseTo(48, 3);
     expect((top + bottom) / 2).toBeCloseTo(400, 3);
   });
 

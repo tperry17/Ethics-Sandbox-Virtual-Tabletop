@@ -90,24 +90,25 @@ export function unionBounds(bounds: Bounds[]): Bounds | null {
   return { minX, minY, maxX, maxY };
 }
 
-/** The viewport that shows all of `bounds` inside `size`, centred. */
+/**
+ * The viewport that shows all of `bounds` inside `size`, against its left
+ * edge: the table starts at the window's left, where the side panel opens
+ * and the decks are laid, and any width left over is on the right.
+ */
 export function fitBounds(bounds: Bounds, size: Size, padding = 48): Viewport {
   const width = Math.max(bounds.maxX - bounds.minX, 1);
   const height = Math.max(bounds.maxY - bounds.minY, 1);
   const usableWidth = Math.max(size.width - padding * 2, 1);
   const usableHeight = Math.max(size.height - padding * 2, 1);
   const scale = clampScale(Math.min(usableWidth / width, usableHeight / height));
-  // Centred on each axis where the table fits; where even the smallest
-  // readable zoom leaves it wider (or taller) than the window, its start edge
-  // is put at the padding instead, so what lies at its left or top - where
-  // the decks are laid - is on screen rather than cut in half.
-  const place = (min: number, extent: number, usable: number, screen: number): number =>
-    extent * scale > usable ? padding - min * scale : screen / 2 - (min + extent / 2) * scale;
-  return {
-    scale,
-    offsetX: place(bounds.minX, width, usableWidth, size.width),
-    offsetY: place(bounds.minY, height, usableHeight, size.height),
-  };
+  // Up and down it is centred where it fits; where even the smallest
+  // readable zoom leaves it taller than the window, its top edge is put at
+  // the padding instead, so what lies at its top is on screen.
+  const offsetY =
+    height * scale > usableHeight
+      ? padding - bounds.minY * scale
+      : size.height / 2 - (bounds.minY + height / 2) * scale;
+  return { scale, offsetX: padding - bounds.minX * scale, offsetY };
 }
 
 /**
