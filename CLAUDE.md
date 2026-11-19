@@ -361,7 +361,7 @@ not touch a locked piece, a piece someone else is holding, or a piece in
 another seat's private zone; they may give a piece to someone's hand, but
 not take one out of it. A lock keeps a piece from being moved by accident,
 not from being unlocked: anyone who could move a piece may lock it, and
-anyone who could move it but for its lock may unlock it. A hand (a zone of kind `hand`) holds only cards and tokens; the model
+anyone who could move it but for its lock may unlock it. A hand (a zone of kind `hand`) holds only cards, tiles and tokens; the model
 refuses anything else going into one (`_reason_not_for_hand` in
 `sandbox/model/ops.py`). Only the facilitator may clear a zone, despawn a
 piece or reset the table. When the facilitator takes a piece out of

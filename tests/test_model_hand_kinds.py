@@ -1,4 +1,4 @@
-"""A hand holds cards and tokens, nothing else."""
+"""A hand holds cards, tiles and tokens, nothing else."""
 
 import pytest
 from _model_support import (
@@ -16,7 +16,7 @@ from sandbox.model.ops import Deal, Draw, MoveToZone, Spawn, StackOnto, run_op
 from sandbox.model.results import Ok, Reject
 from sandbox.model.types import PieceKind
 
-REFUSAL = "Only cards and tokens go in a hand."
+REFUSAL = "Only cards, tiles and tokens go in a hand."
 
 
 def _piece(piece_id: str, kind: PieceKind, zone_id: str = PUBLIC_TABLE) -> Piece:
@@ -32,8 +32,8 @@ def _piece(piece_id: str, kind: PieceKind, zone_id: str = PUBLIC_TABLE) -> Piece
     )
 
 
-@pytest.mark.parametrize("kind", [PieceKind.CARD, PieceKind.TOKEN])
-def test_a_card_or_token_goes_into_a_hand(kind: PieceKind) -> None:
+@pytest.mark.parametrize("kind", [PieceKind.CARD, PieceKind.TILE, PieceKind.TOKEN])
+def test_a_card_tile_or_token_goes_into_a_hand(kind: PieceKind) -> None:
     table = build_sample_table(deck_size=0)
     table.pieces["p"] = _piece("p", kind)
 
@@ -48,7 +48,6 @@ OTHER_KINDS = [
     PieceKind.CUBE,
     PieceKind.MEEPLE,
     PieceKind.NOTE,
-    PieceKind.TILE,
 ]
 
 

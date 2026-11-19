@@ -133,14 +133,14 @@ def _reason_out_of_reach(table: Table, piece: Piece, actor_seat: str) -> str | N
     return None
 
 
-HAND_KINDS = frozenset({PieceKind.CARD, PieceKind.TOKEN})
-"""What a hand holds: cards and tokens, nothing else."""
+HAND_KINDS = frozenset({PieceKind.CARD, PieceKind.TILE, PieceKind.TOKEN})
+"""What a hand holds: cards, tiles and tokens, nothing else."""
 
 
 def _reason_not_for_hand(kind: PieceKind, zone: Zone) -> str | None:
     """Whether a piece of ``kind`` may go into ``zone``, if it is a hand."""
     if zone.kind is ZoneKind.HAND and kind not in HAND_KINDS:
-        return "Only cards and tokens go in a hand."
+        return "Only cards, tiles and tokens go in a hand."
     return None
 
 
