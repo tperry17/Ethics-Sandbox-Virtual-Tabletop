@@ -27,6 +27,8 @@ export class InkLayer {
   private width = 0;
   private height = 0;
   private ratio = 1;
+  /** Whether the canvas holds nothing, so an empty draw can be skipped. */
+  private blank = true;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.context = canvas.getContext("2d");
@@ -40,6 +42,8 @@ export class InkLayer {
     this.canvas.height = Math.max(1, Math.round(height * ratio));
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
+    // Setting the size clears the canvas.
+    this.blank = true;
   }
 
   ping(x: number, y: number, seatId: string, now: number): void {
@@ -59,6 +63,15 @@ export class InkLayer {
 
     this.pings = this.pings.filter((ping) => now - ping.at < PING_MS);
 
+    // Clearing the whole canvas is the expensive part, and its cost grows
+    // with the table's size; with nothing to draw on a blank canvas, there
+    // is nothing to clear either.
+    const strokeList = [...strokes];
+    if (this.blank && strokeList.length === 0 && this.pings.length === 0 && cursors.length === 0) {
+      return false;
+    }
+    this.blank = strokeList.length === 0 && this.pings.length === 0 && cursors.length === 0;
+
     context.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
     context.clearRect(0, 0, this.width, this.height);
     context.save();
@@ -73,7 +86,7 @@ export class InkLayer {
 
     context.lineCap = "round";
     context.lineJoin = "round";
-    for (const stroke of strokes) {
+    for (const stroke of strokeList) {
       if (stroke.points.length < 2) continue;
       context.strokeStyle = stroke.colour || this.seatColour(seats.get(stroke.seat_id));
       context.lineWidth = stroke.width;

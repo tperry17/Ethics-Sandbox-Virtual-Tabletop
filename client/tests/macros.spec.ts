@@ -44,7 +44,9 @@ test("a player deals, and each person sees only their own cards", async ({ brows
   const { host, guest } = await startPairs(browser);
 
   // The hand is docked below the table before any card arrives, and is not
-  // drawn on the table as well.
+  // drawn on the table as well. It starts closed, a row naming it.
+  await expect(host.locator(".hand-tray__empty")).toBeHidden();
+  await host.getByRole("button", { name: "Ines's Hand", exact: true }).click();
   await expect(host.locator(".hand-tray__empty")).toBeVisible();
   // The room's own hand and the activity's are both docked, never drawn.
   await expect(host.locator(".tabletop__zones .zone--private:visible")).toHaveCount(0);

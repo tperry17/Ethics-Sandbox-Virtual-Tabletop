@@ -480,19 +480,49 @@
   background: var(--surface-page);
 }
 
+.hand-tray.is-collapsed { block-size: auto; }
+
 .hand-tray__head {
   position: relative;
   z-index: 1;
   flex: none;
-  padding: var(--space-2) var(--space-4) 0;
+  padding: var(--space-1) var(--space-2) 0;
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--space-1) var(--space-3);
 }
 
-.hand-tray__label {
+.hand-tray.is-collapsed .hand-tray__head { padding-block-end: var(--space-1); }
+
+.hand-tray__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--transparent);
+  color: var(--accent-rubric);
+  cursor: pointer;
+}
+
+.hand-tray__toggle:hover { background: var(--surface-sunken); }
+@media (pointer: coarse) {
+  .hand-tray__toggle { min-block-size: 2.75rem; min-inline-size: 2.75rem; }
+}
+.hand-tray__toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Points right when closed, down when open. */
+.hand-tray__chevron {
+  inline-size: 0.4rem;
+  block-size: 0.4rem;
+  border-inline-end: var(--line-strong) solid currentColor;
+  border-block-end: var(--line-strong) solid currentColor;
+  rotate: -45deg;
+}
+.hand-tray__toggle[aria-expanded="true"] .hand-tray__chevron { rotate: 45deg; }
+
+.hand-tray__label {
   color: var(--accent-rubric);
   font-family: var(--font-ui);
   font-size: var(--text-xs);
@@ -501,16 +531,18 @@
   text-transform: uppercase;
 }
 
-.hand-tray__note {
-  margin: 0;
-  color: var(--text-muted);
-  font-family: var(--font-ui);
-  font-size: var(--text-xs);
+.hand-tray__body {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-block-size: 0;
 }
+.hand-tray__body[hidden] { display: none; }
 
 .hand-tray__empty {
   position: absolute;
-  inset: calc(var(--space-2) + 1.5rem) var(--space-4) var(--space-4);
+  inset: var(--space-2) var(--space-4) var(--space-4);
   display: flex;
   align-items: center;
   margin: 0;

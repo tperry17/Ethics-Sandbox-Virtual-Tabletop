@@ -32,6 +32,7 @@ import type {
   ServerLink,
   ServerMessage,
   StrokeView,
+  ZoneView,
 } from "./protocol.js";
 import { RevealLayer } from "./reveal.js";
 import { ViewportController } from "./viewport-input.js";
@@ -98,6 +99,8 @@ export class TableRenderer {
   private readonly tray: HTMLElement;
   private readonly trayFan: HTMLElement;
   private readonly trayLabel: HTMLElement;
+  private readonly trayToggle: HTMLButtonElement;
+  private readonly trayBody: HTMLElement;
   private readonly trayEmpty: HTMLElement;
   private readonly status: HTMLElement;
   private readonly banner: HTMLElement;
@@ -134,6 +137,8 @@ export class TableRenderer {
   private frameRequested = false;
   private canvasDirty = true;
   private trayDirty = true;
+  /** The pieces last seen in this viewer's hand; null until a snapshot has been laid out. */
+  private trayKnown: Set<string> | null = null;
   private viewport: Viewport;
   private dropTargetZone: string | null = null;
   private reduceMotion = false;
@@ -173,16 +178,35 @@ export class TableRenderer {
     // Docked below the table, for anyone who has a private hand: it is
     // there before the first card arrives, so there is always somewhere to
     // drop one.
+    // It starts closed on every load, a single row naming the hand; its
+    // name is a button that opens and closes it. Closed, it is still
+    // somewhere to drop a card.
     const trayHead = element("div", "hand-tray__head");
-    this.trayLabel = element("p", "hand-tray__label");
-    trayHead.append(this.trayLabel, element("p", "hand-tray__note", "Only you see these faces"));
+    this.trayToggle = document.createElement("button");
+    this.trayToggle.type = "button";
+    this.trayToggle.className = "hand-tray__toggle";
+    this.trayToggle.id = "hand-tray-toggle";
+    this.trayToggle.setAttribute("aria-controls", "hand-tray-body");
+    this.trayToggle.title = "Only you see the faces of the cards in your hand";
+    this.trayLabel = element("span", "hand-tray__label");
+    this.trayToggle.append(element("span", "hand-tray__chevron"), this.trayLabel);
+    this.trayToggle.addEventListener("click", () =>
+      this.setTrayOpen(this.trayToggle.getAttribute("aria-expanded") !== "true"),
+    );
+    trayHead.append(this.trayToggle);
     this.trayEmpty = element(
       "p",
       "hand-tray__empty",
-      "Cards dealt to you land here. Drag a card here to take it into your hand.",
+      "Cards dealt to you land here, and only you see their faces. Drag a card here to take it into your hand.",
     );
     this.trayFan = element("div", "hand-tray__fan");
-    this.tray.append(trayHead, this.trayEmpty, this.trayFan);
+    this.trayBody = element("div", "hand-tray__body");
+    this.trayBody.id = "hand-tray-body";
+    this.trayBody.append(this.trayEmpty, this.trayFan);
+    this.tray.append(trayHead, this.trayBody);
+    this.trayToggle.setAttribute("aria-expanded", "false");
+    this.tray.classList.add("is-collapsed");
+    this.trayBody.hidden = true;
 
     this.intents = new IntentTracker(options.link, (reason) =>
       this.notice(reason, "warning"),
@@ -405,6 +429,8 @@ export class TableRenderer {
     this.diff = emptyDiff();
 
     if (diff.everything) {
+      // What a snapshot brings was already in the hand, not just arriving.
+      this.trayKnown = null;
       this.syncAllZones();
       this.syncAllPieces(now);
       this.canvasDirty = true;
@@ -417,10 +443,14 @@ export class TableRenderer {
       for (const id of diff.removedPieces) this.dropPiece(id);
       for (const id of diff.pieces) this.syncPiece(id, now);
       if (diff.catalog) this.renderToolbar();
+      // A deck's label carries its count, which any move may change.
+      if (diff.pieces.size > 0 || diff.removedPieces.size > 0) this.syncDeckLabels();
     }
 
     if (diff.seats) {
       this.canvasDirty = true;
+      // The tray is named for this viewer, who may have just been named.
+      this.writeTrayLabel();
       for (const id of this.pieceNodes.keys()) this.syncHolder(id);
     }
     if (diff.strokes) this.canvasDirty = true;
@@ -545,9 +575,26 @@ export class TableRenderer {
     if (node.hidden !== docked) node.hidden = docked;
 
     const label = node.firstElementChild;
-    const text = this.zoneLabel(zone.label, zone.owner_seat);
+    let text = this.zoneLabel(zone.label, zone.owner_seat);
+    // A deck says how many cards it holds ("Core deck · 18"): the count of
+    // backs the server sent, never anything about their faces.
+    if (zone.kind === "deck") text = `${text} · ${this.piecesIn(id)}`;
     if (label instanceof HTMLElement && label.textContent !== text) {
       label.textContent = text;
+    }
+  }
+
+  private piecesIn(zoneId: string): number {
+    let count = 0;
+    for (const piece of this.model.pieces.values()) {
+      if (piece.zone_id === zoneId) count += 1;
+    }
+    return count;
+  }
+
+  private syncDeckLabels(): void {
+    for (const zone of this.model.zones.values()) {
+      if (zone.kind === "deck") this.syncZone(zone.id);
     }
   }
 
@@ -707,23 +754,22 @@ export class TableRenderer {
    * because it is yours and you are always holding it.
    */
   private layoutTray(): void {
-    const ids = [...this.model.pieces.values()]
-      .filter((piece) => this.isInMyHand(piece.zone_id))
-      .sort((a, b) => a.z - b.z)
-      .map((piece) => piece.id);
+    const ids = this.handPieceIds();
+    const zone = this.myHandZone();
+    const hidden = zone === undefined && ids.length === 0;
+    if (this.tray.hidden !== hidden) this.tray.hidden = hidden;
+    if (this.trayEmpty.hidden !== ids.length > 0) this.trayEmpty.hidden = ids.length > 0;
 
-    const zone = [...this.model.zones.values()].find(
-      (candidate) => this.isInMyHand(candidate.id),
-    );
-    this.tray.hidden = zone === undefined && ids.length === 0;
-    this.trayEmpty.hidden = ids.length > 0;
-    const name = zone?.label ?? "Your hand";
-    if (ids.length === 0) {
-      this.trayLabel.textContent = name;
-      return;
+    // A piece arriving opens the tray, so it is seen; what was already
+    // there when the page loaded leaves it closed.
+    const known = this.trayKnown;
+    this.trayKnown = new Set(ids);
+    if (known !== null && this.trayBody.hidden && ids.some((id) => !known.has(id))) {
+      this.setTrayOpen(true);
     }
-    const noun = ids.length === 1 ? "piece" : "pieces";
-    this.trayLabel.textContent = `${name} · ${ids.length} ${noun}`;
+
+    this.writeTrayLabel(ids, zone);
+    if (ids.length === 0) return;
 
     const widest = Math.max(
       ...ids.map((id) => {
@@ -1054,6 +1100,54 @@ export class TableRenderer {
     if (id !== null) this.syncHolder(id);
   }
 
+  /** This viewer's own private hand, if they have one. */
+  private myHandZone(): ZoneView | undefined {
+    for (const zone of this.model.zones.values()) {
+      if (this.isInMyHand(zone.id)) return zone;
+    }
+    return undefined;
+  }
+
+  /** The pieces in this viewer's hand, bottom first. */
+  private handPieceIds(): string[] {
+    return [...this.model.pieces.values()]
+      .filter((piece) => this.isInMyHand(piece.zone_id))
+      .sort((a, b) => a.z - b.z)
+      .map((piece) => piece.id);
+  }
+
+  /**
+   * Name the tray for whoever holds it ("Tomer's Hand"), not for the seat
+   * the zone's label names ("Hand · Seat 1"); closed and holding something,
+   * say how much. Written only when it changes: presence updates call this
+   * often, and every write would lay the page out again.
+   */
+  private writeTrayLabel(
+    ids: string[] = this.handPieceIds(),
+    zone: ZoneView | undefined = this.myHandZone(),
+  ): void {
+    const hand = zone === undefined ? "Hand" : handName(zone.label);
+    const me = this.model.seatId === null ? undefined : this.model.seats.get(this.model.seatId);
+    const owner = me?.display_name?.trim();
+    let text = owner ? `${owner}'s ${hand}` : hand;
+    if (this.trayBody.hidden && ids.length > 0) {
+      const allCards = ids.every((id) => this.model.pieces.get(id)?.kind === "card");
+      const noun = allCards ? "card" : "piece";
+      text += ` (${ids.length} ${noun}${ids.length === 1 ? "" : "s"})`;
+    }
+    if (this.trayLabel.textContent !== text) this.trayLabel.textContent = text;
+  }
+
+  /** Open or close the hand tray. Closed, only its name shows. */
+  private setTrayOpen(open: boolean): void {
+    this.trayToggle.setAttribute("aria-expanded", String(open));
+    this.tray.classList.toggle("is-collapsed", !open);
+    this.trayBody.hidden = !open;
+    // The fan is measured to lay it out, and it has no width while closed.
+    this.trayDirty = true;
+    this.schedule();
+  }
+
   /** Light the hand tray up as somewhere a held piece could be let go. */
   setTrayTarget(on: boolean): void {
     this.tray.classList.toggle("is-drop-target", on);
@@ -1366,6 +1460,12 @@ function pointInPolygon(x: number, y: number, points: Array<[number, number]>): 
     if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
   }
   return inside;
+}
+
+/** A per-seat zone's own name, without the seat the engine adds after " · ". */
+function handName(label: string): string {
+  const cut = label.lastIndexOf(" · ");
+  return cut === -1 ? label : label.slice(0, cut);
 }
 
 function element(tag: string, className: string, text?: string): HTMLElement {

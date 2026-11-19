@@ -33,7 +33,30 @@ test.describe("the table client renders a recorded session", () => {
     await expect(page.locator(".hand-tray")).toBeVisible();
     await expect(page.locator(".hand-tray__fan .piece")).toHaveCount(3);
     await expect(page.locator('.tabletop__pieces-layer [data-piece-id="hand-1-a"]')).toHaveCount(0);
-    await expect(page.locator(".hand-tray__label")).toContainText("Your hand");
+    await expect(page.locator(".hand-tray__label")).toHaveText(/^Ines Okafor's Hand/);
+  });
+
+  test("keeps the hand tray closed until a card arrives or its name is pressed", async ({
+    page,
+  }) => {
+    await page.goto(PREVIEW);
+
+    // Closed on load, with a count, though the hand already holds three.
+    const toggle = page.locator(".hand-tray__toggle");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(toggle).toHaveText("Ines Okafor's Hand (3 cards)");
+    await expect(page.locator(".hand-tray__fan .piece").first()).toBeHidden();
+    // The recording deals a fourth card at 1.5 s; its arrival opens the tray.
+    await expect(toggle).toHaveAttribute("aria-expanded", "true", { timeout: 5000 });
+    await expect(toggle).toHaveText("Ines Okafor's Hand");
+    await expect(page.locator(".hand-tray__fan .piece")).toHaveCount(4);
+    await expect(page.locator(".hand-tray__fan .piece").first()).toBeVisible();
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(toggle).toHaveText("Ines Okafor's Hand (4 cards)");
+    await toggle.click();
+    await expect(page.locator(".hand-tray__fan .piece").first()).toBeVisible();
   });
 
   test("shows another seat's hand on the table with its faces withheld", async ({ page }) => {

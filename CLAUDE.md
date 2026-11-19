@@ -150,7 +150,14 @@ then the piece's `z` within that zone — and never DOM insertion order.
 Another person's piece interpolates over 120 ms; the piece under your own
 hand never does. Your own private zone is drawn in a hand tray docked below
 the table, outside the world transform, so it stays put when the table moves;
-it is there whenever you have a private hand, empty or not. A card's picture
+it is there whenever you have a private hand, empty or not. It is closed
+on every load, one row naming the hand for whoever holds it, with the name
+they joined with ("Tomer's Hand"), which opens and closes it; closed and
+not empty, the row adds a count ("(3 cards)", or "(4 pieces)" once
+anything but cards is in it), and a piece arriving in the hand opens it.
+Closed, it still takes a dropped card. A deck zone's label carries the
+number of cards in it ("Core deck · 18"), counted from the backs the
+client was sent. A card's picture
 takes the same share of every card, so a deck shows its pictures at one size.
 
 `/table-preview` replays the recorded session with no room behind it, and
@@ -354,7 +361,9 @@ not touch a locked piece, a piece someone else is holding, or a piece in
 another seat's private zone; they may give a piece to someone's hand, but
 not take one out of it. A lock keeps a piece from being moved by accident,
 not from being unlocked: anyone who could move a piece may lock it, and
-anyone who could move it but for its lock may unlock it. Only the facilitator may clear a zone, despawn a
+anyone who could move it but for its lock may unlock it. A hand (a zone of kind `hand`) holds only cards, tiles and tokens; the model
+refuses anything else going into one (`_reason_not_for_hand` in
+`sandbox/model/ops.py`). Only the facilitator may clear a zone, despawn a
 piece or reset the table. When the facilitator takes a piece out of
 someone's drag, that person's drag so far is logged first, and what they
 send for the piece afterwards is refused until they pick it up again.

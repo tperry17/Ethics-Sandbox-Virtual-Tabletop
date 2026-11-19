@@ -103,9 +103,10 @@ async function visual(page: Page, id: string): Promise<[number, number]> {
   return page.evaluate((pieceId) => window.ethicsSandboxTable!.visualPositionOf(pieceId)!, id);
 }
 
-/** The recording deals a card into this viewer's hand at 1.5 s; let it land first. */
+/** The recording deals a card into this viewer's hand at 1.5 s, which opens the tray; let it land. */
 async function settledTray(page: Page): Promise<void> {
   await expect(page.locator(".hand-tray__fan .piece")).toHaveCount(4, { timeout: 5000 });
+  await expect(page.locator(".hand-tray__toggle")).toHaveAttribute("aria-expanded", "true");
 }
 
 test.describe("dragging", () => {
