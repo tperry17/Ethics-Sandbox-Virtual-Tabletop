@@ -133,6 +133,17 @@ def _reason_out_of_reach(table: Table, piece: Piece, actor_seat: str) -> str | N
     return None
 
 
+HAND_KINDS = frozenset({PieceKind.CARD, PieceKind.TOKEN})
+"""What a hand holds: cards and tokens, nothing else."""
+
+
+def _reason_not_for_hand(kind: PieceKind, zone: Zone) -> str | None:
+    """Whether a piece of ``kind`` may go into ``zone``, if it is a hand."""
+    if zone.kind is ZoneKind.HAND and kind not in HAND_KINDS:
+        return "Only cards and tokens go in a hand."
+    return None
+
+
 def _reason_cannot_place_in(table: Table, zone: Zone, actor_seat: str) -> str | None:
     """Whether ``actor_seat`` may put a piece into ``zone``.
 
@@ -347,6 +358,8 @@ class MoveToZone:
             return f"There is no zone {self.zone_id!r} on the table."
         if (reason := _reason_cannot_place_in(table, zone, actor_seat)) is not None:
             return reason
+        if (reason := _reason_not_for_hand(piece.kind, zone)) is not None:
+            return reason
         already_there = piece.zone_id == zone.id
         if (
             zone.capacity is not None
@@ -403,6 +416,8 @@ class StackOnto:
         if zone is None:
             return f"There is no zone {onto.zone_id!r} on the table."
         if (reason := _reason_cannot_place_in(table, zone, actor_seat)) is not None:
+            return reason
+        if (reason := _reason_not_for_hand(piece.kind, zone)) is not None:
             return reason
         if (
             zone.capacity is not None
@@ -563,11 +578,15 @@ class Draw:
         source = _get_zone(table, self.from_zone)
         if source is None:
             return f"There is no zone {self.from_zone!r} on the table."
-        if _get_zone(table, self.to_zone) is None:
+        destination = _get_zone(table, self.to_zone)
+        if destination is None:
             return f"There is no zone {self.to_zone!r} on the table."
         available = table.pieces_in_zone(self.from_zone)
         if len(available) < self.count:
             return f"Only {len(available)} pieces remain in {source.label}."
+        for piece in available[-self.count :]:
+            if (reason := _reason_not_for_hand(piece.kind, destination)) is not None:
+                return reason
         return _reason_cannot_take_from(table, source, actor_seat)
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
@@ -619,12 +638,20 @@ class Deal:
             if _get_zone(table, zone_id) is None:
                 return f"There is no zone {zone_id!r} on the table."
         needed = self.count_each * len(self.to_zones)
-        available = len(table.pieces_in_zone(self.from_zone))
+        pile = table.pieces_in_zone(self.from_zone)
+        available = len(pile)
         if available < needed:
             return (
                 f"Only {available} pieces remain in {source.label}, "
                 f"but dealing needs {needed}."
             )
+        # Dealt from the top, round by round: the n-th piece off the top goes
+        # to destination n modulo their number.
+        dealt = list(reversed(pile))[:needed]
+        for index, piece in enumerate(dealt):
+            zone = table.zones[self.to_zones[index % len(self.to_zones)]]
+            if (reason := _reason_not_for_hand(piece.kind, zone)) is not None:
+                return reason
         return _reason_cannot_take_from(table, source, actor_seat)
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
@@ -1027,8 +1054,11 @@ class Spawn:
     def validate(self, table: Table, actor_seat: str) -> str | None:
         if self.count < 1:
             return "Cannot spawn fewer than one piece."
-        if _get_zone(table, self.zone_id) is None:
+        zone = _get_zone(table, self.zone_id)
+        if zone is None:
             return f"There is no zone {self.zone_id!r} on the table."
+        if (reason := _reason_not_for_hand(self.kind, zone)) is not None:
+            return reason
         if self.piece_ids is not None:
             if len(self.piece_ids) != self.count:
                 return "The number of piece ids must match the count."

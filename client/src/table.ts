@@ -136,6 +136,8 @@ export class TableRenderer {
   private frameRequested = false;
   private canvasDirty = true;
   private trayDirty = true;
+  /** The pieces last seen in this viewer's hand; null until a snapshot has been laid out. */
+  private trayKnown: Set<string> | null = null;
   private viewport: Viewport;
   private dropTargetZone: string | null = null;
   private reduceMotion = false;
@@ -426,6 +428,8 @@ export class TableRenderer {
     this.diff = emptyDiff();
 
     if (diff.everything) {
+      // What a snapshot brings was already in the hand, not just arriving.
+      this.trayKnown = null;
       this.syncAllZones();
       this.syncAllPieces(now);
       this.canvasDirty = true;
@@ -571,9 +575,9 @@ export class TableRenderer {
 
     const label = node.firstElementChild;
     let text = this.zoneLabel(zone.label, zone.owner_seat);
-    // A deck says how many cards it holds ("Core deck – 18"): the count of
+    // A deck says how many cards it holds ("Core deck · 18"): the count of
     // backs the server sent, never anything about their faces.
-    if (zone.kind === "deck") text = `${text} – ${this.piecesIn(id)}`;
+    if (zone.kind === "deck") text = `${text} · ${this.piecesIn(id)}`;
     if (label instanceof HTMLElement && label.textContent !== text) {
       label.textContent = text;
     }
@@ -765,7 +769,24 @@ export class TableRenderer {
     const hand = zone === undefined ? "Hand" : handName(zone.label);
     const me = this.model.seatId === null ? undefined : this.model.seats.get(this.model.seatId);
     const owner = me?.display_name?.trim();
-    this.trayLabel.textContent = owner ? `${owner}'s ${hand}` : hand;
+    const name = owner ? `${owner}'s ${hand}` : hand;
+
+    // A piece arriving opens the tray, so it is seen; what was already
+    // there when the page loaded leaves it closed.
+    const known = this.trayKnown;
+    this.trayKnown = new Set(ids);
+    if (known !== null && this.trayBody.hidden && ids.some((id) => !known.has(id))) {
+      this.setTrayOpen(true);
+    }
+
+    // Closed and holding something, the row says how much.
+    if (this.trayBody.hidden && ids.length > 0) {
+      const allCards = ids.every((id) => this.model.pieces.get(id)?.kind === "card");
+      const noun = allCards ? "card" : "piece";
+      this.trayLabel.textContent = `${name} (${ids.length} ${noun}${ids.length === 1 ? "" : "s"})`;
+    } else {
+      this.trayLabel.textContent = name;
+    }
     if (ids.length === 0) return;
 
     const widest = Math.max(
