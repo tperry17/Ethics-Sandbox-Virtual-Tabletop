@@ -32,7 +32,7 @@ test("the deck's menu deals to everyone and shuffles", async ({ browser }) => {
   await expect(page.locator(".hand-tray__fan .piece .piece__face")).toHaveCount(3);
   // The deck's label counts what is left in it.
   await expect(deckLabel).toHaveText("Core deck – 15");
-  await page.getByRole("button", { name: "Hand", exact: true }).click();
+  await page.getByRole("button", { name: "Ines's Hand", exact: true }).click();
   // Each face is the printed card's picture, read out as its name and definition.
   const face = page.locator(".hand-tray__fan .piece .piece__face").first();
   await expect(face).toHaveAttribute("alt", /^[A-Z][a-z]+\. \S/);
@@ -60,7 +60,7 @@ test("hovering a card says what the keys do; Space enlarges it and F turns it ov
 }) => {
   const page = await openRoom(browser, "Value Cards", "Ines");
   await page.getByRole("button", { name: "Deal 3 core cards" }).click();
-  await page.getByRole("button", { name: "Hand", exact: true }).click();
+  await page.getByRole("button", { name: "Ines's Hand", exact: true }).click();
   const card = page.locator(".hand-tray__fan .piece").first();
   await expect(card.locator(".piece__face")).toBeVisible();
 

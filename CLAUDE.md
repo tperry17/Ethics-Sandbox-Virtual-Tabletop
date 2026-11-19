@@ -151,7 +151,7 @@ Another person's piece interpolates over 120 ms; the piece under your own
 hand never does. Your own private zone is drawn in a hand tray docked below
 the table, outside the world transform, so it stays put when the table moves;
 it is there whenever you have a private hand, empty or not. It is closed
-on every load, one row naming the hand ("Hand", without its seat), which
+on every load, one row naming the hand for whoever holds it, with the name they joined with ("Tomer's Hand"), which
 opens and closes it; closed, it still takes a dropped card. A deck zone's
 label carries the number of cards in it ("Core deck – 18"), counted from
 the backs the client was sent. A card's picture

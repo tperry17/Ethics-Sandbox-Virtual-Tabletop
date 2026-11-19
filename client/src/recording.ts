@@ -181,7 +181,7 @@ const ZONES: ZoneView[] = [
   zone(
     "hand-1",
     "hand",
-    "Your hand",
+    "Hand",
     380,
     700,
     640,

@@ -444,6 +444,8 @@ export class TableRenderer {
 
     if (diff.seats) {
       this.canvasDirty = true;
+      // The tray is named for this viewer, who may have just been named.
+      this.layoutTray();
       for (const id of this.pieceNodes.keys()) this.syncHolder(id);
     }
     if (diff.strokes) this.canvasDirty = true;
@@ -758,8 +760,12 @@ export class TableRenderer {
     this.tray.hidden = zone === undefined && ids.length === 0;
     this.trayEmpty.hidden = ids.length > 0;
     // A per-seat zone's label names its seat ("Hand · Seat 1"); the tray
-    // is only ever this viewer's own, so it gives the hand's name alone.
-    this.trayLabel.textContent = zone === undefined ? "Your hand" : handName(zone.label);
+    // is only ever this viewer's own, so it names it with the name they
+    // joined with instead ("Tomer's Hand").
+    const hand = zone === undefined ? "Hand" : handName(zone.label);
+    const me = this.model.seatId === null ? undefined : this.model.seats.get(this.model.seatId);
+    const owner = me?.display_name?.trim();
+    this.trayLabel.textContent = owner ? `${owner}'s ${hand}` : hand;
     if (ids.length === 0) return;
 
     const widest = Math.max(

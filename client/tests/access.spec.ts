@@ -313,7 +313,7 @@ test("a card goes out of the hand and back into it with the keyboard alone", asy
 
   const hand = host.locator(".hand-tray__fan .piece");
   await expect(hand).toHaveCount(3);
-  await host.getByRole("button", { name: "Hand", exact: true }).click();
+  await host.getByRole("button", { name: "Ines's Hand", exact: true }).click();
   const id = (await hand.first().getAttribute("data-piece-id"))!;
   const choose = async (label: string): Promise<void> => {
     const item = host.locator(".table-menu__item", { hasText: label }).first();
