@@ -99,10 +99,11 @@ test("the side panel starts closed on a laptop or tablet, and sits below the tab
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-expanded", "true");
     await expect(wide.getByRole("button", { name: "Start Pairs", exact: true })).toBeVisible();
-    // A reload keeps it open; closing it hides it again.
-    await wide.reload();
-    await expect(wide.getByRole("button", { name: "Start Pairs", exact: true })).toBeVisible();
+    // Closing it hides it again, and a reload starts it closed.
     await wide.getByRole("button", { name: "Activities" }).click();
+    await expect(wide.locator("#room-panel")).toBeHidden();
+    await wide.getByRole("button", { name: "Activities" }).click();
+    await wide.reload();
     await expect(wide.locator("#room-panel")).toBeHidden();
   }
 
@@ -124,6 +125,31 @@ test("the side panel starts closed on a laptop or tablet, and sits below the tab
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("the Activities button is marked while a sign-up it has not shown is open", async ({
+  browser,
+}) => {
+  const host = await openRoom(browser, "Ines");
+  const code = host.url().split("/t/")[1]!;
+  const guest = await (await browser.newContext()).newPage();
+  await guest.goto(`/join?code=${code}`);
+  await guest.locator('input[name="display_name"]').fill("Tomas");
+  await guest.locator('form button[type="submit"]').click();
+  await guest.waitForURL(new RegExp(`/t/${code}$`));
+  const toggle = guest.getByRole("button", { name: "Activities" });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(guest.locator(".room__panel-toggle-mark-new")).toHaveCount(0);
+
+  await host.getByRole("button", { name: "Start Pairs", exact: true }).click();
+  await expect(guest.locator(".room__panel-toggle-mark-new")).toHaveCount(1);
+  await expect(toggle).toHaveAccessibleName(/a new sign-up/);
+
+  // Opening the panel shows it, and the mark goes, even once closed again.
+  await toggle.click();
+  await expect(guest.locator(".room__panel-toggle-mark-new")).toHaveCount(0);
+  await toggle.click();
+  await expect(guest.locator(".room__panel-toggle-mark-new")).toHaveCount(0);
 });
 
 test("pages work with text at 200 percent", async ({ page }) => {

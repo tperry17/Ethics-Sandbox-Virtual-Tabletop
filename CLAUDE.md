@@ -29,14 +29,16 @@ A class is an activity run as several tables at once. Someone presses "Start a c
 
 Scenario 2 of Leadership and Knowledge in Popular Rule always runs as a class, in one room, with one table per city. It is best with two paired cities; it can be run with one, and then the other city is hypothetical: the facilitator may choose its decision, and if nobody does, the facilitator sees all three possible results. On the call the group splits into breakout groups, one per table, so each table is self-contained: its own notes, its own votes, its own list of participants.
 
-The table's buttons (the room's macros, and those of any activity running
-for you) are in their own "Table buttons" menu among the table's controls,
-beside "Pieces", closed until it is opened; opening either menu closes the
-other. The room's side panel holds its activities, its debrief and a class.
-On a laptop or tablet (wider than 48rem) it starts closed
-behind an "Activities" button in the room bar, which opens and closes it; the
-tab remembers the choice across a reload, and a new visit starts closed. On a
-phone it is always open, below the table, with no button.
+The room's buttons (its macros) are in their own "Table buttons" menu among
+the table's controls, beside "Pieces", closed until it is opened (and again
+on every load); opening either menu closes the other. An activity's buttons
+are in that activity's own row of the side panel, or its class table's row.
+The room's side panel holds its activities, its debrief and a class. On a
+laptop or tablet (wider than 48rem) it is closed on every load, behind an
+"Activities" button in the room bar, which opens and closes it; while it is
+closed, the button carries a mark when a sign-up has opened that this person
+has not seen with the panel open. On a phone it is always open, below the
+table, with no button.
 
 Every room's side panel has "Write a reflection": a private page
 (`/t/{code}/reflect`, `sandbox/web/debrief.py`) with free writing that is

@@ -134,6 +134,12 @@ test("an open room starts an activity for those who sign up, and its buttons are
     guest.locator("button[data-activity-id]", { hasText: "Deal three each" }),
   ).toBeVisible();
   await expect(bystander.locator("button[data-activity-id]")).toHaveCount(0);
+  // The activity's buttons are in its own row of the side panel, not in the
+  // table's buttons menu.
+  await expect(
+    host.locator(".toolbar__activity button", { hasText: "Deal three each" }),
+  ).toBeVisible();
+  await expect(host.locator(".table-buttons button[data-activity-id]")).toHaveCount(0);
 
   await host.getByRole("button", { name: "End" }).click();
   await expect(host.getByText(/Pairs: running/)).toBeHidden();

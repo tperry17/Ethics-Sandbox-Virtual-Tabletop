@@ -63,6 +63,7 @@ function boot(): void {
   const renderer = new TableRenderer({
     root,
     toolbar: document.getElementById("table-toolbar"),
+    panelToggle: document.getElementById("room-panel-toggle"),
     link,
     roomCode: root.dataset.roomCode ?? "",
   });

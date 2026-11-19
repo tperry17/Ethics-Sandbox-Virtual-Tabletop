@@ -57,21 +57,14 @@
         <div class="room__actions" id="room-bar-actions"></div>
       </header>
       <script>
-        // Open or close the side panel. It starts closed; a tab remembers the
-        // choice across a reload, and a new visit starts closed again.
+        // Open or close the side panel. It starts closed on every load.
         (function () {
           var room = document.getElementById("room");
           var toggle = document.getElementById("room-panel-toggle");
-          var key = "room-panel-open";
-          function set(open) {
-            room.classList.toggle("room--panel-closed", !open);
-            toggle.setAttribute("aria-expanded", open ? "true" : "false");
-          }
-          try { if (window.sessionStorage.getItem(key) === "1") set(true); } catch (e) {}
           toggle.addEventListener("click", function () {
             var open = toggle.getAttribute("aria-expanded") !== "true";
-            set(open);
-            try { window.sessionStorage.setItem(key, open ? "1" : "0"); } catch (e) {}
+            room.classList.toggle("room--panel-closed", !open);
+            toggle.setAttribute("aria-expanded", open ? "true" : "false");
           });
         })();
       </script>

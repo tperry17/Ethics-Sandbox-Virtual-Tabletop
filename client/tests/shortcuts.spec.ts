@@ -31,7 +31,10 @@ test("the deck's menu deals to everyone and shuffles", async ({ browser }) => {
   // Each face is the printed card's picture, read out as its name and definition.
   const face = page.locator(".hand-tray__fan .piece .piece__face").first();
   await expect(face).toHaveAttribute("alt", /^[A-Z][a-z]+\. \S/);
-  expect(await face.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  // It loads: waited for, since the picture arrives after the card does.
+  await expect
+    .poll(() => face.evaluate((image) => (image as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
   // The tray's label sits above the cards, never under one, and each card
   // ends inside the tray.
   const head = await page.locator(".hand-tray__head").boundingBox();

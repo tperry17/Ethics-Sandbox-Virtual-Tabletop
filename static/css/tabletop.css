@@ -1050,7 +1050,18 @@
 .room__actions:empty { display: none; }
 
 /* The side panel's button: the panel is closed until it is pressed. */
-.room__panel-toggle { gap: var(--space-2); }
+.room__panel-toggle { position: relative; gap: var(--space-2); }
+/* A sign-up has opened that this person has not seen with the panel open. */
+.room__panel-toggle-mark-new {
+  position: absolute;
+  inset-block-start: calc(var(--space-1) * -1);
+  inset-inline-end: calc(var(--space-1) * -1);
+  inline-size: 0.7rem;
+  block-size: 0.7rem;
+  border: var(--line-strong) solid var(--surface-page);
+  border-radius: 50%;
+  background: var(--accent-rubric);
+}
 .room__panel-toggle-mark {
   inline-size: 0.5rem;
   block-size: 0.5rem;
