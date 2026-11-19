@@ -12,7 +12,7 @@ from _model_support import (
 )
 
 from sandbox.model.entities import Rect, Zone
-from sandbox.model.ops import MoveToZone, StackOnto, run_op
+from sandbox.model.ops import Draw, MoveToZone, StackOnto, run_op
 from sandbox.model.results import Ok
 from sandbox.model.types import Layout, Visibility, ZoneKind
 from sandbox.model.visibility import project
@@ -53,12 +53,35 @@ def test_a_face_down_card_put_into_a_hand_turns_face_up() -> None:
     assert card.face_up is True
 
 
-def test_a_face_down_card_moved_between_open_zones_stays_face_down() -> None:
+def test_a_face_down_card_put_on_the_discard_pile_turns_face_up() -> None:
     table = build_sample_table(deck_size=1)
     card = table.pieces["card-0"]
     card.zone_id, card.face_up = PUBLIC_TABLE, False
 
     run_op(table, SEAT_A, MoveToZone(piece_id="card-0", zone_id=DISCARD))
+
+    assert card.face_up is True
+
+
+def test_a_card_drawn_onto_the_discard_pile_by_a_step_turns_face_up() -> None:
+    table = build_sample_table(deck_size=2)
+
+    run_op(table, SEAT_A, Draw(from_zone=DECK, to_zone=DISCARD, count=1))
+    assert [p.face_up for p in table.pieces_in_zone(DISCARD)] == [True]
+
+    # A step that says which way up still decides.
+    run_op(table, SEAT_A, Draw(from_zone=DECK, to_zone=DISCARD, count=1, face_up=False))
+    assert [p.face_up for p in table.pieces_in_zone(DISCARD)] == [True, False]
+
+
+def test_a_face_down_card_moved_about_the_open_table_stays_face_down() -> None:
+    table = build_sample_table(deck_size=1)
+    card = table.pieces["card-0"]
+    card.zone_id, card.face_up = PUBLIC_TABLE, False
+
+    run_op(
+        table, SEAT_A, MoveToZone(piece_id="card-0", zone_id=PUBLIC_TABLE, x=300, y=300)
+    )
 
     assert card.face_up is False
 
