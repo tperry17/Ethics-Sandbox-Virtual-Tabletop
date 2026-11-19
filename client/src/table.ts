@@ -204,9 +204,9 @@ export class TableRenderer {
     this.trayBody.id = "hand-tray-body";
     this.trayBody.append(this.trayEmpty, this.trayFan);
     this.tray.append(trayHead, this.trayBody);
-    this.trayToggle.setAttribute("aria-expanded", "false");
-    this.tray.classList.add("is-collapsed");
-    this.trayBody.hidden = true;
+    // CI EXPERIMENT: start open, to test whether the closed tray is what
+    // slows the three-window WebKit test on CI. Not for merging.
+    this.trayToggle.setAttribute("aria-expanded", "true");
 
     this.intents = new IntentTracker(options.link, (reason) =>
       this.notice(reason, "warning"),
