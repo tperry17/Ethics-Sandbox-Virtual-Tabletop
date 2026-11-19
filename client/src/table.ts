@@ -32,6 +32,7 @@ import type {
   ServerLink,
   ServerMessage,
   StrokeView,
+  ZoneView,
 } from "./protocol.js";
 import { RevealLayer } from "./reveal.js";
 import { ViewportController } from "./viewport-input.js";
@@ -449,7 +450,7 @@ export class TableRenderer {
     if (diff.seats) {
       this.canvasDirty = true;
       // The tray is named for this viewer, who may have just been named.
-      this.layoutTray();
+      this.writeTrayLabel();
       for (const id of this.pieceNodes.keys()) this.syncHolder(id);
     }
     if (diff.strokes) this.canvasDirty = true;
@@ -753,23 +754,11 @@ export class TableRenderer {
    * because it is yours and you are always holding it.
    */
   private layoutTray(): void {
-    const ids = [...this.model.pieces.values()]
-      .filter((piece) => this.isInMyHand(piece.zone_id))
-      .sort((a, b) => a.z - b.z)
-      .map((piece) => piece.id);
-
-    const zone = [...this.model.zones.values()].find(
-      (candidate) => this.isInMyHand(candidate.id),
-    );
-    this.tray.hidden = zone === undefined && ids.length === 0;
-    this.trayEmpty.hidden = ids.length > 0;
-    // A per-seat zone's label names its seat ("Hand · Seat 1"); the tray
-    // is only ever this viewer's own, so it names it with the name they
-    // joined with instead ("Tomer's Hand").
-    const hand = zone === undefined ? "Hand" : handName(zone.label);
-    const me = this.model.seatId === null ? undefined : this.model.seats.get(this.model.seatId);
-    const owner = me?.display_name?.trim();
-    const name = owner ? `${owner}'s ${hand}` : hand;
+    const ids = this.handPieceIds();
+    const zone = this.myHandZone();
+    const hidden = zone === undefined && ids.length === 0;
+    if (this.tray.hidden !== hidden) this.tray.hidden = hidden;
+    if (this.trayEmpty.hidden !== ids.length > 0) this.trayEmpty.hidden = ids.length > 0;
 
     // A piece arriving opens the tray, so it is seen; what was already
     // there when the page loaded leaves it closed.
@@ -779,14 +768,7 @@ export class TableRenderer {
       this.setTrayOpen(true);
     }
 
-    // Closed and holding something, the row says how much.
-    if (this.trayBody.hidden && ids.length > 0) {
-      const allCards = ids.every((id) => this.model.pieces.get(id)?.kind === "card");
-      const noun = allCards ? "card" : "piece";
-      this.trayLabel.textContent = `${name} (${ids.length} ${noun}${ids.length === 1 ? "" : "s"})`;
-    } else {
-      this.trayLabel.textContent = name;
-    }
+    this.writeTrayLabel(ids, zone);
     if (ids.length === 0) return;
 
     const widest = Math.max(
@@ -1116,6 +1098,44 @@ export class TableRenderer {
     this.stackTarget = id;
     if (previous !== null) this.syncHolder(previous);
     if (id !== null) this.syncHolder(id);
+  }
+
+  /** This viewer's own private hand, if they have one. */
+  private myHandZone(): ZoneView | undefined {
+    for (const zone of this.model.zones.values()) {
+      if (this.isInMyHand(zone.id)) return zone;
+    }
+    return undefined;
+  }
+
+  /** The pieces in this viewer's hand, bottom first. */
+  private handPieceIds(): string[] {
+    return [...this.model.pieces.values()]
+      .filter((piece) => this.isInMyHand(piece.zone_id))
+      .sort((a, b) => a.z - b.z)
+      .map((piece) => piece.id);
+  }
+
+  /**
+   * Name the tray for whoever holds it ("Tomer's Hand"), not for the seat
+   * the zone's label names ("Hand · Seat 1"); closed and holding something,
+   * say how much. Written only when it changes: presence updates call this
+   * often, and every write would lay the page out again.
+   */
+  private writeTrayLabel(
+    ids: string[] = this.handPieceIds(),
+    zone: ZoneView | undefined = this.myHandZone(),
+  ): void {
+    const hand = zone === undefined ? "Hand" : handName(zone.label);
+    const me = this.model.seatId === null ? undefined : this.model.seats.get(this.model.seatId);
+    const owner = me?.display_name?.trim();
+    let text = owner ? `${owner}'s ${hand}` : hand;
+    if (this.trayBody.hidden && ids.length > 0) {
+      const allCards = ids.every((id) => this.model.pieces.get(id)?.kind === "card");
+      const noun = allCards ? "card" : "piece";
+      text += ` (${ids.length} ${noun}${ids.length === 1 ? "" : "s"})`;
+    }
+    if (this.trayLabel.textContent !== text) this.trayLabel.textContent = text;
   }
 
   /** Open or close the hand tray. Closed, only its name shows. */
