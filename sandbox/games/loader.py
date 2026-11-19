@@ -67,6 +67,7 @@ class Face:
     body: str | None = None
     folio: str | None = None
     image: str | None = None
+    face_image: str | None = None
     group: str | None = None
     badge: str | None = None
     tint_index: int | None = None
@@ -203,6 +204,7 @@ def _load_deck(
         deck.body,
         deck.folio,
         deck.image,
+        deck.face_image,
         deck.group,
         deck.badge,
     ]
@@ -239,6 +241,17 @@ def _load_deck(
                 )
             image = image_url(file.resolve(), root)
 
+        face_image = None
+        printed = _cell(row, deck.face_image)
+        if printed is not None:
+            file = source.parent / "images" / printed
+            if file.suffix.lower() not in IMAGE_SUFFIXES or not file.is_file():
+                raise GameDefinitionError(
+                    f"content/{deck.source} line {line} names a face image "
+                    f"{printed!r} that is not in its images/ folder."
+                )
+            face_image = image_url(file.resolve(), root)
+
         badge = None
         icon = _cell(row, deck.badge)
         if icon is not None:
@@ -259,6 +272,7 @@ def _load_deck(
                     body=_cell(row, deck.body),
                     folio=_cell(row, deck.folio),
                     image=image,
+                    face_image=face_image,
                     group=_cell(row, deck.group),
                     badge=badge,
                     width=deck.width,

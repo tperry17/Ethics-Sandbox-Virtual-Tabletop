@@ -80,7 +80,10 @@ class DeckSpec(_Strict):
     card's component id, so it must be unique within the deck. ``title``,
     ``body`` and ``folio`` name the columns drawn on the card's face, and
     ``image`` the column naming an image file in the exercise's ``images/``
-    folder. ``group`` names a column whose value is the card's group, drawn
+    folder. ``face_image`` names a column whose value is a picture of the
+    whole printed face, also in ``images/``: where a card has one, its face
+    is drawn as that picture alone, with the title and body as its text
+    alternative. ``group`` names a column whose value is the card's group, drawn
     as a frame colour, and ``badge`` one whose value names an icon file
     (``<value>.png``) in ``images/icons/``. Every column of a row stays
     available on the loaded card, for pages that need more than the face.
@@ -100,6 +103,7 @@ class DeckSpec(_Strict):
     body: str | None = None
     folio: str | None = None
     image: str | None = "image"
+    face_image: str | None = None
     group: str | None = None
     badge: str | None = None
     revealable: bool = True

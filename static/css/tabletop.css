@@ -66,6 +66,23 @@
 .piece--card:has(.piece__image) { grid-template-rows: auto auto minmax(0, 1fr) auto; gap: var(--space-2); }
 .piece--card .piece__image { grid-row: auto; flex: none; inline-size: 100%; block-size: 28cqh; min-height: 0; object-fit: contain; }
 
+/* A card drawn from a picture of its printed face: the picture is the whole
+   face, edge to edge, with the plain card edge and no group frame. */
+.piece--card:has(.piece__face),
+.piece--enlarged:has(.piece__face) {
+  padding: 0;
+  border: var(--line-hairline) solid var(--surface-border-strong);
+  background: var(--surface-page);
+}
+.piece__face {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  user-select: none;
+  pointer-events: none;
+}
+
 .piece--card.is-face-down {
   place-items: center;
   border-color: var(--card-back-edge);
@@ -513,7 +530,7 @@
   position: relative;
   flex: 1 1 auto;
   min-block-size: 0;
-  zoom: 0.62;
+  zoom: 0.56;
   inline-size: 100%;
 }
 
@@ -694,6 +711,7 @@
   font-size: var(--text-md);
 }
 
+.piece--enlarged:has(.piece__face) { min-block-size: 0; aspect-ratio: 5 / 7; }
 .piece--enlarged .piece__title { font-size: var(--text-lg); }
 .piece--enlarged .piece__copy { font-size: var(--text-md); }
 
