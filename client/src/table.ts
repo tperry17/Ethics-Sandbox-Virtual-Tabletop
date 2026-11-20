@@ -359,6 +359,11 @@ export class TableRenderer {
     this.controller.fit(true);
   }
 
+  /** Move the camera by a finger's travel, in screen pixels. */
+  panBy(dx: number, dy: number): void {
+    this.controller.panByPerson(dx, dy);
+  }
+
   // -- incoming ---------------------------------------------------------------
 
   private receive(message: ServerMessage): void {

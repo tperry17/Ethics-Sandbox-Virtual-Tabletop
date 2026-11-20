@@ -912,8 +912,8 @@
   line-height: var(--leading-reading);
 }
 
-/* Phones: the same table, with its controls wrapped onto more rows. Pieces
-   are dragged with one finger, as on a tablet; two fingers pan and zoom. */
+/* Phones: the same table, with its controls wrapped onto more rows. One
+   finger drags a piece or, on empty table, pans; two fingers pan and zoom. */
 @media (max-width: 37.5rem) {
   .tabletop__controls { flex-wrap: wrap; justify-content: flex-end; }
 }
