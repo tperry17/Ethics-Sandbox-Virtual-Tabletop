@@ -1196,6 +1196,25 @@ export class TableRenderer {
     return null;
   }
 
+  /** A piece's size in world units, as it is drawn. */
+  pieceSizeOf(id: string): [number, number] {
+    const piece = this.model.pieces.get(id);
+    if (piece === undefined) return [0, 0];
+    const component =
+      piece.component_id === null ? undefined : this.model.components.get(piece.component_id);
+    return pieceSize(piece, component);
+  }
+
+  /** The decks and discard piles on the table, other than `except`, with their outlines. */
+  piles(except: string | null): Array<{ id: string; bounds: Bounds }> {
+    const piles: Array<{ id: string; bounds: Bounds }> = [];
+    for (const zone of this.model.zones.values()) {
+      if (zone.id === except || (zone.kind !== "deck" && zone.kind !== "discard")) continue;
+      piles.push({ id: zone.id, bounds: geometryBounds(zone.geometry) });
+    }
+    return piles;
+  }
+
   myHandZoneId(): string | null {
     for (const zone of this.model.zones.values()) {
       if (zone.kind === "hand" && zone.owner_seat === this.model.seatId) return zone.id;

@@ -66,3 +66,46 @@ export function polygonClipPath(points: Array<[number, number]>): string | null 
   });
   return `polygon(${pairs.join(", ")})`;
 }
+
+/** How far outside a pile a piece is put when it is moved clear of one. */
+const PILE_GAP = 12;
+
+/**
+ * Where a piece let go at (`x`, `y`) should land so that it is not left
+ * half under a pile: `{ join }` if its centre is on one it can go into,
+ * otherwise a spot clear of every pile it overlapped, as near as possible.
+ *
+ * This reads where the hand let go, as finding the zone under the pointer
+ * does; whether the piece may go there is still the server's to say.
+ */
+export function landingBesidePiles(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  piles: Bounds[],
+  canJoin: boolean,
+): { join: number } | { x: number; y: number } {
+  if (canJoin) {
+    const under = piles.findIndex((pile) => boundsContain(pile, x, y));
+    if (under !== -1) return { join: under };
+  }
+  // Moving clear of one pile can land on another; a few rounds settle it.
+  for (let round = 0; round < 4; round++) {
+    const box = { minX: x - width / 2, minY: y - height / 2, maxX: x + width / 2, maxY: y + height / 2 };
+    const pile = piles.find(
+      (p) => box.minX < p.maxX && box.maxX > p.minX && box.minY < p.maxY && box.maxY > p.minY,
+    );
+    if (pile === undefined) break;
+    const choices: Array<[number, number]> = [
+      [pile.minX - PILE_GAP - width / 2, y],
+      [pile.maxX + PILE_GAP + width / 2, y],
+      [x, pile.minY - PILE_GAP - height / 2],
+      [x, pile.maxY + PILE_GAP + height / 2],
+    ];
+    [x, y] = choices.reduce((best, next) =>
+      Math.hypot(next[0] - x, next[1] - y) < Math.hypot(best[0] - x, best[1] - y) ? next : best,
+    );
+  }
+  return { x, y };
+}

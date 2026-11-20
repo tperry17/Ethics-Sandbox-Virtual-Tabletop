@@ -13,6 +13,7 @@
  * What that means is the server's to say.
  */
 
+import { landingBesidePiles } from "./geometry.js";
 import { newClientId } from "./intents.js";
 import type { TableRenderer } from "./table.js";
 
@@ -453,9 +454,38 @@ export class InteractionController {
     for (const piece of live) {
       const truth = this.model.pieces.get(piece.id);
       if (truth === undefined) continue;
-      const px = x - piece.offsetX;
-      const py = y - piece.offsetY;
+      let px = x - piece.offsetX;
+      let py = y - piece.offsetY;
       const refuse = { onReject: () => this.refuse(piece) };
+
+      // Let go partly over a pile, a piece goes into it or is put down clear
+      // of it, never left half under it.
+      const landing =
+        zoneUnder !== null && zoneUnder !== truth.zone_id
+          ? zoneUnder
+          : piece.fromTray ? null : truth.zone_id;
+      if (!(overTray && hand !== null) && onto === null && landing !== null &&
+          this.model.zones.get(landing)?.layout === "free") {
+        const piles = this.table.piles(landing);
+        const [width, height] = this.table.pieceSizeOf(piece.id);
+        const spot = landingBesidePiles(
+          px, py, width, height, piles.map((pile) => pile.bounds),
+          truth.kind === "card" || truth.kind === "tile",
+        );
+        if ("join" in spot) {
+          const pile = piles[spot.join]!.id;
+          this.table.intents.send("move_to_zone", { piece_id: piece.id, zone_id: pile }, refuse);
+          this.release(piece.id, false);
+          this.announceDrop(piece.id, pile, null);
+          continue;
+        }
+        if (spot.x !== px || spot.y !== py) {
+          px = spot.x;
+          py = spot.y;
+          // Show it where it will be, so it does not jump when the server agrees.
+          this.table.setOverride(piece.id, { x: px, y: py });
+        }
+      }
 
       if (overTray && hand !== null) {
         if (truth.zone_id !== hand) {
