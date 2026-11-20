@@ -187,8 +187,9 @@ test("on a touch screen every control is at least 44 px", async ({ browser }) =>
   expect(small).toEqual([]);
 });
 
-test("on a phone the public table is read-only and the page says a tablet is better", async ({
+test("on a phone a piece on the table is dragged with one finger", async ({
   browser,
+  browserName,
 }) => {
   const context = await browser.newContext({
     hasTouch: true,
@@ -205,11 +206,51 @@ test("on a phone the public table is read-only and the page says a tablet is bet
     viewport: { width: 390, height: 800 },
   });
   await expect(page.locator(".tabletop__pieces-layer .piece").first()).toBeAttached();
-  const events = await page.evaluate(() => {
-    const layer = document.querySelector(".tabletop__pieces-layer");
-    return layer ? getComputedStyle(layer.querySelector(".piece") ?? layer).pointerEvents : "none";
+  // A piece in view, unlocked, whose centre a finger lands on: not the zone under it.
+  const found = await page.evaluate(() => {
+    const viewport = document.querySelector(".tabletop__viewport")!.getBoundingClientRect();
+    for (const node of document.querySelectorAll<HTMLElement>(".tabletop__pieces-layer .piece")) {
+      if (node.classList.contains("is-locked")) continue;
+      const box = node.getBoundingClientRect();
+      const x = box.left + box.width / 2;
+      const y = box.top + box.height / 2;
+      if (x < viewport.left + 70 || x > viewport.right - 70) continue;
+      if (y < viewport.top + 70 || y > viewport.bottom - 70) continue;
+      if (document.elementFromPoint(x, y)?.closest("[data-piece-id]") !== node) continue;
+      return { id: node.dataset.pieceId!, x, y };
+    }
+    return null;
   });
-  expect(events).toBe("none");
+  expect(found).not.toBeNull();
+  // Playwright can send a real touch drag only to Chromium.
+  if (browserName !== "chromium") return;
+
+  const { id, x, y } = found!;
+  const target = page.locator(`[data-piece-id="${id}"]`);
+  const before = (await target.boundingBox())!;
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+  for (let step = 1; step <= 10; step++) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: x + step * 5, y: y + step * 4 }],
+    });
+  }
+  // Moving, not drawing a selection box over the table.
+  await expect(page.locator(".tabletop__marquee")).toHaveCount(0);
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  // The server keeps it where it was let go.
+  await expect
+    .poll(async () => {
+      const after = (await target.boundingBox())!;
+      return Math.round(after.x - before.x) > 30 && Math.round(after.y - before.y) > 20;
+    })
+    .toBe(true);
+  // ...and nothing was refused and sent back.
+  await page.waitForTimeout(500);
+  await expect(page.locator(".toast")).toHaveCount(0);
+  const settled = (await target.boundingBox())!;
+  expect(settled.x - before.x).toBeGreaterThan(30);
 });
 
 // -- trading and announcing, by keyboard and by touch --------------------------------------

@@ -22,7 +22,11 @@
   position: relative;
   display: grid;
   place-items: center;
+  /* Safari still needs the prefix; without it, holding a card on an iPhone or
+     iPad starts selecting its text, and the callout takes the touch. */
+  -webkit-user-select: none;
   user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .piece--card {
@@ -908,11 +912,9 @@
   line-height: var(--leading-reading);
 }
 
-/* Phones: your hand and the actions, with the public table to read. Pieces on
-   the shared table are not draggable at this width; the table can still be
-   panned and zoomed, and the hand tray (a separate layer) works as usual. */
+/* Phones: the same table, with its controls wrapped onto more rows. Pieces
+   are dragged with one finger, as on a tablet; two fingers pan and zoom. */
 @media (max-width: 37.5rem) {
-  .tabletop__pieces-layer .piece { pointer-events: none; }
   .tabletop__controls { flex-wrap: wrap; justify-content: flex-end; }
 }
 
