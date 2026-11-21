@@ -253,6 +253,49 @@ test("on a phone a piece on the table is dragged with one finger", async ({
   expect(settled.x - before.x).toBeGreaterThan(30);
 });
 
+test("on a phone one finger on empty table pans the view", async ({ browser, browserName }) => {
+  // Playwright can send a real touch drag only to Chromium.
+  test.skip(browserName !== "chromium", "needs a CDP touch drag");
+  const page = await openRoom(browser, "Ines", {
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 800 },
+  });
+  await expect(page.locator(".tabletop__pieces-layer .piece").first()).toBeAttached();
+  // A spot on the table with no piece under it.
+  const spot = await page.evaluate(() => {
+    const viewport = document.querySelector(".tabletop__viewport")!.getBoundingClientRect();
+    for (let y = viewport.bottom - 80; y > viewport.top + 80; y -= 20) {
+      for (let x = viewport.left + 40; x < viewport.right - 140; x += 20) {
+        const hit = document.elementFromPoint(x, y);
+        if (hit?.closest("[data-piece-id], button, .tray, .table-menu") === null &&
+            hit.closest(".tabletop__viewport") !== null) {
+          return { x, y };
+        }
+      }
+    }
+    return null;
+  });
+  expect(spot).not.toBeNull();
+  const world = page.locator(".tabletop__world");
+  const before = await world.evaluate((node) => getComputedStyle(node).transform);
+  const cdp = await page.context().newCDPSession(page);
+  const { x, y } = spot!;
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+  for (let step = 1; step <= 10; step++) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: x + step * 6, y: y - step * 8 }],
+    });
+  }
+  // No selection box: the finger moved the view.
+  await expect(page.locator(".tabletop__marquee")).toHaveCount(0);
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect
+    .poll(() => world.evaluate((node) => getComputedStyle(node).transform))
+    .not.toBe(before);
+});
+
 // -- trading and announcing, by keyboard and by touch --------------------------------------
 
 async function startTrading(browser: Browser, touch: boolean) {

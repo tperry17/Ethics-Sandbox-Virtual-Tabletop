@@ -33,6 +33,8 @@ const INK_WIDTH = 4;
 const INK_MIN_STEP = 3;
 const INK_SEND_MS = 40;
 const CURSOR_SEND_MS = 100;
+/** The phone layout's width, as in `tabletop.css`: one finger on empty table pans. */
+const PHONE_QUERY = "(max-width: 37.5rem)";
 
 type Tool = "hand" | "pen" | "point";
 
@@ -77,6 +79,7 @@ type Gesture =
       lastSentAt: number;
       refused: boolean;
     }
+  | { kind: "pan"; pointerId: number; lastX: number; lastY: number }
   | { kind: "peek"; pointerId: number; pieceId: string }
   | { kind: "consumed"; pointerId: number };
 
@@ -282,10 +285,12 @@ export class InteractionController {
       if (distance < DRAG_THRESHOLD_PX) return;
       if (gesture.timer !== null) window.clearTimeout(gesture.timer);
       if (gesture.pieceId !== null) this.beginDrag(gesture.pieceId, gesture, event);
+      else if (gesture.pointerType === "touch" && onPhone()) this.beginPan(gesture, event);
       else this.beginMarquee(gesture, event);
       return;
     }
     if (gesture.kind === "drag") this.continueDrag(gesture.pieces, event);
+    else if (gesture.kind === "pan") this.continuePan(gesture, event);
     else if (gesture.kind === "marquee") this.continueMarquee(gesture, event);
     else if (gesture.kind === "pen") this.continueStroke(gesture, event);
   };
@@ -552,6 +557,25 @@ export class InteractionController {
     if (zoneId !== null && zoneId === this.table.myHandZoneId()) {
       this.table.announcer.announce(`${capital(name)} taken into your hand.`);
     }
+  }
+
+  // -- panning with one finger, on a phone ---------------------------------------------
+
+  /**
+   * On a phone, a finger dragged across empty table moves the view rather
+   * than drawing a selection box: the table is mostly off screen there, and
+   * pieces are still chosen by tapping them.
+   */
+  private beginPan(press: Extract<Gesture, { kind: "press" }>, event: PointerEvent): void {
+    this.root.setPointerCapture?.(press.pointerId);
+    this.gesture = { kind: "pan", pointerId: press.pointerId, lastX: press.startX, lastY: press.startY };
+    this.continuePan(this.gesture, event);
+  }
+
+  private continuePan(gesture: Extract<Gesture, { kind: "pan" }>, event: PointerEvent): void {
+    this.table.panBy(event.clientX - gesture.lastX, event.clientY - gesture.lastY);
+    gesture.lastX = event.clientX;
+    gesture.lastY = event.clientY;
   }
 
   // -- marquee selection ---------------------------------------------------------------
@@ -1095,4 +1119,8 @@ function isTyping(element: HTMLElement): boolean {
 
 function capital(text: string): string {
   return text.length === 0 ? text : `${text[0]!.toUpperCase()}${text.slice(1)}`;
+}
+
+function onPhone(): boolean {
+  return window.matchMedia?.(PHONE_QUERY).matches ?? false;
 }

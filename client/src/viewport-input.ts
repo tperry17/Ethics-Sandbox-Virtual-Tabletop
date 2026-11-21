@@ -167,6 +167,16 @@ export class ViewportController {
     this.set(zoomAt(this.viewport, size.width / 2, size.height / 2, factor));
   }
 
+  /**
+   * Pan by a distance in screen pixels. A phone's one-finger drag on empty
+   * table comes here from the interaction half, which alone knows whether
+   * the finger landed on a piece.
+   */
+  panByPerson(dx: number, dy: number): void {
+    this.touchedByPerson = true;
+    this.set(panBy(this.viewport, dx, dy));
+  }
+
   private set(next: Viewport): void {
     const bounds = this.options.bounds();
     const clamped =
@@ -232,7 +242,10 @@ export class ViewportController {
     this.options.surface.classList.remove("is-panning");
   };
 
-  /** Two fingers pan and pinch together; one finger is left for the pieces. */
+  /**
+   * Two fingers pan and pinch together. One finger is left to the interaction
+   * half: it moves a piece, and on a phone it pans across empty table.
+   */
   private handleTouches(): void {
     if (this.touches.size !== 2) return;
     const [a, b] = [...this.touches.values()];
