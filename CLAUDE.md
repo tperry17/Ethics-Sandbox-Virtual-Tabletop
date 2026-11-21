@@ -213,6 +213,10 @@ count), only they or the facilitator may put it away, and it is put away
 when they leave the table. Who is showing what to whom is public; the face
 is not.
 
+Touch: one finger drags a piece, and a long press opens its menu; two
+fingers pan and pinch. One finger on empty table draws a selection box,
+except on a phone (37.5rem wide or less), where it pans the view.
+
 Keyboard: Tab reaches every piece; arrow keys move by a 20-unit step (Shift
 for five); X selects (Shift-X adds to the selection; on a touch
 screen, tapping a piece toggles it); Enter turns over; R and Shift-R rotate; M, the context-menu key
