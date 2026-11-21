@@ -192,6 +192,12 @@ follow it too.
 The client never decides legality. Where a piece was let go - over a zone,
 over another piece, over the hand tray - is input; it becomes
 `move_to_zone`, `stack_onto` or a plain `move`, and the server judges it.
+A piece let go partly over a pile (a zone of kind `deck` or `discard`) is
+never left half under it: a card or tile whose middle is on the pile goes
+into it; otherwise the piece is put down just clear of it, on the nearest
+side (`landingBesidePiles` in `client/src/geometry.ts`). Like the zone under
+the pointer, this reads where the hand let go; the server still judges the
+move.
 The context menu is a `menu_request` answered by a `menu` message built by
 `sandbox/model/actions.py`, which offers every plausible operation and
 keeps those whose own `validate` accepts them. A card in a deck zone also
