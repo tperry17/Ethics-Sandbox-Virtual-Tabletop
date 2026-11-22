@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from sandbox.model.entities import Activity, Table
+from sandbox.model.entities import SYSTEM_SEAT, Activity, Table
 from sandbox.model.ops import new_op_id
 from sandbox.model.results import Patch
 
@@ -110,8 +110,56 @@ class JoinActivity:
 
 
 @dataclass(frozen=True)
+class JoinRunningActivity:
+    """Join an activity that has already begun, while it has room.
+
+    ``seat_id`` is who joins: themselves, or anyone when the room acts for
+    them inside the transaction that lays out their zones. ``added_zones``
+    are the zones the game layer has just made for the new player, in the
+    same transaction. A table of a class is joined through the
+    facilitator's moves instead.
+    """
+
+    activity_id: str
+    seat_id: str
+    added_zones: tuple[str, ...] = ()
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        if (reason := _reason_missing(table, self.activity_id)) is not None:
+            return reason
+        if actor_seat not in (self.seat_id, SYSTEM_SEAT):
+            return "You can only join an activity yourself."
+        activity = table.activities[self.activity_id]
+        if activity.status != "running":
+            return "That activity has not begun. Sign up instead."
+        if activity.class_id:
+            return "A table of a class is joined when the facilitator moves you there."
+        if self.seat_id in activity.seats:
+            return "You are already playing."
+        if len(activity.seats) >= activity.max_players:
+            return "That activity is full."
+        if self.seat_id not in table.seats:
+            return "Take a seat at the table first."
+        for zone_id in self.added_zones:
+            if zone_id not in table.zones:
+                return f"There is no zone {zone_id!r} on the table."
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        activity = table.activities[self.activity_id]
+        activity.seats = (*activity.seats, self.seat_id)
+        activity.zones = (*activity.zones, *self.added_zones)
+        return [_patch(activity)]
+
+
+@dataclass(frozen=True)
 class LeaveActivity:
-    """Take your name off an activity that has not begun. The last one out closes it."""
+    """Take your name off an activity that has not begun.
+
+    Leaving is not cancelling: the sign-up stays open for others even when
+    the last name comes off it. Cancelling is ``EndActivity``.
+    """
 
     activity_id: str
     op_id: str = field(default_factory=new_op_id)
@@ -129,11 +177,60 @@ class LeaveActivity:
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         activity = table.activities[self.activity_id]
         activity.seats = tuple(seat for seat in activity.seats if seat != actor_seat)
-        # A table of a class stays until the facilitator ends the class.
-        if not activity.seats and not activity.class_id:
-            del table.activities[activity.id]
-            return [_removed(activity.id)]
         return [_patch(activity)]
+
+
+@dataclass(frozen=True)
+class LeaveRunningActivity:
+    """Leave an activity that has begun, without ending it for the others.
+
+    The leaver's own zones, and whatever is still in them, leave the table;
+    the game layer puts their cards back in their decks first, in the same
+    transaction. ``seat_id`` is who leaves: themselves, or anyone when the
+    room acts for them inside that transaction. A table of a class is left
+    through the facilitator's moves instead.
+    """
+
+    activity_id: str
+    seat_id: str
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        if (reason := _reason_missing(table, self.activity_id)) is not None:
+            return reason
+        if actor_seat not in (self.seat_id, SYSTEM_SEAT):
+            return "You can only leave an activity yourself."
+        activity = table.activities[self.activity_id]
+        if activity.status != "running":
+            return "That activity has not begun. Leave the sign-up instead."
+        if activity.class_id:
+            return "The facilitator moves people off the tables of a class."
+        if self.seat_id not in activity.seats:
+            return "You are not playing in that activity."
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        activity = table.activities[self.activity_id]
+        patches: list[Patch] = []
+        kept: list[str] = []
+        for zone_id in activity.zones:
+            zone = table.zones.get(zone_id)
+            if zone is not None and zone.owner_seat == self.seat_id:
+                for piece in table.pieces_in_zone(zone_id):
+                    del table.pieces[piece.id]
+                    patches.append(
+                        Patch(kind="piece", op="remove", entity_id=piece.id, fields={})
+                    )
+                del table.zones[zone_id]
+                patches.append(
+                    Patch(kind="zone", op="remove", entity_id=zone_id, fields={})
+                )
+            else:
+                kept.append(zone_id)
+        activity.zones = tuple(kept)
+        activity.seats = tuple(seat for seat in activity.seats if seat != self.seat_id)
+        patches.append(_patch(activity))
+        return patches
 
 
 @dataclass(frozen=True)
@@ -213,7 +310,13 @@ class EndActivity:
         activity = table.activities[self.activity_id]
         if activity.class_id and not table.is_facilitator(actor_seat):
             return "Only the facilitator can end a table of a class."
-        if actor_seat not in activity.seats and not table.is_facilitator(actor_seat):
+        # An activity nobody is in any more belongs to nobody: anyone may end it.
+        unclaimed = not activity.seats
+        if (
+            actor_seat not in activity.seats
+            and not table.is_facilitator(actor_seat)
+            and not unclaimed
+        ):
             return "Only its players or the facilitator can end it."
         return None
 

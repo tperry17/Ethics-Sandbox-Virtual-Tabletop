@@ -1270,3 +1270,26 @@
 .room-panel__class .toolbar__classes,
 .room-panel__class .toolbar__class-start { min-width: 0; max-width: 100%; }
 .room-panel__class .toolbar__class-start > select { width: 100%; }
+
+/* An activity in progress: the side panel is that activity until it is
+   finished. Its heading, who is playing, its own buttons, then Finish. */
+.toolbar__activity.activity-mode {
+  display: grid;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-4);
+  border: var(--line-hairline) solid var(--surface-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.activity-mode + .activity-mode { margin-block-start: var(--space-3); }
+.activity-mode__status {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-reading);
+  font-size: var(--text-sm);
+  line-height: var(--leading-reading);
+}
+.activity-mode__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.toolbar > .room-panel__section > .activity-mode > .room-panel__heading { display: none; }
+.room__panel .room-panel__section > .activity-mode > .room-panel__heading { display: block; }

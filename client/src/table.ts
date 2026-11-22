@@ -14,7 +14,7 @@
  * the piece is seen to go back.
  */
 
-import { renderActivities, renderTrades } from "./activities.js";
+import { activityInProgress, renderActivities, renderTrades } from "./activities.js";
 import { clock, renderClasses } from "./classes.js";
 import { Announcer } from "./announcer.js";
 import { InkLayer } from "./ink.js";
@@ -958,7 +958,10 @@ export class TableRenderer {
       (payload) => this.intents.send("activity", payload),
       () => this.renderToolbar(),
     );
-    if (classes !== null) toolbar.append(panelSection("Run a class", classes, "room-panel__class"));
+    // While an activity is going the panel is that activity's; a class can
+    // be started again once it is finished.
+    const showClasses = classes !== null && (this.model.classes.length > 0 || !activityInProgress(this.model));
+    if (showClasses) toolbar.append(panelSection("Run a class", classes, "room-panel__class"));
     this.renderButtonsMenu(this.placeActivityButtons(toolbar));
     this.markActivitiesButton();
     const trades = renderTrades(this.model, () => this.selection, (opType, payload) =>
