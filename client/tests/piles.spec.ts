@@ -116,3 +116,63 @@ test("a card let go with the hand over a pile but most of the card off it is put
   expect(settled.y).toBeGreaterThanOrEqual(sidebar.y + sidebar.height - 1);
   expect(await page.locator(".toast").count()).toBe(0);
 });
+
+test("the pile lights up only when letting go would put the card into it", async ({ page }) => {
+  await valueCardsRoom(page);
+  const id = await topOfDeck(page);
+  const card = await box(page, `[data-piece-id="${id}"]`);
+  const sidebar = await box(page, '.tabletop__zones [data-zone-id="sidebar"]');
+  const lit = page.locator('.tabletop__zones [data-zone-id="sidebar"].is-drop-target');
+  const from: [number, number] = [card.x + card.width / 2, card.y + 4];
+  await page.mouse.move(...from);
+  await page.mouse.down();
+  // The pointer just inside the bottom of the pile, the card mostly below it: not lit.
+  const toX = sidebar.x + sidebar.width / 2;
+  for (let step = 1; step <= 10; step++) {
+    await page.mouse.move(
+      from[0] + ((toX - from[0]) * step) / 10,
+      from[1] + ((sidebar.y + sidebar.height - 10 - from[1]) * step) / 10,
+    );
+  }
+  await expect(lit).toHaveCount(0);
+  // Higher, so most of the card is over the pile: lit, and letting go joins.
+  await page.mouse.move(toX, sidebar.y + 10, { steps: 6 });
+  await expect(lit).toHaveCount(1);
+  await page.mouse.up();
+  await expect(page.locator('.tabletop__zones [data-zone-id="sidebar"] .zone__label')).toContainText(
+    "19",
+  );
+});
+
+test("arrow keys never leave a card over a pile: it steps off and past", async ({ page }) => {
+  await valueCardsRoom(page);
+  const id = await topOfDeck(page);
+  const deck = await box(page, '.tabletop__zones [data-zone-id="deck"]');
+  const sidebar = await box(page, '.tabletop__zones [data-zone-id="sidebar"]');
+  await page.locator(`[data-piece-id="${id}"]`).focus();
+  // One step right takes the top card off the core deck, to just beside it.
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator('.tabletop__zones [data-zone-id="deck"] .zone__label')).toContainText(
+    "17",
+  );
+  const overlaps = (a: Box, b: Box): boolean =>
+    a.x < b.x + b.width - 1 && a.x + a.width > b.x + 1 && a.y < b.y + b.height - 1 && a.y + a.height > b.y + 1;
+  await page.waitForTimeout(400);
+  let now = await box(page, `[data-piece-id="${id}"]`);
+  expect(overlaps(now, deck)).toBe(false);
+  // Stepping on to the right, it hops over the Sidebar rather than resting on it.
+  for (let press = 0; press < 12; press++) {
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(60);
+    now = await box(page, `[data-piece-id="${id}"]`);
+    expect(overlaps(now, sidebar)).toBe(false);
+  }
+  await page.waitForTimeout(400);
+  now = await box(page, `[data-piece-id="${id}"]`);
+  expect(overlaps(now, sidebar)).toBe(false);
+  expect(now.x).toBeGreaterThan(sidebar.x + sidebar.width);
+  await expect(page.locator('.tabletop__zones [data-zone-id="sidebar"] .zone__label')).toContainText(
+    "18",
+  );
+  expect(await page.locator(".toast").count()).toBe(0);
+});

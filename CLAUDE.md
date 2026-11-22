@@ -195,9 +195,13 @@ over another piece, over the hand tray - is input; it becomes
 A piece let go partly over a pile (a zone of kind `deck` or `discard`) is
 never left half under it: a card or tile more than half of which lies
 over the pile goes into it; otherwise the piece is put down just clear of
-it, on the nearest side (`landingBesidePiles` in `client/src/geometry.ts`). Like the zone under
-the pointer, this reads where the hand let go; the server still judges the
-move.
+it, on the nearest side (`landingBesidePiles` in `client/src/geometry.ts`).
+What is lit up while dragging is exactly what letting go will do (one
+`planDrop` in `interaction.ts` decides both). An arrow-key step that would
+overlap a pile goes just past it in the direction of travel, and a card
+stepped off a pile goes onto the table beneath (`stepPastPiles`). Like the
+zone under the pointer, this reads where the hand let go; the server still
+judges the move.
 The context menu is a `menu_request` answered by a `menu` message built by
 `sandbox/model/actions.py`, which offers every plausible operation and
 keeps those whose own `validate` accepts them. A card in a deck zone also
@@ -220,8 +224,10 @@ when they leave the table. Who is showing what to whom is public; the face
 is not.
 
 Touch: one finger drags a piece, and a long press opens its menu; one
-finger on empty table pans the view, and two fingers pan and pinch. Only a
-mouse draws a selection box; on a touch screen, tap pieces to select them.
+finger on empty table pans the view, and two fingers pan and pinch; tap
+pieces to select them. Mouse: the main button drags a piece or, on empty
+table, pans; the middle button draws a selection box anywhere on the table,
+and so does Shift with the main button, for a trackpad.
 
 Keyboard: Tab reaches every piece; arrow keys move by a 20-unit step (Shift
 for five); X selects (Shift-X adds to the selection; on a touch
