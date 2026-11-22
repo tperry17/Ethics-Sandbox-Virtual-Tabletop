@@ -15,6 +15,7 @@ from _model_support import (
     DISCARD,
     FACILITATOR,
     HAND_A,
+    HAND_B,
     PUBLIC_TABLE,
     SEAT_A,
     SEAT_B,
@@ -524,6 +525,8 @@ async def test_a_menu_lists_what_the_model_allows_with_peoples_names() -> None:
         assert menu["piece_id"] == card
         items = {item["id"]: item for item in menu["items"]}
         assert items[f"show_to:{SEAT_B}"]["label"] == "Bo"
+        # Someone else's hand is named for them, not for their seat.
+        assert items[f"move:{HAND_B}"]["label"] == "Bo's hand"
         assert items[f"show_to:{SEAT_B}"]["group"] == "Show to…"
         assert items[f"show_to:{SEAT_B}"]["op_type"] == "show_to"
         assert items[f"show_to:{SEAT_B}"]["payload"] == {

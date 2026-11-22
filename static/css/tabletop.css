@@ -355,6 +355,8 @@
 }
 
 .tabletop__zones .zone[hidden] { display: none; }
+/* Someone else's private hand is not drawn, nor the cards in it. */
+.tabletop__pieces-layer .piece[hidden] { display: none; }
 .tabletop__zones .zone {
   position: absolute;
   inset-block-start: 0;
