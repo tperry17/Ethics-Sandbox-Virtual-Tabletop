@@ -216,6 +216,10 @@ class ClassGroup:
     """Each paired table's decision, as the facilitator confirmed it."""
     proposed: dict[str, str] = field(default_factory=dict)
     """What someone at a table proposed it decided, waiting for the facilitator."""
+    first_serial: int = 0
+    """The serial number of its first table (``activity-<n>``), so each table
+    keeps its own place side by side even after another table has ended.
+    0 for a class saved before this was kept."""
 
 
 @dataclass

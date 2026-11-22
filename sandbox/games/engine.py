@@ -71,7 +71,7 @@ from sandbox.model import (
     Visibility,
     new_op_id,
 )
-from sandbox.model.types import PieceKind
+from sandbox.model.types import PieceKind, ZoneKind
 
 SEAT_TINTS = 6
 
@@ -123,7 +123,8 @@ class Scope:
 
     Every zone an activity makes is named ``<activity id>:<definition id>``,
     its per-seat zones belong to the activity's players only, and its
-    rectangles are moved by ``origin`` so they sit clear of the sandbox.
+    rectangles are moved by ``origin``: right below the room's own piles,
+    and, for the tables of a class, side by side.
     """
 
     activity_id: str
@@ -137,16 +138,49 @@ class Scope:
 
 
 ACTIVITY_SPACING = 2600.0
+"""How far apart the tables of a class are laid out, side by side."""
+ACTIVITY_GAP = 80.0
+"""How far below the room's own piles an activity's area begins."""
+
+
+def _below_room_piles(table: Table) -> float:
+    """Where an activity's area begins, up and down: just below the room's piles.
+
+    The room's piles are the zones its own setup lays out, other than its
+    table and its hands: they never move, so an activity always lands in the
+    same place. Piles added from the Pieces menu, which can be put anywhere,
+    and every activity's own zones are left out.
+    """
+    bottoms = [
+        zone.geometry.y + zone.geometry.height
+        for zone in table.zones.values()
+        if ":" not in zone.id
+        and not zone.id.startswith(ADDED_DECK_PREFIX)
+        and zone.kind not in (ZoneKind.TABLE, ZoneKind.HAND)
+        and isinstance(zone.geometry, Rect)
+    ]
+    return max(bottoms) + ACTIVITY_GAP if bottoms else 0.0
 
 
 def scope_of(table: Table, activity_id: str) -> Scope:
-    """The scope of an activity in ``table``, placed by its serial number."""
+    """The scope of an activity in ``table``: right below the room's piles.
+
+    A class's tables sit side by side, each in the column its serial number
+    gives it within the class; a lone activity takes the first column.
+    """
     activity = table.activities[activity_id]
     serial = _seat_number(activity_id)[0]
+    column = 0
+    group = table.classes.get(activity.class_id)
+    if group is not None:
+        first = group.first_serial or min(
+            (_seat_number(t)[0] for t in group.tables), default=serial
+        )
+        column = max(serial - first, 0)
     return Scope(
         activity_id=activity_id,
         seats=activity.seats,
-        origin=(ACTIVITY_SPACING * serial, 0.0),
+        origin=(ACTIVITY_SPACING * column, _below_room_piles(table)),
         options=dict(activity.options),
     )
 
