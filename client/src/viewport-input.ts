@@ -211,7 +211,9 @@ export class ViewportController {
       this.touches.set(event.pointerId, this.localPoint(event));
       return;
     }
-    const wantsPan = event.button === 1 || (event.button === 0 && this.spaceHeld);
+    // The middle button draws a selection box (interaction.ts); Space with
+    // the main button pans from anywhere, over pieces too.
+    const wantsPan = event.button === 0 && this.spaceHeld;
     if (!wantsPan) return;
     event.preventDefault();
     this.panPointer = event.pointerId;

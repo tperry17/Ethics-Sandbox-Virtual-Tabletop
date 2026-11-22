@@ -118,3 +118,31 @@ function overlapArea(a: Bounds, b: Bounds): number {
   const height = Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY);
   return width > 0 && height > 0 ? width * height : 0;
 }
+
+/**
+ * Where an arrow-key step to (`x`, `y`), travelling by (`dx`, `dy`), should
+ * put a piece so that it is never left over a pile: just past any pile it
+ * would overlap, on the far side in the direction it is going. A piece
+ * stepped off a pile lands beside it the same way.
+ */
+export function stepPastPiles(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  piles: Bounds[],
+  dx: number,
+  dy: number,
+): { x: number; y: number } {
+  for (let round = 0; round < 8; round++) {
+    const box = { minX: x - width / 2, minY: y - height / 2, maxX: x + width / 2, maxY: y + height / 2 };
+    const pile = piles.find((p) => overlapArea(box, p) > 0);
+    if (pile === undefined) break;
+    if (dx > 0) x = pile.maxX + PILE_GAP + width / 2;
+    else if (dx < 0) x = pile.minX - PILE_GAP - width / 2;
+    else if (dy > 0) y = pile.maxY + PILE_GAP + height / 2;
+    else if (dy < 0) y = pile.minY - PILE_GAP - height / 2;
+    else break;
+  }
+  return { x, y };
+}
