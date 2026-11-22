@@ -23,7 +23,7 @@ Each room offers its own exercise's activities, and its own debrief:
 - Value Cards room: Value Cards Trading, and the Value Cards debrief.
 - Leadership and Knowledge in Popular Rule room: Scenario 1 (Construction project), Scenario 2 (Going to war?), and its debrief.
 
-An activity is a guided exercise started inside a room: someone presses "Start <activity>", a sign-up opens for the activity's players (the facilitator may choose them instead), and the activity lays out its own zones for those seats and guides them through its steps. Everyone else keeps using the sandbox. From the moment it is started until someone presses its "Finish" button (a player or the facilitator; it asks first, since its zones and what is in them leave the table; before it begins the same button says "Cancel" and cancels the sign-up; "Leave" only takes your own name off, and a sign-up nobody is left in stays open, for anyone to join or cancel), the side panel is that activity for everyone in the room: who is playing, its buttons, and "Join" while it has room, during the sign-up and after it has begun. Someone who joins a running activity gets its per-seat zones of their own (`JoinRunningActivity`, `build_join_running`). A player may also leave a running activity without ending it for the others: their cards go back face down into the decks they came from, which are shuffled, and their own zones go (`LeaveRunningActivity`, `build_leave_running`); once nobody is left in an activity, anyone may end it. The list of activities to start, and "Run a class", come back once it is finished: one activity runs in a room at a time, and the only way to run several at once is a class. An activity's `players: {min, max}` is how many people it takes (three for Value Cards Trading), never the room's capacity.
+An activity is a guided exercise started inside a room: someone presses "Start <activity>", a sign-up opens for the activity's players (the facilitator may choose them instead), and the activity lays out its own zones for those seats, right below the room's own piles (`ACTIVITY_GAP` below the lowest zone the room's setup lays out, other than its table and hands; a class's tables side by side, `ACTIVITY_SPACING` apart), and guides them through its steps. Everyone else keeps using the sandbox. From the moment it is started until someone presses its "Finish" button (a player or the facilitator; it asks first, since its zones and what is in them leave the table; before it begins the same button says "Cancel" and cancels the sign-up; "Leave" only takes your own name off, and a sign-up nobody is left in stays open, for anyone to join or cancel), the side panel is that activity for everyone in the room: who is playing, its buttons, and "Join" while it has room, during the sign-up and after it has begun. Someone who joins a running activity gets its per-seat zones of their own (`JoinRunningActivity`, `build_join_running`). A player may also leave a running activity without ending it for the others: their cards go back face down into the decks they came from, which are shuffled, and their own zones go (`LeaveRunningActivity`, `build_leave_running`); once nobody is left in an activity, anyone may end it. The list of activities to start, and "Run a class", come back once it is finished: one activity runs in a room at a time, and the only way to run several at once is a class. An activity's `players: {min, max}` is how many people it takes (three to six for Value Cards Trading), never the room's capacity.
 
 A class is an activity run as several tables at once. Someone presses "Start a class" instead of "Start the <activity>", chooses how many tables, and becomes the facilitator of all of them, as a non-playing admin: they sit at none. The facilitator can sort the room's people into the tables at random (shown first, adjustable by hand, then confirmed), begin the tables, run one timer and push one prompt to every table at once, and, for a game that declares `pairing`, pair two tables so their decisions are read together. The facilitator can move anyone to another table at any time, begun or not (at a begun table their cards go back face down into the decks they came from, which are shuffled, their other zones go, and they get fresh ones at the new table), and a person who arrives after the sort takes the table with the most room. Players at a paired table propose their table's choice and the facilitator confirms it; they see only their own table's. The class is a `ClassGroup` in `sandbox/model/classes.py`; its tables are ordinary activities.
 
@@ -163,9 +163,11 @@ takes the same share of every card, so a deck shows its pictures at one size.
 `/table-preview` replays the recorded session with no room behind it, and
 `?pieces=300&measure=1` is the frame-rate harness.
 
-"Fit table" (and the first view of a table nobody has moved) zooms the
-table to fill the window's width, 16px (`FIT_PADDING`) from each side, so no
-felt is wasted beside it. Up and down it is centred in the room below the
+"Fit table" (and the first view of a table nobody has moved) fits what is on
+the table - every zone but the table's own and your hand, every piece -
+to the window's width, 16px (`FIT_PADDING`) from each side, but never
+zooms past 100% (`FIT_MAX_SCALE`); narrower than that, it is centred across.
+With nothing on the table, the table zone's area is fitted instead. Up and down it is centred in the room below the
 row of table controls (`FIT_TOP`, 64px) where it fits; where it is taller,
 its top edge is put just below the controls and the rest is a pan away.
 
@@ -189,15 +191,25 @@ deck, or into a zone that hides every face, is left as it was. This is
 `MoveToZone` and `StackOnto` in `sandbox/model/ops.py`, so a macro's moves
 follow it too.
 
+The table has no edge. A zone of kind `table` is not drawn (no outline,
+no label), and a piece let go outside every other zone lands on it: its
+activity's table if it came from an activity's zones, otherwise the
+room's (`tableFor` in `table.ts`). Pieces and piles added from the Pieces menu are
+put where they were put down, not pulled inside the zone's outline.
+
 The client never decides legality. Where a piece was let go - over a zone,
 over another piece, over the hand tray - is input; it becomes
 `move_to_zone`, `stack_onto` or a plain `move`, and the server judges it.
 A piece let go partly over a pile (a zone of kind `deck` or `discard`) is
-never left half under it: a card or tile whose middle is on the pile goes
-into it; otherwise the piece is put down just clear of it, on the nearest
-side (`landingBesidePiles` in `client/src/geometry.ts`). Like the zone under
-the pointer, this reads where the hand let go; the server still judges the
-move.
+never left half under it: a card or tile more than half of which lies
+over the pile goes into it; otherwise the piece is put down just clear of
+it, on the nearest side (`landingBesidePiles` in `client/src/geometry.ts`).
+What is lit up while dragging is exactly what letting go will do (one
+`planDrop` in `interaction.ts` decides both). An arrow-key step that would
+overlap a pile goes just past it in the direction of travel, and a card
+stepped off a pile goes onto the table beneath (`stepPastPiles`). Like the
+zone under the pointer, this reads where the hand let go; the server still
+judges the move.
 The context menu is a `menu_request` answered by a `menu` message built by
 `sandbox/model/actions.py`, which offers every plausible operation and
 keeps those whose own `validate` accepts them. A card in a deck zone also
@@ -207,9 +219,11 @@ player who is not the facilitator, in seat order, so each sees only their
 own. A deck on the room's table deals to the room's hands; a deck in an
 activity deals to that activity's private hands, or, if it has none, to
 its players' hands in the room. Every room type has a private, per-seat
-hand (validation checks it). Value Cards Trading plays with the 18 cards
-of the base deck (`group` "Deck"), 6 each, laid out in the open on the board (`seat_area`
-zones), not in a hand; the Value Cards room's sandbox keeps all 36, as the core deck and the sidebar. Faces a patch newly entitles
+hand (validation checks it). Value Cards Trading deals 6 cards to each
+player: three play with the 18 cards of the base deck (`group` "Deck"), and
+with four to six the deal first moves the activity's sidebar (`group`
+"Sidebar") into the deck (`deal_six_each` in its `rules.py`). The cards are
+laid out in the open on the board (`seat_area` zones), not in a hand; the Value Cards room's sandbox keeps all 36, as the core deck and the sidebar. Faces a patch newly entitles
 a viewer to travel with that patch as `components`, to that viewer only.
 
 Reveals are read from state (`revealed_to`, `revealed_by`), not from
@@ -219,9 +233,11 @@ count), only they or the facilitator may put it away, and it is put away
 when they leave the table. Who is showing what to whom is public; the face
 is not.
 
-Touch: one finger drags a piece, and a long press opens its menu; two
-fingers pan and pinch. One finger on empty table draws a selection box,
-except on a phone (37.5rem wide or less), where it pans the view.
+Touch: one finger drags a piece, and a long press opens its menu; one
+finger on empty table pans the view, and two fingers pan and pinch; tap
+pieces to select them. Mouse: the main button drags a piece or, on empty
+table, pans; the middle button draws a selection box anywhere on the table,
+and so does Shift with the main button, for a trackpad.
 
 Keyboard: Tab reaches every piece; arrow keys move by a 20-unit step (Shift
 for five); X selects (Shift-X adds to the selection; on a touch

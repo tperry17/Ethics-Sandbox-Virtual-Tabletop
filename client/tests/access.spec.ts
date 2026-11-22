@@ -296,6 +296,59 @@ test("on a phone one finger on empty table pans the view", async ({ browser, bro
     .not.toBe(before);
 });
 
+test("on a tablet one finger pans, and two fingers still pinch after it", async ({
+  browser,
+  browserName,
+}) => {
+  // Playwright can send real touches only to Chromium.
+  test.skip(browserName !== "chromium", "needs CDP touches");
+  const page = await openRoom(browser, "Ines", {
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 810, height: 1080 },
+  });
+  await expect(page.locator(".tabletop__pieces-layer .piece").first()).toBeAttached();
+  const viewport = (await page.locator(".tabletop__viewport").boundingBox())!;
+  // Low on the right of the table, where nothing lies.
+  const x = viewport.x + viewport.width * 0.75;
+  const y = viewport.y + viewport.height * 0.7;
+  const hit = await page.evaluate(
+    ([px, py]) => document.elementFromPoint(px!, py!)?.closest("[data-piece-id]") ?? null,
+    [x, y],
+  );
+  expect(hit).toBeNull();
+  const world = page.locator(".tabletop__world");
+  const transform = () => world.evaluate((node) => getComputedStyle(node).transform);
+  const cdp = await page.context().newCDPSession(page);
+
+  // One finger: the view moves, and no selection box is drawn.
+  let before = await transform();
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+  for (let step = 1; step <= 10; step++) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: x - step * 10, y: y - step * 6 }],
+    });
+  }
+  await expect(page.locator(".tabletop__marquee")).toHaveCount(0);
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect.poll(transform).not.toBe(before);
+
+  // Then two fingers spread apart: the view zooms. A finger lifted after a
+  // one-finger drag used to be remembered as still down, and pinch stopped.
+  before = await transform();
+  const at = (spread: number) => [
+    { x: x - 40 - spread, y, id: 1 },
+    { x: x + 40 + spread, y, id: 2 },
+  ];
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: at(0) });
+  for (let step = 1; step <= 10; step++) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: at(step * 8) });
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect.poll(transform).not.toBe(before);
+});
+
 // -- trading and announcing, by keyboard and by touch --------------------------------------
 
 async function startTrading(browser: Browser, touch: boolean) {
@@ -316,6 +369,9 @@ async function startTrading(browser: Browser, touch: boolean) {
   await ines.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await tomas.getByRole("button", { name: "Join" }).click();
   await wren.getByRole("button", { name: "Join" }).click();
+  // Value Cards Trading takes three to six: with three signed up, it is begun by hand.
+  await expect(ines.getByText(/Value Cards Trading: signing up, 3 of 3–6/)).toBeVisible();
+  await ines.getByRole("button", { name: "Begin now" }).click();
   await ines.getByRole("button", { name: "Deal 6 each" }).click();
   return { ines, tomas, wren };
 }

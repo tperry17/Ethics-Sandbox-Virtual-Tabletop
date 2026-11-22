@@ -105,12 +105,15 @@ export function fitBounds(
   size: Size,
   padding = FIT_PADDING,
   top = FIT_TOP,
+  maxScale = Number.POSITIVE_INFINITY,
 ): Viewport {
   const width = Math.max(bounds.maxX - bounds.minX, 1);
   const height = Math.max(bounds.maxY - bounds.minY, 1);
   const usableWidth = Math.max(size.width - padding * 2, 1);
   const usableHeight = Math.max(size.height - top - padding, 1);
-  const scale = clampScale(usableWidth / width);
+  const scale = clampScale(Math.min(usableWidth / width, maxScale));
+  // Narrower than the window (held back by maxScale), it is centred across.
+  const spareX = Math.max(usableWidth - width * scale, 0);
   // Up and down it is centred where it fits; where it is taller than the
   // window, its top edge is put at the padding, so what lies at its top is
   // on screen and the rest is a scroll away.
@@ -118,8 +121,14 @@ export function fitBounds(
     height * scale > usableHeight
       ? top - bounds.minY * scale
       : top + usableHeight / 2 - (bounds.minY + height / 2) * scale;
-  return { scale, offsetX: padding - bounds.minX * scale, offsetY };
+  return { scale, offsetX: padding + spareX / 2 - bounds.minX * scale, offsetY };
 }
+
+/**
+ * "Fit table" never zooms in past this: fitted to what is on the table, two
+ * piles would otherwise fill the window.
+ */
+export const FIT_MAX_SCALE = 1;
 
 /**
  * Keep at least a corner of the table on screen.
