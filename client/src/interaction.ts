@@ -484,6 +484,8 @@ export class InteractionController {
     if (pointedAt !== null && !pointedPile) return { kind: "stack", onto: pointedAt };
     let zoneUnder = this.table.zoneAtWorld(x, y);
     if (zoneUnder !== null && this.table.isPile(zoneUnder)) zoneUnder = this.table.zoneAtWorld(x, y, true);
+    // The table has no edge: over no zone at all is on the table.
+    zoneUnder ??= this.table.tableFor(truth.zone_id);
 
     let px = x - piece.offsetX;
     let py = y - piece.offsetY;
@@ -516,7 +518,10 @@ export class InteractionController {
     const plan = live[0] === undefined ? { kind: "none" as const } : this.planDrop(live[0], live.length, event);
     this.table.setTrayTarget(plan.kind === "hand");
     this.table.setStackTarget(plan.kind === "stack" ? plan.onto : null);
-    this.table.setDropTarget(plan.kind === "join" || plan.kind === "zone" ? plan.zone : null);
+    // The table itself is where anything let go lands by default, and it is
+    // not drawn: it is never lit.
+    const lit = plan.kind === "join" || plan.kind === "zone" ? plan.zone : null;
+    this.table.setDropTarget(lit !== null && this.model.zones.get(lit)?.kind === "table" ? null : lit);
   }
 
   private stackTargetAt(draggedId: string, event: PointerEvent): string | null {
@@ -1127,7 +1132,9 @@ export class InteractionController {
       // Never left over a pile: a step that would overlap one goes just past
       // it, and a card stepped off a pile goes onto the table beneath.
       const leaving = this.table.isPile(piece.zone_id);
-      const landing = leaving ? this.table.zoneAtWorld(x, y, true) : piece.zone_id;
+      const landing = leaving
+        ? (this.table.zoneAtWorld(x, y, true) ?? this.table.tableFor(piece.zone_id))
+        : piece.zone_id;
       if (landing !== null && this.model.zones.get(landing)?.layout === "free") {
         const [width, height] = this.table.pieceSizeOf(id);
         const piles = this.table.piles(null).map((pile) => pile.bounds);

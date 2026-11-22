@@ -189,6 +189,13 @@ deck, or into a zone that hides every face, is left as it was. This is
 `MoveToZone` and `StackOnto` in `sandbox/model/ops.py`, so a macro's moves
 follow it too.
 
+The table has no edge. A zone of kind `table` is not drawn (no outline,
+no label), and a piece let go outside every other zone lands on it: its
+activity's table if it came from an activity's zones, otherwise the
+room's (`tableFor` in `table.ts`). The table zone's area still sets the
+first view and "Fit table". Pieces and piles added from the Pieces menu are
+put where they were put down, not pulled inside the zone's outline.
+
 The client never decides legality. Where a piece was let go - over a zone,
 over another piece, over the hand tray - is input; it becomes
 `move_to_zone`, `stack_onto` or a plain `move`, and the server judges it.
