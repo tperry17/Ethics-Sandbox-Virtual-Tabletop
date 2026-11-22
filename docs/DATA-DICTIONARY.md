@@ -279,7 +279,7 @@ Join an activity that has already begun, while it has room.
 
 ### LeaveActivity
 
-Take your name off an activity that has not begun. The last one out closes it.
+Take your name off an activity that has not begun.
 
 | Field | Type |
 | --- | --- |

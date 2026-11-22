@@ -155,7 +155,11 @@ class JoinRunningActivity:
 
 @dataclass(frozen=True)
 class LeaveActivity:
-    """Take your name off an activity that has not begun. The last one out closes it."""
+    """Take your name off an activity that has not begun.
+
+    Leaving is not cancelling: the sign-up stays open for others even when
+    the last name comes off it. Cancelling is ``EndActivity``.
+    """
 
     activity_id: str
     op_id: str = field(default_factory=new_op_id)
@@ -173,10 +177,6 @@ class LeaveActivity:
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         activity = table.activities[self.activity_id]
         activity.seats = tuple(seat for seat in activity.seats if seat != actor_seat)
-        # A table of a class stays until the facilitator ends the class.
-        if not activity.seats and not activity.class_id:
-            del table.activities[activity.id]
-            return [_removed(activity.id)]
         return [_patch(activity)]
 
 
@@ -257,7 +257,13 @@ class EndActivity:
         activity = table.activities[self.activity_id]
         if activity.class_id and not table.is_facilitator(actor_seat):
             return "Only the facilitator can end a table of a class."
-        if actor_seat not in activity.seats and not table.is_facilitator(actor_seat):
+        # A sign-up nobody is in any more belongs to nobody: anyone may cancel it.
+        unclaimed = activity.status == "signup" and not activity.seats
+        if (
+            actor_seat not in activity.seats
+            and not table.is_facilitator(actor_seat)
+            and not unclaimed
+        ):
             return "Only its players or the facilitator can end it."
         return None
 

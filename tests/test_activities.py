@@ -73,13 +73,25 @@ def test_the_opener_is_the_first_to_sign_up_and_the_others_may_join() -> None:
     )  # full
 
 
-def test_leaving_removes_you_and_the_last_one_out_closes_it() -> None:
+def test_leaving_removes_you_and_is_not_cancelling() -> None:
     table = _room()
     activity_id = _open(table)
     run_op(table, "seat-2", JoinActivity(activity_id))
     run_op(table, "seat-1", LeaveActivity(activity_id))
     assert table.activities[activity_id].seats == ("seat-2",)
+    # The last one out leaves the sign-up open, for others to join.
     run_op(table, "seat-2", LeaveActivity(activity_id))
+    assert table.activities[activity_id].seats == ()
+    assert isinstance(run_op(table, "seat-3", JoinActivity(activity_id)), Ok)
+
+
+def test_an_empty_sign_up_may_be_cancelled_by_anyone() -> None:
+    table = _room()
+    activity_id = _open(table)
+    # While someone is signed up, only they (or the facilitator) may cancel.
+    assert isinstance(run_op(table, "seat-2", EndActivity(activity_id)), Reject)
+    run_op(table, "seat-1", LeaveActivity(activity_id))
+    assert isinstance(run_op(table, "seat-2", EndActivity(activity_id)), Ok)
     assert not table.activities
 
 

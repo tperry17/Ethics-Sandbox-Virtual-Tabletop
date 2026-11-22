@@ -144,7 +144,7 @@ export function renderActivities(model: TableModel, send: SendActivity): HTMLEle
     label.className = "activity-mode__status";
     label.textContent =
       activity.status === "signup"
-        ? `${activity.title}: signing up, ${activity.seats.length} of ${places} (${names(model, activity)})`
+        ? `${activity.title}: signing up, ${activity.seats.length} of ${places}${activity.seats.length > 0 ? ` (${names(model, activity)})` : ""}`
         : `${activity.title}: running (${names(model, activity)})`;
     view.append(label);
     const actions = document.createElement("div");
@@ -168,7 +168,10 @@ export function renderActivities(model: TableModel, send: SendActivity): HTMLEle
         actions.append(button("Begin now", () => send({ action: "begin", activity_id: activity.id })));
       }
     }
-    if (signedUp || model.you?.is_facilitator === true) {
+    // Leaving takes your name off; cancelling ends the sign-up for everyone.
+    // A sign-up nobody is in any more may be cancelled by anyone.
+    const unclaimed = activity.status === "signup" && activity.seats.length === 0;
+    if (signedUp || unclaimed || model.you?.is_facilitator === true) {
       // Before it begins there is nothing to finish: the sign-up is cancelled.
       // Once begun, finishing takes its zones, and what is in them, off the table.
       const begun = activity.status !== "signup";

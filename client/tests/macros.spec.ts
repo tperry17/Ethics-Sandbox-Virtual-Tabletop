@@ -166,8 +166,16 @@ test("while an activity is going the panel is that activity, and anyone may join
     await expect(startList(page)).toBeHidden();
     await expect(page.getByRole("button", { name: "Start Pairs", exact: true })).toHaveCount(0);
   }
-  // Before it begins, the same button cancels the sign-up.
+  // Before it begins, the same button cancels the sign-up; leaving is not
+  // cancelling: with nobody left in it, the sign-up stays open, and then
+  // anyone may join it or cancel it.
   await expect(host.getByRole("button", { name: "Cancel Hooked" })).toBeVisible();
+  await expect(guest.getByRole("button", { name: "Cancel Hooked" })).toHaveCount(0);
+  await host.getByRole("button", { name: "Leave" }).click();
+  await expect(guest.getByText(/Hooked: signing up, 0 of 1–3/)).toBeVisible();
+  await expect(guest.getByRole("button", { name: "Cancel Hooked" })).toBeVisible();
+  await host.getByRole("button", { name: "Join Hooked" }).click();
+  await expect(guest.getByText(/Hooked: signing up, 1 of 1–3/)).toBeVisible();
   await host.getByRole("button", { name: "Begin now" }).click();
   await expect(guest.getByText("Hooked: running (Ines)")).toBeVisible();
   await expect(guest.getByRole("heading", { name: "In progress" })).toBeVisible();
