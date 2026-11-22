@@ -23,7 +23,7 @@ def test_seeds_value_cards_trading() -> None:
 def test_refuses_a_party_the_exercise_cannot_take() -> None:
     with db_session() as session:
         with pytest.raises(SeedError):
-            seed_demo(session, "value-cards-trading", people=5)
+            seed_demo(session, "value-cards-trading", people=7)
         with pytest.raises(SeedError):
             seed_demo(session, "no-such-exercise")
 

@@ -181,7 +181,8 @@ def test_collect_leaves_a_running_activitys_cards_alone() -> None:
     assert isinstance(run_op(table, "seat-1", started), Ok)
     zones = table.activities[activity_id].zones
     before = {zone: len(table.pieces_in_zone(zone)) for zone in zones}
-    assert sum(before.values()) == 18
+    # The activity's own deck and sidebar, 18 each.
+    assert sum(before.values()) == 36
 
     assert isinstance(press(ROOM, table, "collect", "seat-2"), Ok)
 

@@ -61,6 +61,9 @@ test("Value Cards Trading: four browsers, a drop and a rejoin, and a macro mid-d
   await ines.page.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await tomas.page.getByRole("button", { name: "Join" }).click();
   await wren.page.getByRole("button", { name: "Join" }).click();
+  // Value Cards Trading takes three to six: with three signed up, it is begun by hand.
+  await expect(ines.page.getByText(/Value Cards Trading: signing up, 3 of 3–6/)).toBeVisible();
+  await ines.page.getByRole("button", { name: "Begin now" }).click();
   await ines.page.getByRole("button", { name: "Deal 6 each" }).click();
 
   const hand = (page: Page, seat: number) =>
