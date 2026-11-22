@@ -176,8 +176,21 @@ test("while an activity is going the panel is that activity, and anyone may join
   await expect(guest.getByRole("button", { name: "Cancel Hooked" })).toBeVisible();
   await host.getByRole("button", { name: "Join Hooked" }).click();
   await expect(guest.getByText(/Hooked: signing up, 1 of 1–3/)).toBeVisible();
+  // Zoomed right in, so the activity's area would be off screen unless fitted.
+  for (let step = 0; step < 6; step++) await host.getByRole("button", { name: "Zoom in" }).click();
   await host.getByRole("button", { name: "Begin now" }).click();
   await expect(guest.getByText("Hooked: running (Ines)")).toBeVisible();
+  // Its player's view is fitted to its area when it begins, so all of it is on screen.
+  const area = host.locator('.tabletop__zones [data-zone-id$=":table"]');
+  await expect
+    .poll(async () => {
+      const zone = (await area.boundingBox())!;
+      const view = (await host.locator(".tabletop__viewport").boundingBox())!;
+      return zone.x >= view.x - 1 && zone.x + zone.width <= view.x + view.width + 1;
+    })
+    .toBe(true);
+  // Hooked is not played by trading: no Trades section.
+  await expect(host.getByRole("group", { name: "Trades" })).toHaveCount(0);
   await expect(guest.getByRole("heading", { name: "In progress" })).toBeVisible();
 
   // Someone who was not there at the start joins it while it runs.

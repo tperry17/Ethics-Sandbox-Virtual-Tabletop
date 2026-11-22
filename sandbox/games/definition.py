@@ -71,6 +71,9 @@ class Meta(_Strict):
     duration_minutes: int = Field(ge=1)
     facilitator: Literal["required", "recommended", "optional"]
     listed: bool = True
+    trading: bool = False
+    """Its players trade cards: the side panel offers them its Trades section
+    while it runs, and nobody else, in no other activity."""
 
 
 class DeckSpec(_Strict):

@@ -128,6 +128,10 @@ export class TableRenderer {
   private readonly toolGroup = element("div", "tabletop__palette");
   private readonly piecesSlot = element("div", "tabletop__pieces-slot");
   private readonly buttonsSlot = element("div", "tabletop__pieces-slot");
+  /** Activities this person plays in whose area the view has been fitted to. */
+  private readonly fittedActivities = new Set<string>();
+  /** Set once the first snapshot has been seen, so a reload does not refit. */
+  private activitiesSeen = false;
   /** Sign-ups this person has seen with the side panel open. */
   private readonly seenSignups = new Set<string>();
   private piecesAdded = 0;
@@ -359,6 +363,38 @@ export class TableRenderer {
     this.controller.fit(true);
   }
 
+  /**
+   * When an activity this person plays in begins (or they join it once it
+   * has), fit the view to its area, so it is all on screen. Activities
+   * already running when the page loads are left alone: a reload keeps the
+   * view the person had.
+   */
+  private fitToNewActivities(): void {
+    const me = this.model.seatId;
+    const playing = new Set<string>();
+    for (const activity of this.model.activities.values()) {
+      if (activity.status !== "running" || me === null || !activity.seats.includes(me)) continue;
+      playing.add(activity.id);
+      if (this.fittedActivities.has(activity.id)) continue;
+      if (!this.activitiesSeen) {
+        this.fittedActivities.add(activity.id);
+        continue;
+      }
+      const area = [...this.model.zones.values()]
+        .filter((zone) => zone.id.startsWith(`${activity.id}:`) && !this.isInMyHand(zone.id))
+        .map((zone) => geometryBounds(zone.geometry));
+      const bounds = unionBounds(area);
+      // Its zones may arrive a message after it is marked running: try again then.
+      if (bounds === null) continue;
+      this.fittedActivities.add(activity.id);
+      this.controller.fitTo(bounds);
+    }
+    for (const id of [...this.fittedActivities]) {
+      if (!playing.has(id)) this.fittedActivities.delete(id);
+    }
+    if (this.model.seatId !== null) this.activitiesSeen = true;
+  }
+
   /** Move the camera by a finger's travel, in screen pixels. */
   panBy(dx: number, dy: number): void {
     this.controller.panByPerson(dx, dy);
@@ -369,6 +405,7 @@ export class TableRenderer {
   private receive(message: ServerMessage): void {
     if (message.type === "snapshot") {
       this.absorb(this.model.applySnapshot(message));
+      this.fitToNewActivities();
       this.listener.onSnapshot?.();
       return;
     }
@@ -385,6 +422,7 @@ export class TableRenderer {
           this.tradeAnnouncement = `${this.nameOf(a)} and ${this.nameOf(b)} have traded cards.`;
         }
       }
+      this.fitToNewActivities();
       return;
     }
     if (message.type === "ack") {

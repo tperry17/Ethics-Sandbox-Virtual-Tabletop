@@ -150,6 +150,8 @@ export interface ActivityView {
   options?: Record<string, string>;
   /** The class this is one table of, or "" when it stands alone. */
   class_id?: string;
+  /** Its players trade cards: the Trades section is offered while it runs. */
+  trading?: boolean;
 }
 
 /** Two paired tables of a class. Sent to the facilitator only. */

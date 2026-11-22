@@ -6,6 +6,7 @@ meta:
   duration_minutes: 30
   facilitator: optional
   listed: true
+  trading: true                 # the side panel's Trades section, while it runs
 
 components:
   decks:
