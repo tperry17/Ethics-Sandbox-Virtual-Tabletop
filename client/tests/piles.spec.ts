@@ -2,8 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { openFromLanding, openControls } from "./rooms";
 
 /**
- * A card let go partly over a pile goes into it, if its middle is on the
- * pile, or is put down clear of it: never left half under it.
+ * A card let go partly over a pile goes into it, if more than half of the
+ * card is over the pile, or is put down clear of it: never left under it.
  */
 
 interface Box {
@@ -55,13 +55,13 @@ async function drag(page: Page, from: [number, number], to: [number, number]): P
 
 test.use({ viewport: { width: 1440, height: 900 } });
 
-test("a card let go with its middle on a pile goes into the pile", async ({ page }) => {
+test("a card let go mostly over a pile goes into the pile", async ({ page }) => {
   await valueCardsRoom(page);
   const id = await topOfDeck(page);
   const card = await box(page, `[data-piece-id="${id}"]`);
   const sidebar = await box(page, '.tabletop__zones [data-zone-id="sidebar"]');
   // Held by its bottom edge and let go just below the Sidebar: the hand is
-  // on the open table, but the card's middle is on the pile.
+  // on the open table, but almost all of the card is over the pile.
   const grabY = card.y + card.height - 4;
   const toY = sidebar.y + sidebar.height + 6;
   await drag(page, [card.x + card.width / 2, grabY], [sidebar.x + sidebar.width / 2, toY]);
@@ -92,5 +92,27 @@ test("a card let go partly over a pile is put down clear of it", async ({ page }
   expect(settled.y).toBeGreaterThanOrEqual(sidebar.y + sidebar.height - 1);
   // ...and near it, not thrown across the table.
   expect(settled.y - (sidebar.y + sidebar.height)).toBeLessThan(card.height * 0.5);
+  expect(await page.locator(".toast").count()).toBe(0);
+});
+
+test("a card let go with the hand over a pile but most of the card off it is put clear", async ({
+  page,
+}) => {
+  await valueCardsRoom(page);
+  const id = await topOfDeck(page);
+  const card = await box(page, `[data-piece-id="${id}"]`);
+  const sidebar = await box(page, '.tabletop__zones [data-zone-id="sidebar"]');
+  // Held by its top edge and let go with the hand just inside the bottom of
+  // the Sidebar: the pointer is on the pile, but nearly all of the card is below it.
+  const toX = sidebar.x + sidebar.width / 2;
+  const toY = sidebar.y + sidebar.height - 10;
+  await drag(page, [card.x + card.width / 2, card.y + 4], [toX, toY]);
+  await expect(page.locator('.tabletop__zones [data-zone-id="deck"] .zone__label')).toContainText("17");
+  await expect(page.locator('.tabletop__zones [data-zone-id="sidebar"] .zone__label')).toContainText(
+    "18",
+  );
+  await page.waitForTimeout(500);
+  const settled = await box(page, `[data-piece-id="${id}"]`);
+  expect(settled.y).toBeGreaterThanOrEqual(sidebar.y + sidebar.height - 1);
   expect(await page.locator(".toast").count()).toBe(0);
 });

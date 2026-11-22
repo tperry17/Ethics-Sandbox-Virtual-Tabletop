@@ -193,9 +193,9 @@ The client never decides legality. Where a piece was let go - over a zone,
 over another piece, over the hand tray - is input; it becomes
 `move_to_zone`, `stack_onto` or a plain `move`, and the server judges it.
 A piece let go partly over a pile (a zone of kind `deck` or `discard`) is
-never left half under it: a card or tile whose middle is on the pile goes
-into it; otherwise the piece is put down just clear of it, on the nearest
-side (`landingBesidePiles` in `client/src/geometry.ts`). Like the zone under
+never left half under it: a card or tile more than half of which lies
+over the pile goes into it; otherwise the piece is put down just clear of
+it, on the nearest side (`landingBesidePiles` in `client/src/geometry.ts`). Like the zone under
 the pointer, this reads where the hand let go; the server still judges the
 move.
 The context menu is a `menu_request` answered by a `menu` message built by
@@ -219,9 +219,9 @@ count), only they or the facilitator may put it away, and it is put away
 when they leave the table. Who is showing what to whom is public; the face
 is not.
 
-Touch: one finger drags a piece, and a long press opens its menu; two
-fingers pan and pinch. One finger on empty table draws a selection box,
-except on a phone (37.5rem wide or less), where it pans the view.
+Touch: one finger drags a piece, and a long press opens its menu; one
+finger on empty table pans the view, and two fingers pan and pinch. Only a
+mouse draws a selection box; on a touch screen, tap pieces to select them.
 
 Keyboard: Tab reaches every piece; arrow keys move by a 20-unit step (Shift
 for five); X selects (Shift-X adds to the selection; on a touch

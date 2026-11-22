@@ -33,8 +33,6 @@ const INK_WIDTH = 4;
 const INK_MIN_STEP = 3;
 const INK_SEND_MS = 40;
 const CURSOR_SEND_MS = 100;
-/** The phone layout's width, as in `tabletop.css`: one finger on empty table pans. */
-const PHONE_QUERY = "(max-width: 37.5rem)";
 
 type Tool = "hand" | "pen" | "point";
 
@@ -285,7 +283,8 @@ export class InteractionController {
       if (distance < DRAG_THRESHOLD_PX) return;
       if (gesture.timer !== null) window.clearTimeout(gesture.timer);
       if (gesture.pieceId !== null) this.beginDrag(gesture.pieceId, gesture, event);
-      else if (gesture.pointerType === "touch" && onPhone()) this.beginPan(gesture, event);
+      // A finger or a pen on empty table pans; only a mouse draws a selection box.
+      else if (gesture.pointerType !== "mouse") this.beginPan(gesture, event);
       else this.beginMarquee(gesture, event);
       return;
     }
@@ -450,11 +449,17 @@ export class InteractionController {
 
   private finishDrag(pieces: Dragged[], event: PointerEvent): void {
     const [x, y] = this.table.clientToWorld(event.clientX, event.clientY);
-    const overTray = this.table.overTray(event.clientX, event.clientY);
+    const overTray = this.table.overTray(event.clientX, event.clientY) && this.table.myHandZoneId() !== null;
     const hand = this.table.myHandZoneId();
     const live = pieces.filter((piece) => !piece.refused);
-    const onto = live.length === 1 ? this.stackTargetAt(live[0]!.id, event) : null;
-    const zoneUnder = this.table.zoneAtWorld(x, y);
+    const pointedAt = live.length === 1 ? this.stackTargetAt(live[0]!.id, event) : null;
+    // Over a pile, where the hand opened does not decide: how much of the
+    // piece lies over the pile does (below). So a pile, or a card in one,
+    // under the pointer counts as the table beneath it.
+    const pointedPile = pointedAt !== null && this.table.isPile(this.model.pieces.get(pointedAt)?.zone_id);
+    const onto = pointedPile ? null : pointedAt;
+    let zoneUnder = this.table.zoneAtWorld(x, y);
+    if (zoneUnder !== null && this.table.isPile(zoneUnder)) zoneUnder = this.table.zoneAtWorld(x, y, true);
 
     for (const piece of live) {
       const truth = this.model.pieces.get(piece.id);
@@ -463,13 +468,13 @@ export class InteractionController {
       let py = y - piece.offsetY;
       const refuse = { onReject: () => this.refuse(piece) };
 
-      // Let go partly over a pile, a piece goes into it or is put down clear
-      // of it, never left half under it.
+      // Let go partly over a pile, a piece goes into it (if more than half of
+      // it is over the pile) or is put down clear of it, never left under it.
       const landing =
         zoneUnder !== null && zoneUnder !== truth.zone_id
           ? zoneUnder
           : piece.fromTray ? null : truth.zone_id;
-      if (!(overTray && hand !== null) && onto === null && landing !== null &&
+      if (!overTray && onto === null && landing !== null &&
           this.model.zones.get(landing)?.layout === "free") {
         const piles = this.table.piles(landing);
         const [width, height] = this.table.pieceSizeOf(piece.id);
@@ -559,12 +564,11 @@ export class InteractionController {
     }
   }
 
-  // -- panning with one finger, on a phone ---------------------------------------------
+  // -- panning with one finger --------------------------------------------------------
 
   /**
-   * On a phone, a finger dragged across empty table moves the view rather
-   * than drawing a selection box: the table is mostly off screen there, and
-   * pieces are still chosen by tapping them.
+   * On a touch screen, a finger dragged across empty table moves the view
+   * rather than drawing a selection box. Pieces are chosen by tapping them.
    */
   private beginPan(press: Extract<Gesture, { kind: "press" }>, event: PointerEvent): void {
     this.root.setPointerCapture?.(press.pointerId);
@@ -1119,8 +1123,4 @@ function isTyping(element: HTMLElement): boolean {
 
 function capital(text: string): string {
   return text.length === 0 ? text : `${text[0]!.toUpperCase()}${text.slice(1)}`;
-}
-
-function onPhone(): boolean {
-  return window.matchMedia?.(PHONE_QUERY).matches ?? false;
 }

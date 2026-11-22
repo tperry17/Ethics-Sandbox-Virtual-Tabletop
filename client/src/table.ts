@@ -1186,8 +1186,17 @@ export class TableRenderer {
   }
 
   /** The topmost zone whose outline contains a world point, or null. */
-  zoneAtWorld(x: number, y: number): string | null {
-    const zones = [...this.model.zones.values()].sort(
+  /** Whether a zone is a pile: a deck or a discard pile. */
+  isPile(zoneId: string | null | undefined): boolean {
+    const kind = zoneId == null ? undefined : this.model.zones.get(zoneId)?.kind;
+    return kind === "deck" || kind === "discard";
+  }
+
+  /** The topmost zone at a point; with `skipPiles`, the topmost that is not a pile. */
+  zoneAtWorld(x: number, y: number, skipPiles = false): string | null {
+    const zones = [...this.model.zones.values()].filter(
+      (zone) => !skipPiles || !this.isPile(zone.id),
+    ).sort(
       (a, b) => (this.model.zoneOrder.get(b.id) ?? 0) - (this.model.zoneOrder.get(a.id) ?? 0),
     );
     for (const zone of zones) {
@@ -1214,7 +1223,7 @@ export class TableRenderer {
   piles(except: string | null): Array<{ id: string; bounds: Bounds }> {
     const piles: Array<{ id: string; bounds: Bounds }> = [];
     for (const zone of this.model.zones.values()) {
-      if (zone.id === except || (zone.kind !== "deck" && zone.kind !== "discard")) continue;
+      if (zone.id === except || !this.isPile(zone.id)) continue;
       piles.push({ id: zone.id, bounds: geometryBounds(zone.geometry) });
     }
     return piles;
