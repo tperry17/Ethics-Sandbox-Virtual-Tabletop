@@ -72,8 +72,9 @@ const PILE_GAP = 12;
 
 /**
  * Where a piece let go at (`x`, `y`) should land so that it is not left
- * half under a pile: `{ join }` if its centre is on one it can go into,
- * otherwise a spot clear of every pile it overlapped, as near as possible.
+ * half under a pile: `{ join }` if more than half of it lies over a pile it
+ * can go into (the one it overlaps most), otherwise a spot clear of every
+ * pile it overlapped, as near as possible.
  *
  * This reads where the hand let go, as finding the zone under the pointer
  * does; whether the piece may go there is still the server's to say.
@@ -87,8 +88,10 @@ export function landingBesidePiles(
   canJoin: boolean,
 ): { join: number } | { x: number; y: number } {
   if (canJoin) {
-    const under = piles.findIndex((pile) => boundsContain(pile, x, y));
-    if (under !== -1) return { join: under };
+    const box = { minX: x - width / 2, minY: y - height / 2, maxX: x + width / 2, maxY: y + height / 2 };
+    const overlaps = piles.map((pile) => overlapArea(box, pile));
+    const most = Math.max(0, ...overlaps);
+    if (most > (width * height) / 2) return { join: overlaps.indexOf(most) };
   }
   // Moving clear of one pile can land on another; a few rounds settle it.
   for (let round = 0; round < 4; round++) {
@@ -106,6 +109,40 @@ export function landingBesidePiles(
     [x, y] = choices.reduce((best, next) =>
       Math.hypot(next[0] - x, next[1] - y) < Math.hypot(best[0] - x, best[1] - y) ? next : best,
     );
+  }
+  return { x, y };
+}
+
+function overlapArea(a: Bounds, b: Bounds): number {
+  const width = Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX);
+  const height = Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY);
+  return width > 0 && height > 0 ? width * height : 0;
+}
+
+/**
+ * Where an arrow-key step to (`x`, `y`), travelling by (`dx`, `dy`), should
+ * put a piece so that it is never left over a pile: just past any pile it
+ * would overlap, on the far side in the direction it is going. A piece
+ * stepped off a pile lands beside it the same way.
+ */
+export function stepPastPiles(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  piles: Bounds[],
+  dx: number,
+  dy: number,
+): { x: number; y: number } {
+  for (let round = 0; round < 8; round++) {
+    const box = { minX: x - width / 2, minY: y - height / 2, maxX: x + width / 2, maxY: y + height / 2 };
+    const pile = piles.find((p) => overlapArea(box, p) > 0);
+    if (pile === undefined) break;
+    if (dx > 0) x = pile.maxX + PILE_GAP + width / 2;
+    else if (dx < 0) x = pile.minX - PILE_GAP - width / 2;
+    else if (dy > 0) y = pile.maxY + PILE_GAP + height / 2;
+    else if (dy < 0) y = pile.minY - PILE_GAP - height / 2;
+    else break;
   }
   return { x, y };
 }

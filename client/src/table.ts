@@ -14,7 +14,7 @@
  * the piece is seen to go back.
  */
 
-import { renderActivities, renderTrades } from "./activities.js";
+import { activityInProgress, renderActivities, renderTrades } from "./activities.js";
 import { clock, renderClasses } from "./classes.js";
 import { Announcer } from "./announcer.js";
 import { InkLayer } from "./ink.js";
@@ -578,12 +578,13 @@ export class TableRenderer {
     if (id === this.dropTargetZone) classes.push("is-drop-target");
     const className = classes.join(" ");
     if (node.className !== className) node.className = className;
-    // Your own private hand is drawn in the tray docked below the table.
-    const docked = this.isInMyHand(id);
+    // Your own private hand is drawn in the tray docked below the table;
+    // anyone else's is not drawn at all.
+    const docked = this.isInMyHand(id) || this.isOthersHand(id);
     if (node.hidden !== docked) node.hidden = docked;
 
     const label = node.firstElementChild;
-    let text = this.zoneLabel(zone.label, zone.owner_seat);
+    let text = this.zoneLabel(zone);
     // A deck says how many cards it holds ("Core deck · 18"): the count of
     // backs the server sent, never anything about their faces.
     if (zone.kind === "deck") text = `${text} · ${this.piecesIn(id)}`;
@@ -606,12 +607,33 @@ export class TableRenderer {
     }
   }
 
-  private zoneLabel(label: string, ownerSeat: string | null): string {
+  /**
+   * A zone's name as this viewer reads it. A hand is named for whoever holds
+   * it, by the name they joined with ("Ada's hand"), not for their seat.
+   */
+  private zoneLabel(zone: ZoneView): string {
+    const { label, owner_seat: ownerSeat } = zone;
     if (ownerSeat === null) return label;
     const seat = this.model.seats.get(ownerSeat);
     const name = seat?.display_name ?? seat?.label ?? null;
     if (name === null) return label;
+    if (zone.kind === "hand") return ownerSeat === this.model.seatId ? "your hand" : `${name}'s hand`;
     return ownerSeat === this.model.seatId ? `${label} · you` : `${label} · ${name}`;
+  }
+
+  /**
+   * Someone else's private hand: not drawn on the table, nor the backs of
+   * the cards in it. An open hand stays on the table, to be read in place.
+   */
+  private isOthersHand(zoneId: string): boolean {
+    const zone = this.model.zones.get(zoneId);
+    return (
+      zone !== undefined &&
+      zone.kind === "hand" &&
+      zone.visibility === "private_to_owner" &&
+      zone.owner_seat !== null &&
+      zone.owner_seat !== this.model.seatId
+    );
   }
 
   // -- pieces ---------------------------------------------------------------------
@@ -670,11 +692,15 @@ export class TableRenderer {
     node.setZ(this.model.stackingOrder(piece.zone_id, piece.z));
     node.setFace(shown, component, this.model.zones.get(piece.zone_id)?.label ?? "");
     this.syncHolder(id);
+    // Kept current in the tray too, where setTarget (which also sets it) is not called.
+    if (node.element.dataset.zoneId !== piece.zone_id) node.element.dataset.zoneId = piece.zone_id;
 
     if (home === "tray") {
       this.trayDirty = true;
       return;
     }
+    const elsewhere = this.isOthersHand(piece.zone_id) && !pinned;
+    if (node.element.hidden !== elsewhere) node.element.hidden = elsewhere;
 
     if (pinned) {
       // The piece under this person's own hand goes exactly where the hand
@@ -974,7 +1000,10 @@ export class TableRenderer {
       (payload) => this.intents.send("activity", payload),
       () => this.renderToolbar(),
     );
-    if (classes !== null) toolbar.append(panelSection("Run a class", classes, "room-panel__class"));
+    // While an activity is going the panel is that activity's; a class can
+    // be started again once it is finished.
+    const showClasses = classes !== null && (this.model.classes.length > 0 || !activityInProgress(this.model));
+    if (showClasses) toolbar.append(panelSection("Run a class", classes, "room-panel__class"));
     this.renderButtonsMenu(this.placeActivityButtons(toolbar));
     this.markActivitiesButton();
     const trades = renderTrades(this.model, () => this.selection, (opType, payload) =>
@@ -1202,8 +1231,35 @@ export class TableRenderer {
   }
 
   /** The topmost zone whose outline contains a world point, or null. */
-  zoneAtWorld(x: number, y: number): string | null {
-    const zones = [...this.model.zones.values()].sort(
+  /**
+   * The table a piece let go over no zone lands on. The table has no edge:
+   * its zone is not drawn, and anywhere outside every other zone is on it.
+   * A piece already in an activity's zones goes to that activity's table
+   * (zones of one activity share the id prefix before ":"), anything else to
+   * the room's.
+   */
+  tableFor(pieceZoneId: string | null): string | null {
+    const prefix = pieceZoneId?.includes(":") ? pieceZoneId.slice(0, pieceZoneId.indexOf(":") + 1) : "";
+    let room: string | null = null;
+    for (const zone of this.model.zones.values()) {
+      if (zone.kind !== "table") continue;
+      if (prefix !== "" && zone.id.startsWith(prefix)) return zone.id;
+      if (room === null && !zone.id.includes(":")) room = zone.id;
+    }
+    return room;
+  }
+
+  /** Whether a zone is a pile: a deck or a discard pile. */
+  isPile(zoneId: string | null | undefined): boolean {
+    const kind = zoneId == null ? undefined : this.model.zones.get(zoneId)?.kind;
+    return kind === "deck" || kind === "discard";
+  }
+
+  /** The topmost zone at a point; with `skipPiles`, the topmost that is not a pile. */
+  zoneAtWorld(x: number, y: number, skipPiles = false): string | null {
+    const zones = [...this.model.zones.values()].filter(
+      (zone) => !skipPiles || !this.isPile(zone.id),
+    ).sort(
       (a, b) => (this.model.zoneOrder.get(b.id) ?? 0) - (this.model.zoneOrder.get(a.id) ?? 0),
     );
     for (const zone of zones) {
@@ -1230,7 +1286,7 @@ export class TableRenderer {
   piles(except: string | null): Array<{ id: string; bounds: Bounds }> {
     const piles: Array<{ id: string; bounds: Bounds }> = [];
     for (const zone of this.model.zones.values()) {
-      if (zone.id === except || (zone.kind !== "deck" && zone.kind !== "discard")) continue;
+      if (zone.id === except || !this.isPile(zone.id)) continue;
       piles.push({ id: zone.id, bounds: geometryBounds(zone.geometry) });
     }
     return piles;
@@ -1273,7 +1329,7 @@ export class TableRenderer {
   zoneLabelOf(zoneId: string): string {
     const zone = this.model.zones.get(zoneId);
     if (zone === undefined) return "the table";
-    return this.zoneLabel(zone.label, zone.owner_seat);
+    return this.zoneLabel(zone);
   }
 
   nameOf(seatId: string): string {
@@ -1387,12 +1443,16 @@ export class TableRenderer {
 
   private tableBounds(): Bounds | null {
     const boxes: Bounds[] = [];
+    // The table has no edge: what is fitted is what is on it - every other
+    // zone and every piece - and the table zone's own area only when there
+    // is nothing else. The fit never zooms past 100% (FIT_MAX_SCALE).
+    const tables: Bounds[] = [];
     for (const zone of this.model.zones.values()) {
-      if (this.isInMyHand(zone.id)) continue;
-      boxes.push(geometryBounds(zone.geometry));
+      if (this.isInMyHand(zone.id) || this.isOthersHand(zone.id)) continue;
+      (zone.kind === "table" ? tables : boxes).push(geometryBounds(zone.geometry));
     }
     for (const piece of this.model.pieces.values()) {
-      if (this.isInMyHand(piece.zone_id)) continue;
+      if (this.isInMyHand(piece.zone_id) || this.isOthersHand(piece.zone_id)) continue;
       const component =
         piece.component_id === null
           ? undefined
@@ -1405,7 +1465,7 @@ export class TableRenderer {
         maxY: piece.y + height / 2,
       });
     }
-    return unionBounds(boxes);
+    return unionBounds(boxes.length > 0 ? boxes : tables);
   }
 
   private observeSize(): void {

@@ -2,8 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { openFromLanding, openControls } from "./rooms";
 
 /**
- * A card let go partly over a pile goes into it, if its middle is on the
- * pile, or is put down clear of it: never left half under it.
+ * A card let go partly over a pile goes into it, if more than half of the
+ * card is over the pile, or is put down clear of it: never left under it.
  */
 
 interface Box {
@@ -55,13 +55,13 @@ async function drag(page: Page, from: [number, number], to: [number, number]): P
 
 test.use({ viewport: { width: 1440, height: 900 } });
 
-test("a card let go with its middle on a pile goes into the pile", async ({ page }) => {
+test("a card let go mostly over a pile goes into the pile", async ({ page }) => {
   await valueCardsRoom(page);
   const id = await topOfDeck(page);
   const card = await box(page, `[data-piece-id="${id}"]`);
   const sidebar = await box(page, '.tabletop__zones [data-zone-id="sidebar"]');
   // Held by its bottom edge and let go just below the Sidebar: the hand is
-  // on the open table, but the card's middle is on the pile.
+  // on the open table, but almost all of the card is over the pile.
   const grabY = card.y + card.height - 4;
   const toY = sidebar.y + sidebar.height + 6;
   await drag(page, [card.x + card.width / 2, grabY], [sidebar.x + sidebar.width / 2, toY]);
@@ -92,5 +92,122 @@ test("a card let go partly over a pile is put down clear of it", async ({ page }
   expect(settled.y).toBeGreaterThanOrEqual(sidebar.y + sidebar.height - 1);
   // ...and near it, not thrown across the table.
   expect(settled.y - (sidebar.y + sidebar.height)).toBeLessThan(card.height * 0.5);
+  expect(await page.locator(".toast").count()).toBe(0);
+});
+
+test("a card let go with the hand over a pile but most of the card off it is put clear", async ({
+  page,
+}) => {
+  await valueCardsRoom(page);
+  const id = await topOfDeck(page);
+  const card = await box(page, `[data-piece-id="${id}"]`);
+  const sidebar = await box(page, '.tabletop__zones [data-zone-id="sidebar"]');
+  // Held by its top edge and let go with the hand just inside the bottom of
+  // the Sidebar: the pointer is on the pile, but nearly all of the card is below it.
+  const toX = sidebar.x + sidebar.width / 2;
+  const toY = sidebar.y + sidebar.height - 10;
+  await drag(page, [card.x + card.width / 2, card.y + 4], [toX, toY]);
+  await expect(page.locator('.tabletop__zones [data-zone-id="deck"] .zone__label')).toContainText("17");
+  await expect(page.locator('.tabletop__zones [data-zone-id="sidebar"] .zone__label')).toContainText(
+    "18",
+  );
+  await page.waitForTimeout(500);
+  const settled = await box(page, `[data-piece-id="${id}"]`);
+  expect(settled.y).toBeGreaterThanOrEqual(sidebar.y + sidebar.height - 1);
+  expect(await page.locator(".toast").count()).toBe(0);
+});
+
+test("the pile lights up only when letting go would put the card into it", async ({ page }) => {
+  await valueCardsRoom(page);
+  const id = await topOfDeck(page);
+  const card = await box(page, `[data-piece-id="${id}"]`);
+  const sidebar = await box(page, '.tabletop__zones [data-zone-id="sidebar"]');
+  const lit = page.locator('.tabletop__zones [data-zone-id="sidebar"].is-drop-target');
+  const from: [number, number] = [card.x + card.width / 2, card.y + 4];
+  await page.mouse.move(...from);
+  await page.mouse.down();
+  // The pointer just inside the bottom of the pile, the card mostly below it: not lit.
+  const toX = sidebar.x + sidebar.width / 2;
+  for (let step = 1; step <= 10; step++) {
+    await page.mouse.move(
+      from[0] + ((toX - from[0]) * step) / 10,
+      from[1] + ((sidebar.y + sidebar.height - 10 - from[1]) * step) / 10,
+    );
+  }
+  await expect(lit).toHaveCount(0);
+  // Higher, so most of the card is over the pile: lit, and letting go joins.
+  await page.mouse.move(toX, sidebar.y + 10, { steps: 6 });
+  await expect(lit).toHaveCount(1);
+  await page.mouse.up();
+  await expect(page.locator('.tabletop__zones [data-zone-id="sidebar"] .zone__label')).toContainText(
+    "19",
+  );
+});
+
+test("arrow keys never leave a card over a pile: it steps off and past", async ({ page }) => {
+  await valueCardsRoom(page);
+  const id = await topOfDeck(page);
+  const deck = await box(page, '.tabletop__zones [data-zone-id="deck"]');
+  const sidebar = await box(page, '.tabletop__zones [data-zone-id="sidebar"]');
+  await page.locator(`[data-piece-id="${id}"]`).focus();
+  // One step right takes the top card off the core deck, to just beside it.
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator('.tabletop__zones [data-zone-id="deck"] .zone__label')).toContainText(
+    "17",
+  );
+  const overlaps = (a: Box, b: Box): boolean =>
+    a.x < b.x + b.width - 1 && a.x + a.width > b.x + 1 && a.y < b.y + b.height - 1 && a.y + a.height > b.y + 1;
+  await page.waitForTimeout(400);
+  let now = await box(page, `[data-piece-id="${id}"]`);
+  expect(overlaps(now, deck)).toBe(false);
+  // Stepping on to the right, it hops over the Sidebar rather than resting on it.
+  for (let press = 0; press < 12; press++) {
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(60);
+    now = await box(page, `[data-piece-id="${id}"]`);
+    expect(overlaps(now, sidebar)).toBe(false);
+  }
+  await page.waitForTimeout(400);
+  now = await box(page, `[data-piece-id="${id}"]`);
+  expect(overlaps(now, sidebar)).toBe(false);
+  expect(now.x).toBeGreaterThan(sidebar.x + sidebar.width);
+  await expect(page.locator('.tabletop__zones [data-zone-id="sidebar"] .zone__label')).toContainText(
+    "18",
+  );
+  expect(await page.locator(".toast").count()).toBe(0);
+});
+
+test("the table has no edge: no outline, and a card let go beyond it lands on the table", async ({
+  page,
+}) => {
+  await valueCardsRoom(page);
+  const tableZone = page.locator('.tabletop__zones [data-zone-id="table"]');
+  await expect(tableZone.locator(".zone__label")).toBeHidden();
+  expect(await tableZone.evaluate((node) => getComputedStyle(node).borderTopColor)).toBe(
+    "rgba(0, 0, 0, 0)",
+  );
+  // Step back until there is room beside where the table zone's outline was.
+  for (let step = 0; step < 8; step++) await page.getByRole("button", { name: "Zoom out" }).click();
+  await page.waitForTimeout(300);
+  const id = await topOfDeck(page);
+  const card = await box(page, `[data-piece-id="${id}"]`);
+  const edge = await box(page, '.tabletop__zones [data-zone-id="table"]');
+  const viewport = await box(page, ".tabletop__viewport");
+  // A spot just outside where the outline was, on whichever side is on screen
+  // (clear of the controls along the top and the hand tray along the bottom).
+  const middleY = edge.y + edge.height / 3;
+  const candidates: Array<[number, number]> = [
+    [edge.x - 60, middleY],
+    [edge.x + edge.width + 60, middleY],
+  ];
+  const to = candidates.find(
+    ([x]) => x > viewport.x + 20 && x < viewport.x + viewport.width - 20,
+  );
+  expect(to).toBeDefined();
+  await drag(page, [card.x + card.width / 2, card.y + card.height / 2], to!);
+  await expect(page.locator('.tabletop__zones [data-zone-id="deck"] .zone__label')).toContainText(
+    "17",
+  );
+  await expect(page.locator(`[data-piece-id="${id}"]`)).toHaveAttribute("data-zone-id", "table");
   expect(await page.locator(".toast").count()).toBe(0);
 });

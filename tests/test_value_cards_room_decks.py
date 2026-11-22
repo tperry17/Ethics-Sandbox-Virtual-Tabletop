@@ -88,12 +88,14 @@ def test_anyone_can_add_a_further_deck_as_a_pile_of_its_own() -> None:
     assert len(table.pieces_in_zone("deck")) == 18
 
 
-def test_an_added_deck_stays_on_the_table() -> None:
+def test_an_added_deck_is_centred_where_it_was_put_down() -> None:
+    # The table has no edge: a pile put down beyond the table zone's outline
+    # stays there rather than being pulled back inside it.
     table = seated(ROOM, 1)
 
     zone_id = _add(table, "core-deck", "seat-1", x=-500, y=5000)
 
-    assert table.zones[zone_id].geometry == Rect(x=0, y=580, width=240, height=320)
+    assert table.zones[zone_id].geometry == Rect(x=-620, y=4840, width=240, height=320)
     assert _groups(table, zone_id) == ["Deck"] * 18
 
 
@@ -181,7 +183,8 @@ def test_collect_leaves_a_running_activitys_cards_alone() -> None:
     assert isinstance(run_op(table, "seat-1", started), Ok)
     zones = table.activities[activity_id].zones
     before = {zone: len(table.pieces_in_zone(zone)) for zone in zones}
-    assert sum(before.values()) == 18
+    # The activity's own deck and sidebar, 18 each.
+    assert sum(before.values()) == 36
 
     assert isinstance(press(ROOM, table, "collect", "seat-2"), Ok)
 
