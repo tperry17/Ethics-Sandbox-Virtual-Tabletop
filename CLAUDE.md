@@ -207,11 +207,11 @@ player who is not the facilitator, in seat order, so each sees only their
 own. A deck on the room's table deals to the room's hands; a deck in an
 activity deals to that activity's private hands, or, if it has none, to
 its players' hands in the room. Every room type has a private, per-seat
-hand (validation checks it). Value Cards Trading plays with the 18 cards
-of the base deck (`group` "Deck"), as many each as go round (6 each for three
-players, 4 for four, 3 for five or six; the deal step's `count:
-as_many_as_go_round`), laid out in the open on the board (`seat_area`
-zones), not in a hand; the Value Cards room's sandbox keeps all 36, as the core deck and the sidebar. Faces a patch newly entitles
+hand (validation checks it). Value Cards Trading deals 6 cards to each
+player: three play with the 18 cards of the base deck (`group` "Deck"), and
+with four to six the deal first moves the activity's sidebar (`group`
+"Sidebar") into the deck (`deal_six_each` in its `rules.py`). The cards are
+laid out in the open on the board (`seat_area` zones), not in a hand; the Value Cards room's sandbox keeps all 36, as the core deck and the sidebar. Faces a patch newly entitles
 a viewer to travel with that patch as `components`, to that viewer only.
 
 Reveals are read from state (`revealed_to`, `revealed_by`), not from
