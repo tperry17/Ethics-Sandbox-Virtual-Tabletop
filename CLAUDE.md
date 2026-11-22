@@ -163,9 +163,11 @@ takes the same share of every card, so a deck shows its pictures at one size.
 `/table-preview` replays the recorded session with no room behind it, and
 `?pieces=300&measure=1` is the frame-rate harness.
 
-"Fit table" (and the first view of a table nobody has moved) zooms the
-table to fill the window's width, 16px (`FIT_PADDING`) from each side, so no
-felt is wasted beside it. Up and down it is centred in the room below the
+"Fit table" (and the first view of a table nobody has moved) fits what is on
+the table - every zone but the table's own and your hand, every piece -
+to the window's width, 16px (`FIT_PADDING`) from each side, but never
+zooms past 100% (`FIT_MAX_SCALE`); narrower than that, it is centred across.
+With nothing on the table, the table zone's area is fitted instead. Up and down it is centred in the room below the
 row of table controls (`FIT_TOP`, 64px) where it fits; where it is taller,
 its top edge is put just below the controls and the rest is a pan away.
 
@@ -192,8 +194,7 @@ follow it too.
 The table has no edge. A zone of kind `table` is not drawn (no outline,
 no label), and a piece let go outside every other zone lands on it: its
 activity's table if it came from an activity's zones, otherwise the
-room's (`tableFor` in `table.ts`). The table zone's area still sets the
-first view and "Fit table". Pieces and piles added from the Pieces menu are
+room's (`tableFor` in `table.ts`). Pieces and piles added from the Pieces menu are
 put where they were put down, not pulled inside the zone's outline.
 
 The client never decides legality. Where a piece was let go - over a zone,

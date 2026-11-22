@@ -187,15 +187,24 @@ test("the table has no edge: no outline, and a card let go beyond it lands on th
     "rgba(0, 0, 0, 0)",
   );
   // Step back until there is room beside where the table zone's outline was.
-  for (let step = 0; step < 4; step++) await page.getByRole("button", { name: "Zoom out" }).click();
+  for (let step = 0; step < 8; step++) await page.getByRole("button", { name: "Zoom out" }).click();
   await page.waitForTimeout(300);
   const id = await topOfDeck(page);
   const card = await box(page, `[data-piece-id="${id}"]`);
   const edge = await box(page, '.tabletop__zones [data-zone-id="table"]');
   const viewport = await box(page, ".tabletop__viewport");
-  const to: [number, number] = [edge.x + edge.width + 60, edge.y + edge.height / 3];
-  expect(to[0]).toBeLessThan(viewport.x + viewport.width - 20);
-  await drag(page, [card.x + card.width / 2, card.y + card.height / 2], to);
+  // A spot just outside where the outline was, on whichever side is on screen
+  // (clear of the controls along the top and the hand tray along the bottom).
+  const middleY = edge.y + edge.height / 3;
+  const candidates: Array<[number, number]> = [
+    [edge.x - 60, middleY],
+    [edge.x + edge.width + 60, middleY],
+  ];
+  const to = candidates.find(
+    ([x]) => x > viewport.x + 20 && x < viewport.x + viewport.width - 20,
+  );
+  expect(to).toBeDefined();
+  await drag(page, [card.x + card.width / 2, card.y + card.height / 2], to!);
   await expect(page.locator('.tabletop__zones [data-zone-id="deck"] .zone__label')).toContainText(
     "17",
   );

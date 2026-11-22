@@ -10,6 +10,9 @@ import {
   type Bounds,
   type Size,
   type Viewport,
+  FIT_MAX_SCALE,
+  FIT_PADDING,
+  FIT_TOP,
   clampPan,
   fitBounds,
   identityViewport,
@@ -162,7 +165,7 @@ export class ViewportController {
     const bounds = this.options.bounds();
     if (bounds === null) return;
     if (byPerson) this.touchedByPerson = true;
-    this.set(fitBounds(bounds, this.options.size()));
+    this.set(fitBounds(bounds, this.options.size(), FIT_PADDING, FIT_TOP, FIT_MAX_SCALE));
   }
 
   zoomBy(factor: number): void {

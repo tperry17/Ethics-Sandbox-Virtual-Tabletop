@@ -1398,12 +1398,13 @@ export class TableRenderer {
 
   private tableBounds(): Bounds | null {
     const boxes: Bounds[] = [];
-    // The table zone is not drawn, but its area still sets the first view and
-    // "Fit table", so the table opens at a sensible size rather than zoomed
-    // in on its piles.
+    // The table has no edge: what is fitted is what is on it - every other
+    // zone and every piece - and the table zone's own area only when there
+    // is nothing else. The fit never zooms past 100% (FIT_MAX_SCALE).
+    const tables: Bounds[] = [];
     for (const zone of this.model.zones.values()) {
       if (this.isInMyHand(zone.id)) continue;
-      boxes.push(geometryBounds(zone.geometry));
+      (zone.kind === "table" ? tables : boxes).push(geometryBounds(zone.geometry));
     }
     for (const piece of this.model.pieces.values()) {
       if (this.isInMyHand(piece.zone_id)) continue;
@@ -1419,7 +1420,7 @@ export class TableRenderer {
         maxY: piece.y + height / 2,
       });
     }
-    return unionBounds(boxes);
+    return unionBounds(boxes.length > 0 ? boxes : tables);
   }
 
   private observeSize(): void {
