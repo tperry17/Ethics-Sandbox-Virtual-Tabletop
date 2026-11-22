@@ -369,6 +369,9 @@ async function startTrading(browser: Browser, touch: boolean) {
   await ines.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await tomas.getByRole("button", { name: "Join" }).click();
   await wren.getByRole("button", { name: "Join" }).click();
+  // Value Cards Trading takes three to six: with three signed up, it is begun by hand.
+  await expect(ines.getByText(/Value Cards Trading: signing up, 3 of 3–6/)).toBeVisible();
+  await ines.getByRole("button", { name: "Begin now" }).click();
   await ines.getByRole("button", { name: "Deal 6 each" }).click();
   return { ines, tomas, wren };
 }

@@ -19,6 +19,7 @@ from sandbox.model import (
     Ok,
     OpenActivity,
     Record,
+    Rect,
     Reject,
     Table,
     TableRng,
@@ -30,18 +31,18 @@ GAME = GAMES["value-cards-trading"]
 PLAYERS = ("seat-1", "seat-2", "seat-3")
 
 
-def _room() -> Table:
-    """An open room with four people in it; the first three will play."""
+def _room(people: int = 4) -> Table:
+    """An open room with ``people`` in it; by default, the first three play."""
     table = Table(rng=TableRng(seed=3))
     seat_id, transaction = build_table(None, table, participant_id="p-1")
     assert isinstance(run_op(table, seat_id, transaction), Ok)
-    for person in range(2, 5):
+    for person in range(2, people + 1):
         seat_id, transaction = build_seat(None, table, participant_id=f"p-{person}")
         assert isinstance(run_op(table, seat_id, transaction), Ok)
     return table
 
 
-def _start(table: Table) -> str:
+def _start(table: Table, players: tuple[str, ...] = PLAYERS) -> str:
     meta = GAME.definition.meta
     opened = OpenActivity(
         kind=meta.slug,
@@ -49,13 +50,13 @@ def _start(table: Table) -> str:
         min_players=meta.players.min,
         max_players=meta.players.max,
     )
-    assert isinstance(run_op(table, PLAYERS[0], opened), Ok)
+    assert isinstance(run_op(table, players[0], opened), Ok)
     activity_id = next(reversed(table.activities))
-    for seat in PLAYERS[1:]:
+    for seat in players[1:]:
         assert isinstance(run_op(table, seat, JoinActivity(activity_id)), Ok)
-    built = build_activity_start(GAME, table, PLAYERS[0], activity_id)
+    built = build_activity_start(GAME, table, players[0], activity_id)
     assert isinstance(built, Transaction), built
-    assert isinstance(run_op(table, PLAYERS[0], built), Ok)
+    assert isinstance(run_op(table, players[0], built), Ok)
     return activity_id
 
 
@@ -78,9 +79,9 @@ def _hand(table: Table, activity_id: str, seat: str) -> list[str]:
     return [p.id for p in table.pieces_in_zone(zone)]
 
 
-def test_it_takes_exactly_three_and_starts_when_the_third_signs_up() -> None:
+def test_it_takes_three_to_six_players() -> None:
     meta = GAME.definition.meta
-    assert meta.players.min == meta.players.max == 3
+    assert (meta.players.min, meta.players.max) == (3, 6)
     table = _room()
     activity_id = _start(table)
     assert table.activities[activity_id].seats == PLAYERS
@@ -98,6 +99,64 @@ def test_deal_gives_six_open_cards_of_the_base_deck_to_each_of_three() -> None:
         # The trio plays with the base deck; the sidebar cards stay out.
         assert {groups[card.component_id] for card in hand} == {"Deck"}
     assert not table.pieces_in_zone(f"{activity_id}:deck")
+
+
+def test_with_four_to_six_players_the_sidebar_is_dealt_too() -> None:
+    groups = {card.component_id: card.face.group for card in GAME.decks["values"]}
+    for players in (4, 5, 6):
+        table = _room(people=players)
+        seats = tuple(f"seat-{n}" for n in range(1, players + 1))
+        activity_id = _start(table, seats)
+        assert isinstance(_press(table, activity_id, "deal"), Ok)
+        dealt = [
+            card
+            for seat in seats
+            for card in table.pieces_in_zone(f"{activity_id}:hand-{seat}")
+        ]
+        for seat in seats:
+            assert len(_hand(table, activity_id, seat)) == 6
+        assert all(card.face_up for card in dealt)
+        assert {groups[card.component_id] for card in dealt} == {"Deck", "Sidebar"}
+        assert not table.pieces_in_zone(f"{activity_id}:sidebar")
+        left = table.pieces_in_zone(f"{activity_id}:deck")
+        assert len(left) == 36 - 6 * players
+
+
+def test_three_players_leave_the_sidebar_alone() -> None:
+    table, activity_id = _dealt()
+    assert len(table.pieces_in_zone(f"{activity_id}:sidebar")) == 18
+
+
+def test_collecting_puts_each_card_back_in_its_own_pile() -> None:
+    groups = {card.component_id: card.face.group for card in GAME.decks["values"]}
+    table = _room(people=5)
+    seats = tuple(f"seat-{n}" for n in range(1, 6))
+    activity_id = _start(table, seats)
+    assert isinstance(_press(table, activity_id, "deal"), Ok)
+    assert isinstance(_press(table, activity_id, "collect"), Ok)
+    deck = table.pieces_in_zone(f"{activity_id}:deck")
+    sidebar = table.pieces_in_zone(f"{activity_id}:sidebar")
+    assert {groups[card.component_id] for card in deck} == {"Deck"} and len(deck) == 18
+    assert {groups[c.component_id] for c in sidebar} == {"Sidebar"} and len(
+        sidebar
+    ) == 18
+
+
+def test_six_players_each_get_a_row_inside_the_table() -> None:
+    table = _room(people=6)
+    seats = tuple(f"seat-{n}" for n in range(1, 7))
+    activity_id = _start(table, seats)
+    board = table.zones[f"{activity_id}:table"].geometry
+    assert isinstance(board, Rect)
+    rows = [table.zones[f"{activity_id}:hand-{seat}"].geometry for seat in seats]
+    assert all(isinstance(row, Rect) for row in rows)
+    tops = {row.y for row in rows if isinstance(row, Rect)}
+    assert len(tops) == 6
+    assert all(
+        row.y + row.height <= board.y + board.height
+        for row in rows
+        if isinstance(row, Rect)
+    )
 
 
 def test_each_player_has_a_top_three_zone_of_three() -> None:

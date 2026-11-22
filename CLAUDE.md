@@ -23,7 +23,7 @@ Each room offers its own exercise's activities, and its own debrief:
 - Value Cards room: Value Cards Trading, and the Value Cards debrief.
 - Leadership and Knowledge in Popular Rule room: Scenario 1 (Construction project), Scenario 2 (Going to war?), and its debrief.
 
-An activity is a guided exercise started inside a room: someone presses "Start <activity>", a sign-up opens for the activity's players (the facilitator may choose them instead), and the activity lays out its own zones for those seats, right below the room's own piles (`ACTIVITY_GAP` below the lowest zone the room's setup lays out, other than its table and hands; a class's tables side by side, `ACTIVITY_SPACING` apart), and guides them through its steps. Everyone else keeps using the sandbox, and several activities, or several groups doing the same one, can run in a room at once. An activity's `players: {min, max}` is how many people it takes (three for Value Cards Trading), never the room's capacity.
+An activity is a guided exercise started inside a room: someone presses "Start <activity>", a sign-up opens for the activity's players (the facilitator may choose them instead), and the activity lays out its own zones for those seats, right below the room's own piles (`ACTIVITY_GAP` below the lowest zone the room's setup lays out, other than its table and hands; a class's tables side by side, `ACTIVITY_SPACING` apart), and guides them through its steps. Everyone else keeps using the sandbox, and several activities, or several groups doing the same one, can run in a room at once. An activity's `players: {min, max}` is how many people it takes (three to six for Value Cards Trading), never the room's capacity.
 
 A class is an activity run as several tables at once. Someone presses "Start a class" instead of "Start the <activity>", chooses how many tables, and becomes the facilitator of all of them, as a non-playing admin: they sit at none. The facilitator can sort the room's people into the tables at random (shown first, adjustable by hand, then confirmed), begin the tables, run one timer and push one prompt to every table at once, and, for a game that declares `pairing`, pair two tables so their decisions are read together. The facilitator can move anyone to another table at any time, begun or not (at a begun table their cards go back face down into the decks they came from, which are shuffled, their other zones go, and they get fresh ones at the new table), and a person who arrives after the sort takes the table with the most room. Players at a paired table propose their table's choice and the facilitator confirms it; they see only their own table's. The class is a `ClassGroup` in `sandbox/model/classes.py`; its tables are ordinary activities.
 
@@ -219,9 +219,11 @@ player who is not the facilitator, in seat order, so each sees only their
 own. A deck on the room's table deals to the room's hands; a deck in an
 activity deals to that activity's private hands, or, if it has none, to
 its players' hands in the room. Every room type has a private, per-seat
-hand (validation checks it). Value Cards Trading plays with the 18 cards
-of the base deck (`group` "Deck"), 6 each, laid out in the open on the board (`seat_area`
-zones), not in a hand; the Value Cards room's sandbox keeps all 36, as the core deck and the sidebar. Faces a patch newly entitles
+hand (validation checks it). Value Cards Trading deals 6 cards to each
+player: three play with the 18 cards of the base deck (`group` "Deck"), and
+with four to six the deal first moves the activity's sidebar (`group`
+"Sidebar") into the deck (`deal_six_each` in its `rules.py`). The cards are
+laid out in the open on the board (`seat_area` zones), not in a hand; the Value Cards room's sandbox keeps all 36, as the core deck and the sidebar. Faces a patch newly entitles
 a viewer to travel with that patch as `components`, to that viewer only.
 
 Reveals are read from state (`revealed_to`, `revealed_by`), not from
