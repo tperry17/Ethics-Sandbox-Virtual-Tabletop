@@ -651,7 +651,8 @@ test.describe("pointing and ink", () => {
     expect(point.payload["x"]).toBeCloseTo(700, 0);
     expect(point.payload["y"]).toBeCloseTo(250, 0);
 
-    const button = page.getByRole("button", { name: "Point" });
+    // Point is on the row of the table's controls, with the menus.
+    const button = page.locator(".tabletop__controls").getByRole("button", { name: "Point" });
     await button.click();
     await expect(button).toHaveAttribute("aria-pressed", "true");
     const other = await onScreen(page, 600, 300);
@@ -664,7 +665,15 @@ test.describe("pointing and ink", () => {
 
   test("the pen draws one stroke, and ink can be cleared", async ({ page }) => {
     await page.goto(PREVIEW);
+    // The pen and clearing ink are in the Draw menu, beside the Table buttons, closed at first.
+    const draw = page.locator(".tabletop__controls details.draw-menu");
+    await expect(draw).not.toHaveAttribute("open", "");
+    await expect(page.getByRole("button", { name: "Pen" })).toBeHidden();
+    await draw.locator("summary").click();
     await page.getByRole("button", { name: "Pen" }).click();
+    // Choosing the pen closes the menu, which says the pen is in hand.
+    await expect(page.getByRole("button", { name: "Pen" })).toBeHidden();
+    await expect(draw.locator("summary")).toHaveText("Draw: pen");
     await drag(page, await onScreen(page, 100, 250), await onScreen(page, 300, 300));
 
     const ink = (await intents(page)).filter((intent) => intent.op_type.startsWith("ink_"));
@@ -674,6 +683,7 @@ test.describe("pointing and ink", () => {
     expect(new Set(ink.map((intent) => intent.payload["stroke_id"])).size).toBe(1);
     expect(ink[0]!.payload["colour"]).toMatch(/\S/);
 
+    await draw.locator("summary").click();
     await page.getByRole("button", { name: "Clear my ink" }).click();
     expect((await intents(page)).at(-1)!.payload).toMatchObject({ everyone: false });
     // This viewer is the facilitator in the recording, so may clear everyone's.

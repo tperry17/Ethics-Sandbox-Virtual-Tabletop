@@ -91,6 +91,8 @@ export class InteractionController {
   /** The release that settles each keyboard-moved piece, so only the last one clears it. */
   private readonly keyboardSettle = new Map<string, string>();
   private toolButtons: { point: HTMLButtonElement; pen: HTMLButtonElement } | null = null;
+  /** The Draw menu's own button, marked while the pen is in hand. */
+  private drawSummary: HTMLElement | null = null;
   private clearAllButton: HTMLButtonElement | null = null;
   private facilitatorButton: HTMLButtonElement | null = null;
   /** The piece under a mouse pointer, which the single-key shortcuts act on first. */
@@ -145,15 +147,27 @@ export class InteractionController {
   // -- tools ---------------------------------------------------------------------------
 
   private buildTools(): void {
-    const group = document.createElement("div");
-    group.className = "tabletop__tools";
-    group.setAttribute("role", "group");
-    group.setAttribute("aria-label", "Pointing and ink");
-
+    // Point sits on the row of the table's controls; the pen and clearing
+    // ink are in a Draw menu beside the Table buttons, closed until opened.
     const point = toolButton("Point", "Point at a spot on the table. Alt-click also points.");
     point.addEventListener("click", () => this.setTool(this.tool === "point" ? "hand" : "point"));
+    this.table.pointArea.replaceChildren(point);
+
+    const draw = document.createElement("details");
+    draw.className = "draw-menu";
+    const summary = document.createElement("summary");
+    summary.className = "button button--secondary button--sm";
+    summary.textContent = "Draw";
+    const panel = document.createElement("div");
+    panel.className = "draw-menu__panel";
+    panel.setAttribute("role", "group");
+    panel.setAttribute("aria-label", "Drawing");
     const pen = toolButton("Pen", "Draw on the table in your colour.");
-    pen.addEventListener("click", () => this.setTool(this.tool === "pen" ? "hand" : "pen"));
+    pen.addEventListener("click", () => {
+      this.setTool(this.tool === "pen" ? "hand" : "pen");
+      // Out of the way of the table, which is what the pen is for.
+      draw.open = false;
+    });
     const clearMine = plainButton("Clear my ink", () => {
       this.table.intents.send("clear_ink", { everyone: false });
     });
@@ -161,18 +175,20 @@ export class InteractionController {
       this.table.intents.send("clear_ink", { everyone: true });
     });
     clearAll.hidden = true;
+    panel.append(pen, clearMine, clearAll);
+    draw.append(summary, panel);
+    this.table.drawArea.replaceChildren(draw);
+    this.drawSummary = summary;
+
     const facilitator = plainButton("Become facilitator", () => {
       const holding = this.model.you?.is_facilitator === true;
       this.table.intents.send(holding ? "release_facilitator" : "take_facilitator", {});
     });
     facilitator.hidden = true;
-
-    group.append(point, pen, clearMine, clearAll);
-    this.table.toolArea.prepend(group);
     // "Become facilitator" belongs with the room, in its top bar, if the page has one.
     const bar = document.getElementById("room-bar-actions");
     if (bar !== null) bar.append(facilitator);
-    else group.append(facilitator);
+    else this.table.toolArea.append(facilitator);
     this.toolButtons = { point, pen };
     this.clearAllButton = clearAll;
     this.facilitatorButton = facilitator;
@@ -199,6 +215,10 @@ export class InteractionController {
       this.toolButtons.point.setAttribute("aria-pressed", String(tool === "point"));
       this.toolButtons.pen.setAttribute("aria-pressed", String(tool === "pen"));
     }
+    if (this.drawSummary !== null) {
+      this.drawSummary.textContent = tool === "pen" ? "Draw: pen" : "Draw";
+      this.drawSummary.classList.toggle("is-active", tool === "pen");
+    }
     this.table.surfaceElement.dataset.tool = tool;
   }
 
@@ -216,7 +236,9 @@ export class InteractionController {
     this.hideHint();
     const target = event.target;
     if (!(target instanceof Element)) return;
-    if (target.closest("button, .table-menu, .reveals, .peek, input, a")) return;
+    // The table's own controls (its menus' summaries and panels included)
+    // are not the table: a press there never starts a drag, a stroke or a point.
+    if (target.closest("button, summary, .tabletop__controls, .table-menu, .reveals, .peek, input, a")) return;
     if (event.pointerType === "touch") {
       this.touches.add(event.pointerId);
       // A second finger means pan or pinch, which the camera owns.
