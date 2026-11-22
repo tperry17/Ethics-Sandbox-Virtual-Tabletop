@@ -71,7 +71,7 @@ from sandbox.model import (
     Visibility,
     new_op_id,
 )
-from sandbox.model.types import PieceKind
+from sandbox.model.types import PieceKind, ZoneKind
 
 SEAT_TINTS = 6
 
@@ -123,7 +123,8 @@ class Scope:
 
     Every zone an activity makes is named ``<activity id>:<definition id>``,
     its per-seat zones belong to the activity's players only, and its
-    rectangles are moved by ``origin`` so they sit clear of the sandbox.
+    rectangles are moved by ``origin``: right below the room's own piles,
+    and, for the tables of a class, side by side.
     """
 
     activity_id: str
@@ -137,16 +138,49 @@ class Scope:
 
 
 ACTIVITY_SPACING = 2600.0
+"""How far apart the tables of a class are laid out, side by side."""
+ACTIVITY_GAP = 80.0
+"""How far below the room's own piles an activity's area begins."""
+
+
+def _below_room_piles(table: Table) -> float:
+    """Where an activity's area begins, up and down: just below the room's piles.
+
+    The room's piles are the zones its own setup lays out, other than its
+    table and its hands: they never move, so an activity always lands in the
+    same place. Piles added from the Pieces menu, which can be put anywhere,
+    and every activity's own zones are left out.
+    """
+    bottoms = [
+        zone.geometry.y + zone.geometry.height
+        for zone in table.zones.values()
+        if ":" not in zone.id
+        and not zone.id.startswith(ADDED_DECK_PREFIX)
+        and zone.kind not in (ZoneKind.TABLE, ZoneKind.HAND)
+        and isinstance(zone.geometry, Rect)
+    ]
+    return max(bottoms) + ACTIVITY_GAP if bottoms else 0.0
 
 
 def scope_of(table: Table, activity_id: str) -> Scope:
-    """The scope of an activity in ``table``, placed by its serial number."""
+    """The scope of an activity in ``table``: right below the room's piles.
+
+    A class's tables sit side by side, each in the column its serial number
+    gives it within the class; a lone activity takes the first column.
+    """
     activity = table.activities[activity_id]
     serial = _seat_number(activity_id)[0]
+    column = 0
+    group = table.classes.get(activity.class_id)
+    if group is not None:
+        first = group.first_serial or min(
+            (_seat_number(t)[0] for t in group.tables), default=serial
+        )
+        column = max(serial - first, 0)
     return Scope(
         activity_id=activity_id,
         seats=activity.seats,
-        origin=(ACTIVITY_SPACING * serial, 0.0),
+        origin=(ACTIVITY_SPACING * column, _below_room_piles(table)),
         options=dict(activity.options),
     )
 
@@ -865,7 +899,8 @@ def build_add_piece(
     """One piece from the room's Pieces menu, put down at ``x``, ``y``.
 
     Only a room type has a Pieces menu, and only what it lists can be added.
-    The piece goes into the room's ``pieces_zone``, kept inside its edges.
+    The piece goes into the room's ``pieces_zone`` where it was put down:
+    the table has no edge, so it is not pulled back inside the zone's outline.
     The new piece's id is random, like every spawned piece's.
     """
     room = game.definition.room
@@ -882,7 +917,6 @@ def build_add_piece(
     zone = table.zones.get(room.pieces_zone)
     if zone is None or not isinstance(zone.geometry, Rect):
         return Reject("This room has nowhere to put new pieces.")
-    rect = zone.geometry
     piece_id = new_op_id()
     return Transaction(
         steps=(
@@ -892,11 +926,7 @@ def build_add_piece(
                 zone_id=zone.id,
                 piece_ids=(piece_id,),
             ),
-            Move(
-                piece_id=piece_id,
-                x=min(max(x, rect.x), rect.x + rect.width),
-                y=min(max(y, rect.y), rect.y + rect.height),
-            ),
+            Move(piece_id=piece_id, x=x, y=y),
         ),
         name=f"add:{spec.id}",
         label=f"Add {(spec.title or spec.kind.value).lower()}",
@@ -908,9 +938,9 @@ def build_add_deck(
 ) -> Transaction | Reject:
     """A further pile of cards from the room's Pieces menu, centred on ``x``, ``y``.
 
-    The pile is a zone of its own, made like the zone the room deck names
-    and kept inside the room's ``pieces_zone``, so it shuffles and deals as
-    any deck does. Its cards are spawned as ``spawn_deck`` would, shuffled
+    The pile is a zone of its own, made like the zone the room deck names,
+    centred where it was put down (the table has no edge), so it shuffles
+    and deals as any deck does. Its cards are spawned as ``spawn_deck`` would, shuffled
     when the pile is hidden. The room's reset takes the zone away again.
     """
     room = game.definition.room
@@ -925,10 +955,9 @@ def build_add_deck(
             f"The table already has {MAX_ADDED_DECKS} added decks; "
             "reset the table to clear them."
         )
-    area = bounds.geometry
     width, height = shape.rect[2], shape.rect[3]
-    left = min(max(x - width / 2, area.x), area.x + area.width - width)
-    top = min(max(y - height / 2, area.y), area.y + area.height - height)
+    left = x - width / 2
+    top = y - height / 2
     zone_id = ADDED_DECK_PREFIX + new_op_id()
     builder = _Builder(game, table, SYSTEM_SEAT)
     # "Sidebar 2", "Sidebar 3": the base pile is the first of its name.

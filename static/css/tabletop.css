@@ -387,11 +387,13 @@
 
 .zone--facilitator { border-style: dotted; }
 
-.zone--table {
-  border-color: var(--table-felt-edge);
-  border-style: solid;
-  background: var(--table-felt);
+/* The table has no edge: its zone is not drawn, and the felt runs on
+   under everything. Anything let go outside the other zones lands on it. */
+.tabletop__zones .zone--table {
+  border-color: var(--transparent);
+  background: var(--transparent);
 }
+.tabletop__zones .zone--table > .zone__label { display: none; }
 
 .piece--placed {
   position: absolute;

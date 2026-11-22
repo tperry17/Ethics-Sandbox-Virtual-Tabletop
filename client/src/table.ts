@@ -1186,8 +1186,35 @@ export class TableRenderer {
   }
 
   /** The topmost zone whose outline contains a world point, or null. */
-  zoneAtWorld(x: number, y: number): string | null {
-    const zones = [...this.model.zones.values()].sort(
+  /**
+   * The table a piece let go over no zone lands on. The table has no edge:
+   * its zone is not drawn, and anywhere outside every other zone is on it.
+   * A piece already in an activity's zones goes to that activity's table
+   * (zones of one activity share the id prefix before ":"), anything else to
+   * the room's.
+   */
+  tableFor(pieceZoneId: string | null): string | null {
+    const prefix = pieceZoneId?.includes(":") ? pieceZoneId.slice(0, pieceZoneId.indexOf(":") + 1) : "";
+    let room: string | null = null;
+    for (const zone of this.model.zones.values()) {
+      if (zone.kind !== "table") continue;
+      if (prefix !== "" && zone.id.startsWith(prefix)) return zone.id;
+      if (room === null && !zone.id.includes(":")) room = zone.id;
+    }
+    return room;
+  }
+
+  /** Whether a zone is a pile: a deck or a discard pile. */
+  isPile(zoneId: string | null | undefined): boolean {
+    const kind = zoneId == null ? undefined : this.model.zones.get(zoneId)?.kind;
+    return kind === "deck" || kind === "discard";
+  }
+
+  /** The topmost zone at a point; with `skipPiles`, the topmost that is not a pile. */
+  zoneAtWorld(x: number, y: number, skipPiles = false): string | null {
+    const zones = [...this.model.zones.values()].filter(
+      (zone) => !skipPiles || !this.isPile(zone.id),
+    ).sort(
       (a, b) => (this.model.zoneOrder.get(b.id) ?? 0) - (this.model.zoneOrder.get(a.id) ?? 0),
     );
     for (const zone of zones) {
@@ -1214,7 +1241,7 @@ export class TableRenderer {
   piles(except: string | null): Array<{ id: string; bounds: Bounds }> {
     const piles: Array<{ id: string; bounds: Bounds }> = [];
     for (const zone of this.model.zones.values()) {
-      if (zone.id === except || (zone.kind !== "deck" && zone.kind !== "discard")) continue;
+      if (zone.id === except || !this.isPile(zone.id)) continue;
       piles.push({ id: zone.id, bounds: geometryBounds(zone.geometry) });
     }
     return piles;
@@ -1371,9 +1398,13 @@ export class TableRenderer {
 
   private tableBounds(): Bounds | null {
     const boxes: Bounds[] = [];
+    // The table has no edge: what is fitted is what is on it - every other
+    // zone and every piece - and the table zone's own area only when there
+    // is nothing else. The fit never zooms past 100% (FIT_MAX_SCALE).
+    const tables: Bounds[] = [];
     for (const zone of this.model.zones.values()) {
       if (this.isInMyHand(zone.id)) continue;
-      boxes.push(geometryBounds(zone.geometry));
+      (zone.kind === "table" ? tables : boxes).push(geometryBounds(zone.geometry));
     }
     for (const piece of this.model.pieces.values()) {
       if (this.isInMyHand(piece.zone_id)) continue;
@@ -1389,7 +1420,7 @@ export class TableRenderer {
         maxY: piece.y + height / 2,
       });
     }
-    return unionBounds(boxes);
+    return unionBounds(boxes.length > 0 ? boxes : tables);
   }
 
   private observeSize(): void {

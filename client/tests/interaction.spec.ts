@@ -88,11 +88,12 @@ async function drag(
   page: Page,
   from: { x: number; y: number },
   to: { x: number; y: number },
+  button: "left" | "middle" = "left",
 ): Promise<void> {
   await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
+  await page.mouse.down({ button });
   await page.mouse.move(to.x, to.y, { steps: 8 });
-  await page.mouse.up();
+  await page.mouse.up({ button });
 }
 
 function piece(page: Page, id: string): Locator {
@@ -258,7 +259,8 @@ test.describe("selecting", () => {
   test("marquee-selects pieces, which then rotate and move together", async ({ page }) => {
     await page.goto(PREVIEW);
     await cameraSettled(page);
-    await drag(page, await onScreen(page, 120, 120), await onScreen(page, 300, 220));
+    // The middle button draws the selection box.
+    await drag(page, await onScreen(page, 120, 120), await onScreen(page, 300, 220), "middle");
 
     await expect(piece(page, "token-1")).toHaveClass(/is-selected/);
     await expect(piece(page, "cube-1")).toHaveClass(/is-selected/);
@@ -279,6 +281,27 @@ test.describe("selecting", () => {
         .map((intent) => intent.payload["piece_id"]),
     );
     expect(moved).toEqual(new Set(["token-1", "cube-1"]));
+  });
+
+  test("a left-drag on empty table pans the view and selects nothing", async ({ page }) => {
+    await page.goto(PREVIEW);
+    await cameraSettled(page);
+    const world = page.locator(".tabletop__world");
+    const before = await world.evaluate((node) => getComputedStyle(node).transform);
+    await drag(page, await onScreen(page, 120, 120), await onScreen(page, 300, 220));
+    await expect(page.locator(".tabletop__marquee")).toHaveCount(0);
+    await expect(page.locator(".is-selected")).toHaveCount(0);
+    expect(await world.evaluate((node) => getComputedStyle(node).transform)).not.toBe(before);
+  });
+
+  test("Shift with a left-drag draws a selection box, for a trackpad", async ({ page }) => {
+    await page.goto(PREVIEW);
+    await cameraSettled(page);
+    await page.keyboard.down("Shift");
+    await drag(page, await onScreen(page, 120, 120), await onScreen(page, 300, 220));
+    await page.keyboard.up("Shift");
+    await expect(piece(page, "token-1")).toHaveClass(/is-selected/);
+    await expect(piece(page, "cube-1")).toHaveClass(/is-selected/);
   });
 
   test("a click on empty table clears the selection", async ({ page }) => {

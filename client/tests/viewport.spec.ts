@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
+  FIT_MAX_SCALE,
   MAX_SCALE,
   MIN_SCALE,
   clampScale,
@@ -52,6 +53,19 @@ test.describe("viewport arithmetic", () => {
     const [, bottom] = worldToScreen(viewport, bounds.maxX, bounds.maxY);
     // Centred in the room left below the controls: 64 to 800 - 48.
     expect((top + bottom) / 2).toBeCloseTo((64 + 800 - 48) / 2, 3);
+  });
+
+  test("fitting what is on the table never zooms past 100%, and centres it across", () => {
+    // Two piles side by side: fitted to the width alone, they would fill a laptop.
+    const bounds = { minX: 40, minY: 40, maxX: 560, maxY: 360 };
+    const viewport = fitBounds(bounds, { width: 1440, height: 760 }, 16, 64, FIT_MAX_SCALE);
+    expect(viewport.scale).toBe(1);
+    const [left] = worldToScreen(viewport, bounds.minX, bounds.minY);
+    const [right] = worldToScreen(viewport, bounds.maxX, bounds.maxY);
+    expect((left + right) / 2).toBeCloseTo(1440 / 2, 3);
+    // On a phone the same piles are narrower than 100% allows, so they fill the width.
+    const phone = fitBounds(bounds, { width: 390, height: 600 }, 16, 64, FIT_MAX_SCALE);
+    expect(phone.scale).toBeCloseTo((390 - 32) / 520, 6);
   });
 
   test("puts a table too wide for the smallest zoom at its left edge, not cut in half", () => {

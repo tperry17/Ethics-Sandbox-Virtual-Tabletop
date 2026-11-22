@@ -163,9 +163,11 @@ takes the same share of every card, so a deck shows its pictures at one size.
 `/table-preview` replays the recorded session with no room behind it, and
 `?pieces=300&measure=1` is the frame-rate harness.
 
-"Fit table" (and the first view of a table nobody has moved) zooms the
-table to fill the window's width, 16px (`FIT_PADDING`) from each side, so no
-felt is wasted beside it. Up and down it is centred in the room below the
+"Fit table" (and the first view of a table nobody has moved) fits what is on
+the table - every zone but the table's own and your hand, every piece -
+to the window's width, 16px (`FIT_PADDING`) from each side, but never
+zooms past 100% (`FIT_MAX_SCALE`); narrower than that, it is centred across.
+With nothing on the table, the table zone's area is fitted instead. Up and down it is centred in the room below the
 row of table controls (`FIT_TOP`, 64px) where it fits; where it is taller,
 its top edge is put just below the controls and the rest is a pan away.
 
@@ -189,15 +191,25 @@ deck, or into a zone that hides every face, is left as it was. This is
 `MoveToZone` and `StackOnto` in `sandbox/model/ops.py`, so a macro's moves
 follow it too.
 
+The table has no edge. A zone of kind `table` is not drawn (no outline,
+no label), and a piece let go outside every other zone lands on it: its
+activity's table if it came from an activity's zones, otherwise the
+room's (`tableFor` in `table.ts`). Pieces and piles added from the Pieces menu are
+put where they were put down, not pulled inside the zone's outline.
+
 The client never decides legality. Where a piece was let go - over a zone,
 over another piece, over the hand tray - is input; it becomes
 `move_to_zone`, `stack_onto` or a plain `move`, and the server judges it.
 A piece let go partly over a pile (a zone of kind `deck` or `discard`) is
-never left half under it: a card or tile whose middle is on the pile goes
-into it; otherwise the piece is put down just clear of it, on the nearest
-side (`landingBesidePiles` in `client/src/geometry.ts`). Like the zone under
-the pointer, this reads where the hand let go; the server still judges the
-move.
+never left half under it: a card or tile more than half of which lies
+over the pile goes into it; otherwise the piece is put down just clear of
+it, on the nearest side (`landingBesidePiles` in `client/src/geometry.ts`).
+What is lit up while dragging is exactly what letting go will do (one
+`planDrop` in `interaction.ts` decides both). An arrow-key step that would
+overlap a pile goes just past it in the direction of travel, and a card
+stepped off a pile goes onto the table beneath (`stepPastPiles`). Like the
+zone under the pointer, this reads where the hand let go; the server still
+judges the move.
 The context menu is a `menu_request` answered by a `menu` message built by
 `sandbox/model/actions.py`, which offers every plausible operation and
 keeps those whose own `validate` accepts them. A card in a deck zone also
@@ -221,9 +233,11 @@ count), only they or the facilitator may put it away, and it is put away
 when they leave the table. Who is showing what to whom is public; the face
 is not.
 
-Touch: one finger drags a piece, and a long press opens its menu; two
-fingers pan and pinch. One finger on empty table draws a selection box,
-except on a phone (37.5rem wide or less), where it pans the view.
+Touch: one finger drags a piece, and a long press opens its menu; one
+finger on empty table pans the view, and two fingers pan and pinch; tap
+pieces to select them. Mouse: the main button drags a piece or, on empty
+table, pans; the middle button draws a selection box anywhere on the table,
+and so does Shift with the main button, for a trackpad.
 
 Keyboard: Tab reaches every piece; arrow keys move by a 20-unit step (Shift
 for five); X selects (Shift-X adds to the selection; on a touch
