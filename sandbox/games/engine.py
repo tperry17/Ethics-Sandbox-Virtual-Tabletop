@@ -865,7 +865,8 @@ def build_add_piece(
     """One piece from the room's Pieces menu, put down at ``x``, ``y``.
 
     Only a room type has a Pieces menu, and only what it lists can be added.
-    The piece goes into the room's ``pieces_zone``, kept inside its edges.
+    The piece goes into the room's ``pieces_zone`` where it was put down:
+    the table has no edge, so it is not pulled back inside the zone's outline.
     The new piece's id is random, like every spawned piece's.
     """
     room = game.definition.room
@@ -882,7 +883,6 @@ def build_add_piece(
     zone = table.zones.get(room.pieces_zone)
     if zone is None or not isinstance(zone.geometry, Rect):
         return Reject("This room has nowhere to put new pieces.")
-    rect = zone.geometry
     piece_id = new_op_id()
     return Transaction(
         steps=(
@@ -892,11 +892,7 @@ def build_add_piece(
                 zone_id=zone.id,
                 piece_ids=(piece_id,),
             ),
-            Move(
-                piece_id=piece_id,
-                x=min(max(x, rect.x), rect.x + rect.width),
-                y=min(max(y, rect.y), rect.y + rect.height),
-            ),
+            Move(piece_id=piece_id, x=x, y=y),
         ),
         name=f"add:{spec.id}",
         label=f"Add {(spec.title or spec.kind.value).lower()}",
@@ -908,9 +904,9 @@ def build_add_deck(
 ) -> Transaction | Reject:
     """A further pile of cards from the room's Pieces menu, centred on ``x``, ``y``.
 
-    The pile is a zone of its own, made like the zone the room deck names
-    and kept inside the room's ``pieces_zone``, so it shuffles and deals as
-    any deck does. Its cards are spawned as ``spawn_deck`` would, shuffled
+    The pile is a zone of its own, made like the zone the room deck names,
+    centred where it was put down (the table has no edge), so it shuffles
+    and deals as any deck does. Its cards are spawned as ``spawn_deck`` would, shuffled
     when the pile is hidden. The room's reset takes the zone away again.
     """
     room = game.definition.room
@@ -925,10 +921,9 @@ def build_add_deck(
             f"The table already has {MAX_ADDED_DECKS} added decks; "
             "reset the table to clear them."
         )
-    area = bounds.geometry
     width, height = shape.rect[2], shape.rect[3]
-    left = min(max(x - width / 2, area.x), area.x + area.width - width)
-    top = min(max(y - height / 2, area.y), area.y + area.height - height)
+    left = x - width / 2
+    top = y - height / 2
     zone_id = ADDED_DECK_PREFIX + new_op_id()
     builder = _Builder(game, table, SYSTEM_SEAT)
     # "Sidebar 2", "Sidebar 3": the base pile is the first of its name.

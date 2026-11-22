@@ -176,3 +176,38 @@ test("arrow keys never leave a card over a pile: it steps off and past", async (
   );
   expect(await page.locator(".toast").count()).toBe(0);
 });
+
+test("the table has no edge: no outline, and a card let go beyond it lands on the table", async ({
+  page,
+}) => {
+  await valueCardsRoom(page);
+  const tableZone = page.locator('.tabletop__zones [data-zone-id="table"]');
+  await expect(tableZone.locator(".zone__label")).toBeHidden();
+  expect(await tableZone.evaluate((node) => getComputedStyle(node).borderTopColor)).toBe(
+    "rgba(0, 0, 0, 0)",
+  );
+  // Step back until there is room beside where the table zone's outline was.
+  for (let step = 0; step < 8; step++) await page.getByRole("button", { name: "Zoom out" }).click();
+  await page.waitForTimeout(300);
+  const id = await topOfDeck(page);
+  const card = await box(page, `[data-piece-id="${id}"]`);
+  const edge = await box(page, '.tabletop__zones [data-zone-id="table"]');
+  const viewport = await box(page, ".tabletop__viewport");
+  // A spot just outside where the outline was, on whichever side is on screen
+  // (clear of the controls along the top and the hand tray along the bottom).
+  const middleY = edge.y + edge.height / 3;
+  const candidates: Array<[number, number]> = [
+    [edge.x - 60, middleY],
+    [edge.x + edge.width + 60, middleY],
+  ];
+  const to = candidates.find(
+    ([x]) => x > viewport.x + 20 && x < viewport.x + viewport.width - 20,
+  );
+  expect(to).toBeDefined();
+  await drag(page, [card.x + card.width / 2, card.y + card.height / 2], to!);
+  await expect(page.locator('.tabletop__zones [data-zone-id="deck"] .zone__label')).toContainText(
+    "17",
+  );
+  await expect(page.locator(`[data-piece-id="${id}"]`)).toHaveAttribute("data-zone-id", "table");
+  expect(await page.locator(".toast").count()).toBe(0);
+});
