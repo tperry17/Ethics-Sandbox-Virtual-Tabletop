@@ -150,7 +150,10 @@ then the piece's `z` within that zone — and never DOM insertion order.
 Another person's piece interpolates over 120 ms; the piece under your own
 hand never does. Your own private zone is drawn in a hand tray docked below
 the table, outside the world transform, so it stays put when the table moves;
-it is there whenever you have a private hand, empty or not. It is closed
+it is there whenever you have a private hand, empty or not. Anyone else's private hand is not drawn on the table at all, neither its
+outline nor the backs of the cards in it, and a hand is named for whoever
+holds it, by the name they joined with ("Ada's hand"), on the table, in
+announcements and in the "Move to…" menu, never by seat. It is closed
 on every load, one row naming the hand for whoever holds it, with the name
 they joined with ("Tomer's Hand"), which opens and closes it; closed and
 not empty, the row adds a count ("(3 cards)", or "(4 pieces)" once
@@ -164,7 +167,7 @@ takes the same share of every card, so a deck shows its pictures at one size.
 `?pieces=300&measure=1` is the frame-rate harness.
 
 "Fit table" (and the first view of a table nobody has moved) fits what is on
-the table - every zone but the table's own and your hand, every piece -
+the table - every zone but the table's own and anyone's hand, every piece -
 to the window's width, 16px (`FIT_PADDING`) from each side, but never
 zooms past 100% (`FIT_MAX_SCALE`); narrower than that, it is centred across.
 With nothing on the table, the table zone's area is fitted instead. Up and down it is centred in the room below the

@@ -125,7 +125,9 @@ test("Leadership and Knowledge in Popular Rule: a city of nine, a rejoin, and th
   await expect(host.page.getByText(/Scenario 1: Construction project: running/)).toBeVisible();
 
   await host.page.getByRole("button", { name: "Deal role cards" }).click();
-  const mine = citizens[0]!.page.locator('.piece[data-zone-id*=":hand-seat-"]');
+  // Each citizen's own role card, in their own hand tray (nobody else's hand
+  // is drawn on the table).
+  const mine = citizens[0]!.page.locator('.hand-tray__fan .piece[data-zone-id*=":hand-seat-"]');
   await expect(mine.first()).toBeVisible({ timeout: 15_000 });
 
   // One citizen drops off and returns; their role card is still theirs.
@@ -136,9 +138,11 @@ test("Leadership and Knowledge in Popular Rule: a city of nine, a rejoin, and th
     timeout: 20_000,
   });
   await citizens[1]!.page.reload();
-  await expect(citizens[1]!.page.locator('.piece[data-zone-id*=":hand-seat-"]').first()).toBeVisible({
-    timeout: 15_000,
-  });
+  // The tray is closed on every load; opened, it still holds their card.
+  await citizens[1]!.page.locator("#hand-tray-toggle").click();
+  await expect(
+    citizens[1]!.page.locator('.hand-tray__fan .piece[data-zone-id*=":hand-seat-"]').first(),
+  ).toBeVisible({ timeout: 15_000 });
   expect(held).toBeGreaterThan(0);
 
   // The facilitator collects every card while a citizen is dragging one: the

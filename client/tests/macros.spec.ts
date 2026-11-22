@@ -63,11 +63,18 @@ test("a player deals, and each person sees only their own cards", async ({ brows
   const hostTitles = await hostCards.allTextContents();
   const guestTitles = await guestCards.allTextContents();
   for (const title of hostTitles) expect(guestTitles).not.toContain(title);
-  // The other hand is on the table as backs, with no text to read.
+  // Nobody else's hand is drawn on the table: neither its outline nor the
+  // backs of the cards in it.
   for (const title of hostTitles) {
     await expect(
       guest.locator(".tabletop__pieces-layer .piece__title", { hasText: title }),
     ).toHaveCount(0);
+  }
+  for (const page of [host, guest]) {
+    await expect(page.locator(".tabletop__zones .zone--sealed:visible")).toHaveCount(0);
+    await expect(page.locator(".tabletop__pieces-layer .piece:visible")).toHaveCount(
+      await page.locator(".tabletop__pieces-layer .piece:not([data-zone-id*='hand'])").count(),
+    );
   }
 
   await expect(guest.getByText("Ines dealt three cards to each seat.")).toBeVisible();
