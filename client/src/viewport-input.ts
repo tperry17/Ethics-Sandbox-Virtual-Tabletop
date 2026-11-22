@@ -10,6 +10,9 @@ import {
   type Bounds,
   type Size,
   type Viewport,
+  FIT_MAX_SCALE,
+  FIT_PADDING,
+  FIT_TOP,
   clampPan,
   fitBounds,
   identityViewport,
@@ -135,9 +138,13 @@ export class ViewportController {
     const surface = this.options.surface;
     surface.addEventListener("wheel", this.onWheel, { passive: false });
     surface.addEventListener("pointerdown", this.onPointerDown);
-    surface.addEventListener("pointermove", this.onPointerMove);
-    surface.addEventListener("pointerup", this.onPointerUp);
-    surface.addEventListener("pointercancel", this.onPointerUp);
+    // Moves and lifts are heard on the window, not the surface: once the
+    // interaction half captures a finger (for a drag or a pan), its events go
+    // to the table's root and never reach the surface. Heard only there, a
+    // lifted finger was never forgotten, and pinching stopped working.
+    window.addEventListener("pointermove", this.onPointerMove);
+    window.addEventListener("pointerup", this.onPointerUp);
+    window.addEventListener("pointercancel", this.onPointerUp);
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
   }
@@ -146,9 +153,9 @@ export class ViewportController {
     const surface = this.options.surface;
     surface.removeEventListener("wheel", this.onWheel);
     surface.removeEventListener("pointerdown", this.onPointerDown);
-    surface.removeEventListener("pointermove", this.onPointerMove);
-    surface.removeEventListener("pointerup", this.onPointerUp);
-    surface.removeEventListener("pointercancel", this.onPointerUp);
+    window.removeEventListener("pointermove", this.onPointerMove);
+    window.removeEventListener("pointerup", this.onPointerUp);
+    window.removeEventListener("pointercancel", this.onPointerUp);
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
   }
@@ -158,7 +165,7 @@ export class ViewportController {
     const bounds = this.options.bounds();
     if (bounds === null) return;
     if (byPerson) this.touchedByPerson = true;
-    this.set(fitBounds(bounds, this.options.size()));
+    this.set(fitBounds(bounds, this.options.size(), FIT_PADDING, FIT_TOP, FIT_MAX_SCALE));
   }
 
   zoomBy(factor: number): void {
@@ -168,9 +175,9 @@ export class ViewportController {
   }
 
   /**
-   * Pan by a distance in screen pixels. A phone's one-finger drag on empty
-   * table comes here from the interaction half, which alone knows whether
-   * the finger landed on a piece.
+   * Pan by a distance in screen pixels. A one-finger drag on empty table
+   * comes here from the interaction half, which alone knows whether the
+   * finger landed on a piece.
    */
   panByPerson(dx: number, dy: number): void {
     this.touchedByPerson = true;
@@ -207,7 +214,9 @@ export class ViewportController {
       this.touches.set(event.pointerId, this.localPoint(event));
       return;
     }
-    const wantsPan = event.button === 1 || (event.button === 0 && this.spaceHeld);
+    // The middle button draws a selection box (interaction.ts); Space with
+    // the main button pans from anywhere, over pieces too.
+    const wantsPan = event.button === 0 && this.spaceHeld;
     if (!wantsPan) return;
     event.preventDefault();
     this.panPointer = event.pointerId;
@@ -244,7 +253,7 @@ export class ViewportController {
 
   /**
    * Two fingers pan and pinch together. One finger is left to the interaction
-   * half: it moves a piece, and on a phone it pans across empty table.
+   * half: it moves a piece, or pans across empty table.
    */
   private handleTouches(): void {
     if (this.touches.size !== 2) return;

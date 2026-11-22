@@ -53,6 +53,8 @@ from sandbox.model import (
     Despawn,
     Draw,
     Flip,
+    JoinRunningActivity,
+    LeaveRunningActivity,
     Lock,
     Move,
     MoveToZone,
@@ -71,7 +73,7 @@ from sandbox.model import (
     Visibility,
     new_op_id,
 )
-from sandbox.model.types import PieceKind
+from sandbox.model.types import PieceKind, ZoneKind
 
 SEAT_TINTS = 6
 
@@ -123,7 +125,8 @@ class Scope:
 
     Every zone an activity makes is named ``<activity id>:<definition id>``,
     its per-seat zones belong to the activity's players only, and its
-    rectangles are moved by ``origin`` so they sit clear of the sandbox.
+    rectangles are moved by ``origin``: right below the room's own piles,
+    and, for the tables of a class, side by side.
     """
 
     activity_id: str
@@ -137,16 +140,49 @@ class Scope:
 
 
 ACTIVITY_SPACING = 2600.0
+"""How far apart the tables of a class are laid out, side by side."""
+ACTIVITY_GAP = 80.0
+"""How far below the room's own piles an activity's area begins."""
+
+
+def _below_room_piles(table: Table) -> float:
+    """Where an activity's area begins, up and down: just below the room's piles.
+
+    The room's piles are the zones its own setup lays out, other than its
+    table and its hands: they never move, so an activity always lands in the
+    same place. Piles added from the Pieces menu, which can be put anywhere,
+    and every activity's own zones are left out.
+    """
+    bottoms = [
+        zone.geometry.y + zone.geometry.height
+        for zone in table.zones.values()
+        if ":" not in zone.id
+        and not zone.id.startswith(ADDED_DECK_PREFIX)
+        and zone.kind not in (ZoneKind.TABLE, ZoneKind.HAND)
+        and isinstance(zone.geometry, Rect)
+    ]
+    return max(bottoms) + ACTIVITY_GAP if bottoms else 0.0
 
 
 def scope_of(table: Table, activity_id: str) -> Scope:
-    """The scope of an activity in ``table``, placed by its serial number."""
+    """The scope of an activity in ``table``: right below the room's piles.
+
+    A class's tables sit side by side, each in the column its serial number
+    gives it within the class; a lone activity takes the first column.
+    """
     activity = table.activities[activity_id]
     serial = _seat_number(activity_id)[0]
+    column = 0
+    group = table.classes.get(activity.class_id)
+    if group is not None:
+        first = group.first_serial or min(
+            (_seat_number(t)[0] for t in group.tables), default=serial
+        )
+        column = max(serial - first, 0)
     return Scope(
         activity_id=activity_id,
         seats=activity.seats,
-        origin=(ACTIVITY_SPACING * serial, 0.0),
+        origin=(ACTIVITY_SPACING * column, _below_room_piles(table)),
         options=dict(activity.options),
     )
 
@@ -732,6 +768,38 @@ def _return_cards(builder: _Builder, scope: Scope, gone: set[str]) -> None:
             builder.run(Shuffle(zone_id=home_id))
 
 
+def _zones_for_newcomers(
+    builder: _Builder,
+    scope: Scope,
+    staying: tuple[str, ...],
+    newcomers: Sequence[str],
+) -> list[str]:
+    """Lay out a begun activity's per-seat zones for people new to it.
+
+    Each newcomer takes the first place along the zones' step that nobody
+    staying holds. Returns the ids of the zones made.
+    """
+    used = _used_seat_indexes(builder, scope, staying)
+    added: list[str] = []
+    for seat_id in newcomers:
+        limit = len(staying) + len(newcomers) + len(used) + 1
+        index = next(i for i in range(limit) if i not in used)
+        used.add(index)
+        label = builder.trial.seats[seat_id].label
+        for spec in builder._game().definition.zones:
+            if spec.per_seat and builder._wanted(spec):
+                zone = _add_zone(
+                    spec,
+                    seat_id=seat_id,
+                    seat_index=index,
+                    label=f"{spec.label} · {label}",
+                    scope=scope,
+                )
+                builder.run(zone)
+                added.append(zone.zone_id)
+    return added
+
+
 def _change_seats(builder: _Builder, activity_id: str, seats: tuple[str, ...]) -> None:
     """Add the steps that change who sits at one table, making zones for new people."""
     activity = builder.trial.activities[activity_id]
@@ -741,23 +809,65 @@ def _change_seats(builder: _Builder, activity_id: str, seats: tuple[str, ...]) -
     if activity.status == "running":
         _return_cards(builder, scope, set(activity.seats) - set(seats))
         staying = tuple(seat for seat in seats if seat in activity.seats)
-        used = _used_seat_indexes(builder, scope, staying)
-        for seat_id in (seat for seat in seats if seat not in activity.seats):
-            index = next(i for i in range(len(seats) + len(used) + 1) if i not in used)
-            used.add(index)
-            label = builder.trial.seats[seat_id].label
-            for spec in builder._game().definition.zones:
-                if spec.per_seat and builder._wanted(spec):
-                    zone = _add_zone(
-                        spec,
-                        seat_id=seat_id,
-                        seat_index=index,
-                        label=f"{spec.label} · {label}",
-                        scope=scope,
-                    )
-                    builder.run(zone)
-                    added.append(zone.zone_id)
+        newcomers = [seat for seat in seats if seat not in activity.seats]
+        added = _zones_for_newcomers(builder, scope, staying, newcomers)
     builder.run(ChangeActivitySeats(activity_id, seats, tuple(added)))
+
+
+def build_leave_running(
+    game: Game, table: Table, actor_seat: str, activity_id: str
+) -> Transaction | Reject:
+    """Take someone off an activity that has begun, leaving it running for the rest.
+
+    One transaction: their cards go back face down into the decks they came
+    from (which are shuffled), and their own zones leave the table.
+    """
+    activity = table.activities.get(activity_id)
+    if activity is None:
+        return Reject("That activity is not running any more.")
+    reason = LeaveRunningActivity(activity_id, actor_seat).validate(table, actor_seat)
+    if reason is not None:
+        return Reject(reason)
+    scope = scope_of(table, activity_id)
+    builder = _Builder(game, table, actor_seat, scope)
+    try:
+        _return_cards(builder, scope, {actor_seat})
+        builder.run(LeaveRunningActivity(activity_id, actor_seat))
+    except _Refused as refusal:
+        return Reject(refusal.reason)
+    return dataclasses.replace(
+        builder.transaction(
+            name=f"leave:{activity_id}", label=f"Leave {activity.title}"
+        ),
+        activity_id=activity_id,
+    )
+
+
+def build_join_running(
+    game: Game, table: Table, actor_seat: str, activity_id: str
+) -> Transaction | Reject:
+    """Seat someone at an activity that has already begun, with zones of their own.
+
+    One transaction: their zones are laid out and they join together, or
+    neither happens.
+    """
+    activity = table.activities.get(activity_id)
+    if activity is None:
+        return Reject("That activity is not running any more.")
+    reason = JoinRunningActivity(activity_id, actor_seat).validate(table, actor_seat)
+    if reason is not None:
+        return Reject(reason)
+    scope = scope_of(table, activity_id)
+    builder = _Builder(game, table, actor_seat, scope)
+    try:
+        added = _zones_for_newcomers(builder, scope, activity.seats, [actor_seat])
+        builder.run(JoinRunningActivity(activity_id, actor_seat, tuple(added)))
+    except _Refused as refusal:
+        return Reject(refusal.reason)
+    return dataclasses.replace(
+        builder.transaction(name=f"join:{activity_id}", label=f"Join {activity.title}"),
+        activity_id=activity_id,
+    )
 
 
 def build_seat_move(
@@ -865,7 +975,8 @@ def build_add_piece(
     """One piece from the room's Pieces menu, put down at ``x``, ``y``.
 
     Only a room type has a Pieces menu, and only what it lists can be added.
-    The piece goes into the room's ``pieces_zone``, kept inside its edges.
+    The piece goes into the room's ``pieces_zone`` where it was put down:
+    the table has no edge, so it is not pulled back inside the zone's outline.
     The new piece's id is random, like every spawned piece's.
     """
     room = game.definition.room
@@ -882,7 +993,6 @@ def build_add_piece(
     zone = table.zones.get(room.pieces_zone)
     if zone is None or not isinstance(zone.geometry, Rect):
         return Reject("This room has nowhere to put new pieces.")
-    rect = zone.geometry
     piece_id = new_op_id()
     return Transaction(
         steps=(
@@ -892,11 +1002,7 @@ def build_add_piece(
                 zone_id=zone.id,
                 piece_ids=(piece_id,),
             ),
-            Move(
-                piece_id=piece_id,
-                x=min(max(x, rect.x), rect.x + rect.width),
-                y=min(max(y, rect.y), rect.y + rect.height),
-            ),
+            Move(piece_id=piece_id, x=x, y=y),
         ),
         name=f"add:{spec.id}",
         label=f"Add {(spec.title or spec.kind.value).lower()}",
@@ -908,9 +1014,9 @@ def build_add_deck(
 ) -> Transaction | Reject:
     """A further pile of cards from the room's Pieces menu, centred on ``x``, ``y``.
 
-    The pile is a zone of its own, made like the zone the room deck names
-    and kept inside the room's ``pieces_zone``, so it shuffles and deals as
-    any deck does. Its cards are spawned as ``spawn_deck`` would, shuffled
+    The pile is a zone of its own, made like the zone the room deck names,
+    centred where it was put down (the table has no edge), so it shuffles
+    and deals as any deck does. Its cards are spawned as ``spawn_deck`` would, shuffled
     when the pile is hidden. The room's reset takes the zone away again.
     """
     room = game.definition.room
@@ -925,10 +1031,9 @@ def build_add_deck(
             f"The table already has {MAX_ADDED_DECKS} added decks; "
             "reset the table to clear them."
         )
-    area = bounds.geometry
     width, height = shape.rect[2], shape.rect[3]
-    left = min(max(x - width / 2, area.x), area.x + area.width - width)
-    top = min(max(y - height / 2, area.y), area.y + area.height - height)
+    left = x - width / 2
+    top = y - height / 2
     zone_id = ADDED_DECK_PREFIX + new_op_id()
     builder = _Builder(game, table, SYSTEM_SEAT)
     # "Sidebar 2", "Sidebar 3": the base pile is the first of its name.
@@ -1076,6 +1181,8 @@ __all__ = [
     "Scope",
     "SetupFailedError",
     "build_activity_start",
+    "build_join_running",
+    "build_leave_running",
     "scope_of",
     "announcement",
     "build_macro",

@@ -103,6 +103,7 @@ class StartClass:
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         table.class_serial += 1
         class_id = f"class-{table.class_serial}"
+        first_serial = table.activity_serial + 1
         made: list[str] = []
         for _ in range(self.tables):
             table.activity_serial += 1
@@ -124,6 +125,7 @@ class StartClass:
             title=self.title,
             tables=tuple(made),
             options=dict(self.options),
+            first_serial=first_serial,
         )
         table.classes[class_id] = group
         return [_class_patch(group)]

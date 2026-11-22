@@ -31,6 +31,14 @@
       "pieces": {},
       "visibility": "public"
     },
+    "activity-1:sidebar": {
+      "kind": "deck",
+      "owner_seat": null,
+      "pieces": {
+        "card": 18
+      },
+      "visibility": "hidden"
+    },
     "activity-1:table": {
       "kind": "table",
       "owner_seat": null,

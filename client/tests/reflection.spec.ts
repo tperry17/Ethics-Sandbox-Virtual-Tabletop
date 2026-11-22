@@ -69,6 +69,9 @@ test("once an activity with questions is played, the panel offers to respond to 
   await ines.getByRole("button", { name: "Start Value Cards Trading", exact: true }).click();
   await tomas.getByRole("button", { name: "Join" }).click();
   await wren.getByRole("button", { name: "Join" }).click();
+  // Value Cards Trading takes three to six: with three signed up, it is begun by hand.
+  await expect(ines.getByText(/Value Cards Trading: signing up, 3 of 3–6/)).toBeVisible();
+  await ines.getByRole("button", { name: "Begin now" }).click();
   await expect(ines.getByRole("button", { name: "Deal 6 each" })).toBeVisible();
 
   // The page asks again whenever it is looked at again.

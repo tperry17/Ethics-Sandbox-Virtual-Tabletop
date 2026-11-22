@@ -2,7 +2,7 @@
 meta:
   slug: value-cards-trading
   title: Value Cards Trading
-  players: {min: 3, max: 3}
+  players: {min: 3, max: 6}
   duration_minutes: 30
   facilitator: optional
   listed: true
@@ -23,19 +23,25 @@ components:
       height: 210
 
 seats:
-  labels: [First player, Second player, Third player]
+  labels: [First player, Second player, Third player, Fourth player, Fifth player, Sixth player]
 
 zones:
   - id: table
     kind: table
     label: The table
-    rect: [0, 0, 2200, 1200]
+    rect: [0, 0, 2200, 1960]      # room for six seats' rows
     visibility: public
     layout: free
   - id: deck
     kind: deck
     label: Deck
     rect: [40, 40, 240, 320]
+    visibility: hidden
+    layout: stack
+  - id: sidebar                   # the other 18, dealt too with four or more players
+    kind: deck
+    label: Sidebar
+    rect: [320, 40, 240, 320]
     visibility: hidden
     layout: stack
   - id: hand
@@ -58,9 +64,10 @@ zones:
     step: [0, 260]
 
 setup:
-  # The trio plays with the 18 cards of the base deck (group "Deck"); the
-  # room's sandbox keeps the full 36, the sidebar cards included.
+  # Three play with the 18 cards of the base deck (group "Deck"); four to
+  # six play with all 36, the sidebar's 18 joining the deck when dealt.
   - {op: spawn_deck, deck: values, zone: deck, where: {group: Deck}}
+  - {op: spawn_deck, deck: values, zone: sidebar, where: {group: Sidebar}}
 
 macros:
   - id: setup
@@ -68,8 +75,7 @@ macros:
       - {op: reset_table}
       - {op: setup}
   - id: deal
-    steps:
-      - {op: deal, from: deck, to: hand, count: 6, face_up: true}
+    python: deal_six_each       # with four or more, the sidebar joins the deck first
   - id: record_hands
     who: anyone
     python: record_hands
@@ -81,8 +87,10 @@ macros:
       - {op: shuffle, zone: deck}
   - id: collect
     steps:
-      - {op: collect, to: deck, kinds: [card], face_up: false}
+      - {op: collect, to: deck, kinds: [card], where: {group: Deck}, face_up: false}
+      - {op: collect, to: sidebar, kinds: [card], where: {group: Sidebar}, face_up: false}
       - {op: shuffle, zone: deck}
+      - {op: shuffle, zone: sidebar}
   - id: clear_ink
     steps:
       - {op: clear_ink}

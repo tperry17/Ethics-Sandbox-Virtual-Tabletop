@@ -13,7 +13,7 @@
  * What that means is the server's to say.
  */
 
-import { landingBesidePiles } from "./geometry.js";
+import { landingBesidePiles, stepPastPiles } from "./geometry.js";
 import { newClientId } from "./intents.js";
 import type { TableRenderer } from "./table.js";
 
@@ -33,8 +33,6 @@ const INK_WIDTH = 4;
 const INK_MIN_STEP = 3;
 const INK_SEND_MS = 40;
 const CURSOR_SEND_MS = 100;
-/** The phone layout's width, as in `tabletop.css`: one finger on empty table pans. */
-const PHONE_QUERY = "(max-width: 37.5rem)";
 
 type Tool = "hand" | "pen" | "point";
 
@@ -48,6 +46,15 @@ interface Dragged {
   refused: boolean;
 }
 
+/** What letting go of one dragged piece will do; see `planDrop`. */
+type DropPlan =
+  | { kind: "hand"; zone: string }
+  | { kind: "stack"; onto: string }
+  | { kind: "join"; zone: string }
+  | { kind: "zone"; zone: string; x: number; y: number }
+  | { kind: "move"; x: number; y: number }
+  | { kind: "none" };
+
 type Gesture =
   | {
       kind: "press";
@@ -58,6 +65,8 @@ type Gesture =
       pieceId: string | null;
       fromTray: boolean;
       additive: boolean;
+      /** Pressed with a mouse's middle button: a drag draws a selection box. */
+      middle: boolean;
       timer: number | null;
     }
   | { kind: "drag"; pointerId: number; pieces: Dragged[] }
@@ -225,9 +234,30 @@ export class InteractionController {
         return;
       }
     }
-    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const middle = event.pointerType === "mouse" && event.button === 1;
+    if (event.pointerType === "mouse" && event.button !== 0 && !middle) return;
     if (this.table.surfaceElement.classList.contains("is-pannable")) return;
     if (this.gesture !== null) return;
+
+    if (middle) {
+      // The middle button selects: dragged anywhere on the table, over pieces
+      // or not, it draws a selection box. Not the browser's autoscroll.
+      if (!this.table.surfaceElement.contains(target)) return;
+      event.preventDefault();
+      this.gesture = {
+        kind: "press",
+        pointerId: event.pointerId,
+        pointerType: event.pointerType,
+        startX: event.clientX,
+        startY: event.clientY,
+        pieceId: null,
+        fromTray: false,
+        additive: event.shiftKey,
+        middle: true,
+        timer: null,
+      };
+      return;
+    }
 
     const [x, y] = this.table.clientToWorld(event.clientX, event.clientY);
     if (this.tool === "point" || event.altKey) {
@@ -260,6 +290,7 @@ export class InteractionController {
       // A finger has no Shift key: tapping a piece toggles it in the selection,
       // tapping empty table clears it.
       additive: event.shiftKey || (event.pointerType === "touch" && pieceId !== null),
+      middle: false,
       timer: null,
     };
     if (pieceId !== null && fromTray) {
@@ -285,8 +316,12 @@ export class InteractionController {
       if (distance < DRAG_THRESHOLD_PX) return;
       if (gesture.timer !== null) window.clearTimeout(gesture.timer);
       if (gesture.pieceId !== null) this.beginDrag(gesture.pieceId, gesture, event);
-      else if (gesture.pointerType === "touch" && onPhone()) this.beginPan(gesture, event);
-      else this.beginMarquee(gesture, event);
+      // Empty table pans, under a finger, a pen or the mouse's main button.
+      // The middle button draws a selection box, and so does Shift with the
+      // main button, for a trackpad that has no middle button.
+      else if (gesture.middle || (gesture.pointerType === "mouse" && gesture.additive)) {
+        this.beginMarquee(gesture, event);
+      } else this.beginPan(gesture, event);
       return;
     }
     if (gesture.kind === "drag") this.continueDrag(gesture.pieces, event);
@@ -303,7 +338,7 @@ export class InteractionController {
 
     if (gesture.kind === "press") {
       if (gesture.timer !== null) window.clearTimeout(gesture.timer);
-      this.click(gesture.pieceId, gesture.additive);
+      if (!gesture.middle) this.click(gesture.pieceId, gesture.additive);
       return;
     }
     if (gesture.kind === "drag") this.finishDrag(gesture.pieces, event);
@@ -422,24 +457,71 @@ export class InteractionController {
         });
       }
     }
-    this.showDropTargets(pieces, event, x, y);
+    this.showDropTargets(pieces, event);
   }
 
-  /** Light up where the pieces would go if let go now. */
-  private showDropTargets(pieces: Dragged[], event: PointerEvent, x: number, y: number): void {
-    const live = pieces.filter((piece) => !piece.refused);
-    if (this.table.overTray(event.clientX, event.clientY)) {
-      this.table.setTrayTarget(true);
-      this.table.setDropTarget(null);
-      this.table.setStackTarget(null);
-      return;
+  /**
+   * What letting go here would do with one piece: the single decision that
+   * both the highlight while dragging and the release use, so that what is
+   * lit up is what happens.
+   *
+   * Over a pile, where the hand opened does not decide: how much of the piece
+   * lies over the pile does. More than half, and it goes into the pile;
+   * otherwise it is put down clear of it. So a pile, or a card in one, under
+   * the pointer counts as the table beneath it.
+   */
+  private planDrop(piece: Dragged, count: number, event: PointerEvent): DropPlan {
+    const [x, y] = this.table.clientToWorld(event.clientX, event.clientY);
+    const truth = this.model.pieces.get(piece.id);
+    if (truth === undefined) return { kind: "none" };
+    const hand = this.table.myHandZoneId();
+    if (hand !== null && this.table.overTray(event.clientX, event.clientY)) {
+      return { kind: "hand", zone: hand };
     }
-    this.table.setTrayTarget(false);
-    const onto = live.length === 1 ? this.stackTargetAt(live[0]!.id, event) : null;
-    this.table.setStackTarget(onto);
-    const zone = this.table.zoneAtWorld(x, y);
-    const current = live[0] === undefined ? null : this.model.pieces.get(live[0].id)?.zone_id;
-    this.table.setDropTarget(onto === null && zone !== null && zone !== current ? zone : null);
+    const pointedAt = count === 1 ? this.stackTargetAt(piece.id, event) : null;
+    const pointedPile =
+      pointedAt !== null && this.table.isPile(this.model.pieces.get(pointedAt)?.zone_id);
+    if (pointedAt !== null && !pointedPile) return { kind: "stack", onto: pointedAt };
+    let zoneUnder = this.table.zoneAtWorld(x, y);
+    if (zoneUnder !== null && this.table.isPile(zoneUnder)) zoneUnder = this.table.zoneAtWorld(x, y, true);
+    // The table has no edge: over no zone at all is on the table.
+    zoneUnder ??= this.table.tableFor(truth.zone_id);
+
+    let px = x - piece.offsetX;
+    let py = y - piece.offsetY;
+    const landing =
+      zoneUnder !== null && zoneUnder !== truth.zone_id
+        ? zoneUnder
+        : piece.fromTray ? null : truth.zone_id;
+    if (landing !== null && this.model.zones.get(landing)?.layout === "free") {
+      const piles = this.table.piles(landing);
+      const [width, height] = this.table.pieceSizeOf(piece.id);
+      const spot = landingBesidePiles(
+        px, py, width, height, piles.map((pile) => pile.bounds),
+        truth.kind === "card" || truth.kind === "tile",
+      );
+      if ("join" in spot) return { kind: "join", zone: piles[spot.join]!.id };
+      px = spot.x;
+      py = spot.y;
+    }
+    if (zoneUnder !== null && zoneUnder !== truth.zone_id) {
+      return { kind: "zone", zone: zoneUnder, x: px, y: py };
+    }
+    if (!piece.fromTray) return { kind: "move", x: px, y: py };
+    // Lifted out of the hand and let go nowhere in particular: back it goes.
+    return { kind: "none" };
+  }
+
+  /** Light up where the pieces would go if let go now: exactly what the release will do. */
+  private showDropTargets(pieces: Dragged[], event: PointerEvent): void {
+    const live = pieces.filter((piece) => !piece.refused);
+    const plan = live[0] === undefined ? { kind: "none" as const } : this.planDrop(live[0], live.length, event);
+    this.table.setTrayTarget(plan.kind === "hand");
+    this.table.setStackTarget(plan.kind === "stack" ? plan.onto : null);
+    // The table itself is where anything let go lands by default, and it is
+    // not drawn: it is never lit.
+    const lit = plan.kind === "join" || plan.kind === "zone" ? plan.zone : null;
+    this.table.setDropTarget(lit !== null && this.model.zones.get(lit)?.kind === "table" ? null : lit);
   }
 
   private stackTargetAt(draggedId: string, event: PointerEvent): string | null {
@@ -449,71 +531,48 @@ export class InteractionController {
   }
 
   private finishDrag(pieces: Dragged[], event: PointerEvent): void {
-    const [x, y] = this.table.clientToWorld(event.clientX, event.clientY);
-    const overTray = this.table.overTray(event.clientX, event.clientY);
-    const hand = this.table.myHandZoneId();
     const live = pieces.filter((piece) => !piece.refused);
-    const onto = live.length === 1 ? this.stackTargetAt(live[0]!.id, event) : null;
-    const zoneUnder = this.table.zoneAtWorld(x, y);
-
     for (const piece of live) {
       const truth = this.model.pieces.get(piece.id);
       if (truth === undefined) continue;
-      let px = x - piece.offsetX;
-      let py = y - piece.offsetY;
       const refuse = { onReject: () => this.refuse(piece) };
-
-      // Let go partly over a pile, a piece goes into it or is put down clear
-      // of it, never left half under it.
-      const landing =
-        zoneUnder !== null && zoneUnder !== truth.zone_id
-          ? zoneUnder
-          : piece.fromTray ? null : truth.zone_id;
-      if (!(overTray && hand !== null) && onto === null && landing !== null &&
-          this.model.zones.get(landing)?.layout === "free") {
-        const piles = this.table.piles(landing);
-        const [width, height] = this.table.pieceSizeOf(piece.id);
-        const spot = landingBesidePiles(
-          px, py, width, height, piles.map((pile) => pile.bounds),
-          truth.kind === "card" || truth.kind === "tile",
-        );
-        if ("join" in spot) {
-          const pile = piles[spot.join]!.id;
-          this.table.intents.send("move_to_zone", { piece_id: piece.id, zone_id: pile }, refuse);
-          this.release(piece.id, false);
-          this.announceDrop(piece.id, pile, null);
-          continue;
-        }
-        if (spot.x !== px || spot.y !== py) {
-          px = spot.x;
-          py = spot.y;
+      const plan = this.planDrop(piece, live.length, event);
+      switch (plan.kind) {
+        case "hand":
+          if (truth.zone_id !== plan.zone) {
+            this.table.intents.send("move_to_zone", { piece_id: piece.id, zone_id: plan.zone }, refuse);
+          }
+          break;
+        case "stack":
+          this.table.intents.send("stack_onto", { piece_id: piece.id, onto_id: plan.onto }, refuse);
+          break;
+        case "join":
+          this.table.intents.send("move_to_zone", { piece_id: piece.id, zone_id: plan.zone }, refuse);
+          break;
+        case "zone":
           // Show it where it will be, so it does not jump when the server agrees.
-          this.table.setOverride(piece.id, { x: px, y: py });
-        }
-      }
-
-      if (overTray && hand !== null) {
-        if (truth.zone_id !== hand) {
-          this.table.intents.send("move_to_zone", { piece_id: piece.id, zone_id: hand }, refuse);
-        }
-      } else if (onto !== null) {
-        this.table.intents.send("stack_onto", { piece_id: piece.id, onto_id: onto }, refuse);
-      } else if (zoneUnder !== null && zoneUnder !== truth.zone_id) {
-        this.table.intents.send(
-          "move_to_zone",
-          { piece_id: piece.id, zone_id: zoneUnder, x: px, y: py },
-          refuse,
-        );
-      } else if (!piece.fromTray) {
-        this.table.intents.send("move", { piece_id: piece.id, x: px, y: py }, refuse);
-      } else {
-        // Lifted out of the hand and let go nowhere in particular: back it goes.
-        this.release(piece.id, false);
-        this.table.clearOverride(piece.id, false);
-        continue;
+          this.table.setOverride(piece.id, { x: plan.x, y: plan.y });
+          this.table.intents.send(
+            "move_to_zone",
+            { piece_id: piece.id, zone_id: plan.zone, x: plan.x, y: plan.y },
+            refuse,
+          );
+          break;
+        case "move":
+          this.table.setOverride(piece.id, { x: plan.x, y: plan.y });
+          this.table.intents.send("move", { piece_id: piece.id, x: plan.x, y: plan.y }, refuse);
+          break;
+        case "none":
+          this.release(piece.id, false);
+          this.table.clearOverride(piece.id, false);
+          continue;
       }
       this.release(piece.id, false);
-      this.announceDrop(piece.id, overTray && hand !== null ? hand : zoneUnder, onto);
+      this.announceDrop(
+        piece.id,
+        plan.kind === "hand" || plan.kind === "join" || plan.kind === "zone" ? plan.zone : null,
+        plan.kind === "stack" ? plan.onto : null,
+      );
     }
     this.endDragChrome();
   }
@@ -559,12 +618,11 @@ export class InteractionController {
     }
   }
 
-  // -- panning with one finger, on a phone ---------------------------------------------
+  // -- panning across empty table -----------------------------------------------------
 
   /**
-   * On a phone, a finger dragged across empty table moves the view rather
-   * than drawing a selection box: the table is mostly off screen there, and
-   * pieces are still chosen by tapping them.
+   * A finger, a pen or the mouse's main button dragged across empty table
+   * moves the view. The selection box is the middle button's (see above).
    */
   private beginPan(press: Extract<Gesture, { kind: "press" }>, event: PointerEvent): void {
     this.root.setPointerCapture?.(press.pointerId);
@@ -1069,10 +1127,25 @@ export class InteractionController {
       const piece = this.model.pieces.get(id);
       if (piece === undefined) continue;
       const override = this.table.overrideOf(id);
-      const x = (override?.x ?? piece.x) + dx;
-      const y = (override?.y ?? piece.y) + dy;
+      let x = (override?.x ?? piece.x) + dx;
+      let y = (override?.y ?? piece.y) + dy;
+      // Never left over a pile: a step that would overlap one goes just past
+      // it, and a card stepped off a pile goes onto the table beneath.
+      const leaving = this.table.isPile(piece.zone_id);
+      const landing = leaving
+        ? (this.table.zoneAtWorld(x, y, true) ?? this.table.tableFor(piece.zone_id))
+        : piece.zone_id;
+      if (landing !== null && this.model.zones.get(landing)?.layout === "free") {
+        const [width, height] = this.table.pieceSizeOf(id);
+        const piles = this.table.piles(null).map((pile) => pile.bounds);
+        ({ x, y } = stepPastPiles(x, y, width, height, piles, dx, dy));
+      }
       this.table.setOverride(id, { x, y });
-      this.table.intents.send("move", { piece_id: id, x, y }, {
+      const [op, payload] =
+        leaving && landing !== null
+          ? (["move_to_zone", { piece_id: id, zone_id: landing, x, y }] as const)
+          : (["move", { piece_id: id, x, y }] as const);
+      this.table.intents.send(op, payload, {
         onReject: () => {
           this.keyboardSettle.delete(id);
           this.table.clearOverride(id, true);
@@ -1119,8 +1192,4 @@ function isTyping(element: HTMLElement): boolean {
 
 function capital(text: string): string {
   return text.length === 0 ? text : `${text[0]!.toUpperCase()}${text.slice(1)}`;
-}
-
-function onPhone(): boolean {
-  return window.matchMedia?.(PHONE_QUERY).matches ?? false;
 }
