@@ -169,12 +169,18 @@ export function renderActivities(model: TableModel, send: SendActivity): HTMLEle
       }
     }
     if (signedUp || model.you?.is_facilitator === true) {
-      const finish = button("Finish", () => {
-        // Finishing takes the activity's zones, and what is in them, off the table.
-        if (!window.confirm(`Finish ${activity.title}? Its zones and the cards in them leave the table.`)) return;
+      // Before it begins there is nothing to finish: the sign-up is cancelled.
+      // Once begun, finishing takes its zones, and what is in them, off the table.
+      const begun = activity.status !== "signup";
+      const verb = begun ? "Finish" : "Cancel";
+      const finish = button(verb, () => {
+        const question = begun
+          ? `Finish ${activity.title}? Its zones and the cards in them leave the table.`
+          : `Cancel the sign-up for ${activity.title}?`;
+        if (!window.confirm(question)) return;
         send({ action: "end", activity_id: activity.id });
       });
-      finish.setAttribute("aria-label", `Finish ${activity.title}`);
+      finish.setAttribute("aria-label", `${verb} ${activity.title}`);
       actions.append(finish);
     }
     view.append(actions);
