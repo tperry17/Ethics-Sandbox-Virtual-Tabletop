@@ -54,6 +54,7 @@ from sandbox.model import (
     Draw,
     Flip,
     JoinRunningActivity,
+    LeaveRunningActivity,
     Lock,
     Move,
     MoveToZone,
@@ -779,6 +780,35 @@ def _change_seats(builder: _Builder, activity_id: str, seats: tuple[str, ...]) -
     builder.run(ChangeActivitySeats(activity_id, seats, tuple(added)))
 
 
+def build_leave_running(
+    game: Game, table: Table, actor_seat: str, activity_id: str
+) -> Transaction | Reject:
+    """Take someone off an activity that has begun, leaving it running for the rest.
+
+    One transaction: their cards go back face down into the decks they came
+    from (which are shuffled), and their own zones leave the table.
+    """
+    activity = table.activities.get(activity_id)
+    if activity is None:
+        return Reject("That activity is not running any more.")
+    reason = LeaveRunningActivity(activity_id, actor_seat).validate(table, actor_seat)
+    if reason is not None:
+        return Reject(reason)
+    scope = scope_of(table, activity_id)
+    builder = _Builder(game, table, actor_seat, scope)
+    try:
+        _return_cards(builder, scope, {actor_seat})
+        builder.run(LeaveRunningActivity(activity_id, actor_seat))
+    except _Refused as refusal:
+        return Reject(refusal.reason)
+    return dataclasses.replace(
+        builder.transaction(
+            name=f"leave:{activity_id}", label=f"Leave {activity.title}"
+        ),
+        activity_id=activity_id,
+    )
+
+
 def build_join_running(
     game: Game, table: Table, actor_seat: str, activity_id: str
 ) -> Transaction | Reject:
@@ -1123,6 +1153,7 @@ __all__ = [
     "SetupFailedError",
     "build_activity_start",
     "build_join_running",
+    "build_leave_running",
     "scope_of",
     "announcement",
     "build_macro",

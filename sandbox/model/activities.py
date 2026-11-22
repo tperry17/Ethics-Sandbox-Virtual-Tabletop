@@ -181,6 +181,59 @@ class LeaveActivity:
 
 
 @dataclass(frozen=True)
+class LeaveRunningActivity:
+    """Leave an activity that has begun, without ending it for the others.
+
+    The leaver's own zones, and whatever is still in them, leave the table;
+    the game layer puts their cards back in their decks first, in the same
+    transaction. ``seat_id`` is who leaves: themselves, or anyone when the
+    room acts for them inside that transaction. A table of a class is left
+    through the facilitator's moves instead.
+    """
+
+    activity_id: str
+    seat_id: str
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        if (reason := _reason_missing(table, self.activity_id)) is not None:
+            return reason
+        if actor_seat not in (self.seat_id, SYSTEM_SEAT):
+            return "You can only leave an activity yourself."
+        activity = table.activities[self.activity_id]
+        if activity.status != "running":
+            return "That activity has not begun. Leave the sign-up instead."
+        if activity.class_id:
+            return "The facilitator moves people off the tables of a class."
+        if self.seat_id not in activity.seats:
+            return "You are not playing in that activity."
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        activity = table.activities[self.activity_id]
+        patches: list[Patch] = []
+        kept: list[str] = []
+        for zone_id in activity.zones:
+            zone = table.zones.get(zone_id)
+            if zone is not None and zone.owner_seat == self.seat_id:
+                for piece in table.pieces_in_zone(zone_id):
+                    del table.pieces[piece.id]
+                    patches.append(
+                        Patch(kind="piece", op="remove", entity_id=piece.id, fields={})
+                    )
+                del table.zones[zone_id]
+                patches.append(
+                    Patch(kind="zone", op="remove", entity_id=zone_id, fields={})
+                )
+            else:
+                kept.append(zone_id)
+        activity.zones = tuple(kept)
+        activity.seats = tuple(seat for seat in activity.seats if seat != self.seat_id)
+        patches.append(_patch(activity))
+        return patches
+
+
+@dataclass(frozen=True)
 class SetActivityPlayers:
     """The facilitator chooses who plays, instead of the sign-up."""
 
@@ -257,8 +310,8 @@ class EndActivity:
         activity = table.activities[self.activity_id]
         if activity.class_id and not table.is_facilitator(actor_seat):
             return "Only the facilitator can end a table of a class."
-        # A sign-up nobody is in any more belongs to nobody: anyone may cancel it.
-        unclaimed = activity.status == "signup" and not activity.seats
+        # An activity nobody is in any more belongs to nobody: anyone may end it.
+        unclaimed = not activity.seats
         if (
             actor_seat not in activity.seats
             and not table.is_facilitator(actor_seat)

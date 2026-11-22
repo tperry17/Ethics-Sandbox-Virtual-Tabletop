@@ -13,6 +13,7 @@ from sandbox.model.activities import (
     JoinActivity,
     JoinRunningActivity,
     LeaveActivity,
+    LeaveRunningActivity,
     OpenActivity,
     SetActivityPlayers,
 )
@@ -137,6 +138,7 @@ __all__ = [
     "JoinActivity",
     "JoinRunningActivity",
     "LeaveActivity",
+    "LeaveRunningActivity",
     "OpenActivity",
     "SetActivityPlayers",
     "ReleaseFacilitator",

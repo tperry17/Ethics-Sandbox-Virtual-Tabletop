@@ -162,6 +162,15 @@ export function renderActivities(model: TableModel, send: SendActivity): HTMLEle
       note.textContent = "Full: every place is taken.";
       actions.append(note);
     }
+    if (activity.status !== "signup" && signedUp) {
+      // Leaving a running activity leaves it running for the others.
+      actions.append(
+        button("Leave", () => {
+          if (!window.confirm(`Leave ${activity.title}? Your cards go back to the deck, and the others carry on.`)) return;
+          send({ action: "leave", activity_id: activity.id });
+        }),
+      );
+    }
     if (activity.status === "signup") {
       if (signedUp) actions.append(button("Leave", () => send({ action: "leave", activity_id: activity.id })));
       if (activity.seats.length >= activity.min_players) {

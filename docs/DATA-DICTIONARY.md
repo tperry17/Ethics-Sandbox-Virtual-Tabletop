@@ -285,6 +285,15 @@ Take your name off an activity that has not begun.
 | --- | --- |
 | `activity_id` | `str` |
 
+### LeaveRunningActivity
+
+Leave an activity that has begun, without ending it for the others.
+
+| Field | Type |
+| --- | --- |
+| `activity_id` | `str` |
+| `seat_id` | `str` |
+
 ### Lock
 
 Lock a piece in place, so that nobody moves it by accident.

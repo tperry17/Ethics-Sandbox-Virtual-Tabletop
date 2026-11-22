@@ -184,6 +184,11 @@ test("while an activity is going the panel is that activity, and anyone may join
   await guest.getByRole("button", { name: "Join Hooked" }).click();
   await expect(host.getByText("Hooked: running (Ines, Tomas)")).toBeVisible();
   await expect(guest.getByRole("button", { name: "Finish Hooked" })).toBeVisible();
+  // A player may leave it while it runs; it carries on for the others.
+  guest.once("dialog", (dialog) => void dialog.accept());
+  await guest.getByRole("button", { name: "Leave" }).click();
+  await expect(host.getByText("Hooked: running (Ines)")).toBeVisible();
+  await expect(guest.getByRole("button", { name: "Join Hooked" })).toBeVisible();
 
   // Finished, the panel goes back to the activities to start.
   host.once("dialog", (dialog) => void dialog.accept());

@@ -7,6 +7,7 @@ from _games_support import hooked, pairs
 from sandbox.games.engine import (
     build_activity_start,
     build_join_running,
+    build_leave_running,
     build_macro,
     build_seat,
     build_table,
@@ -16,6 +17,7 @@ from sandbox.model import (
     JoinActivity,
     JoinRunningActivity,
     LeaveActivity,
+    LeaveRunningActivity,
     MoveToZone,
     Ok,
     OpenActivity,
@@ -285,3 +287,35 @@ def test_nobody_joins_a_running_activity_for_someone_else() -> None:
     activity_id = _begun_with_room(table)
     refused = run_op(table, "seat-2", JoinRunningActivity(activity_id, "seat-3"))
     assert "yourself" in str(refused)
+
+
+def test_a_player_may_leave_a_running_activity_and_the_rest_carry_on() -> None:
+    table = _room()
+    activity_id = _begun_with_room(table)
+    joined = build_join_running(hooked(), table, "seat-2", activity_id)
+    assert not isinstance(joined, Reject), joined
+    assert isinstance(run_op(table, "seat-2", joined), Ok)
+    theirs = {
+        z
+        for z in table.activities[activity_id].zones
+        if table.zones[z].owner_seat == "seat-2"
+    }
+    assert theirs
+
+    left = build_leave_running(hooked(), table, "seat-2", activity_id)
+    assert not isinstance(left, Reject), left
+    assert isinstance(run_op(table, "seat-2", left), Ok)
+    activity = table.activities[activity_id]
+    assert activity.status == "running"
+    assert activity.seats == ("seat-1",)
+    assert not theirs & set(table.zones)
+    assert not theirs & set(activity.zones)
+
+    # Nobody leaves for someone else, and the last one out leaves it ownerless:
+    # then anyone may end it.
+    refused = run_op(table, "seat-2", LeaveRunningActivity(activity_id, "seat-1"))
+    assert "yourself" in str(refused)
+    last = build_leave_running(hooked(), table, "seat-1", activity_id)
+    assert not isinstance(last, Reject), last
+    assert isinstance(run_op(table, "seat-1", last), Ok)
+    assert isinstance(run_op(table, "seat-3", EndActivity(activity_id)), Ok)
