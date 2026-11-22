@@ -245,3 +245,12 @@ def test_the_room_sandbox_keeps_the_full_deck_of_36() -> None:
     cards = table.pieces_in_zone("deck") + table.pieces_in_zone("sidebar")
     assert len(cards) == 36
     assert {groups[str(card.component_id)] for card in cards} == {"Deck", "Sidebar"}
+
+
+def test_only_the_trading_activity_offers_the_trades_section() -> None:
+    from sandbox.web.live import _trades
+
+    assert GAME.definition.meta.trading is True
+    assert _trades("value-cards-trading") is True
+    assert _trades("value-cards-debrief") is False
+    assert _trades("no-such-activity") is False

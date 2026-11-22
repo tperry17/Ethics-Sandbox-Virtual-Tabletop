@@ -320,6 +320,8 @@ class ActivityView(BaseModel):
     status: str
     options: dict[str, str] = Field(default_factory=dict)
     class_id: str = ""
+    trading: bool = False
+    """Its definition says its players trade cards (``meta.trading``)."""
 
 
 class ClassOutcomeView(BaseModel):
@@ -659,6 +661,12 @@ _OPERATION_TYPES: tuple[type, ...] = (
     TakeFacilitator,
     ReleaseFacilitator,
 )
+
+
+def _trades(kind: str) -> bool:
+    """Whether the activity of this kind is played by trading cards."""
+    game = GAMES.get(kind)
+    return game is not None and game.definition.meta.trading
 
 
 def _wire_name(operation_type: type) -> str:
@@ -2272,6 +2280,7 @@ class RoomRuntime:
                     status=a.status,
                     options=dict(a.options),
                     class_id=a.class_id,
+                    trading=_trades(a.kind),
                 )
                 for a in view.activities
             ],

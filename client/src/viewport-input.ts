@@ -168,6 +168,12 @@ export class ViewportController {
     this.set(fitBounds(bounds, this.options.size(), FIT_PADDING, FIT_TOP, FIT_MAX_SCALE));
   }
 
+  /** Fit the view to one area of the table, as "Fit table" fits the whole. */
+  fitTo(bounds: Bounds): void {
+    this.touchedByPerson = true;
+    this.set(fitBounds(bounds, this.options.size(), FIT_PADDING, FIT_TOP, FIT_MAX_SCALE));
+  }
+
   zoomBy(factor: number): void {
     const size = this.options.size();
     this.touchedByPerson = true;

@@ -232,7 +232,8 @@ export function renderTrades(
   if (mine === null) return null;
   const players = new Set<string>();
   for (const activity of model.activities.values()) {
-    if (activity.status === "running" && activity.seats.includes(mine)) {
+    // Only an activity played by trading (its definition says so) offers trades.
+    if (activity.status === "running" && activity.trading === true && activity.seats.includes(mine)) {
       for (const seat of activity.seats) players.add(seat);
     }
   }
