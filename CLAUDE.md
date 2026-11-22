@@ -30,8 +30,11 @@ A class is an activity run as several tables at once. Someone presses "Start a c
 Scenario 2 of Leadership and Knowledge in Popular Rule always runs as a class, in one room, with one table per city. It is best with two paired cities; it can be run with one, and then the other city is hypothetical: the facilitator may choose its decision, and if nobody does, the facilitator sees all three possible results. On the call the group splits into breakout groups, one per table, so each table is self-contained: its own notes, its own votes, its own list of participants.
 
 The room's buttons (its macros) are in their own "Table buttons" menu among
-the table's controls, beside "Pieces", closed until it is opened (and again
-on every load); opening either menu closes the other. An activity's buttons
+the table's controls, beside a "Draw" menu (the pen, "Clear my ink", and for
+the facilitator "Clear all ink") and "Pieces", each closed until it is
+opened (and again on every load); opening one closes the others. "Point"
+sits on the same row, with "Fit table" and the zoom buttons. A press on
+these controls never starts a drag, a stroke or a point on the table. An activity's buttons
 are in that activity's own row of the side panel, or its class table's row.
 The room's side panel holds its activities, its debrief and a class. On a
 laptop or tablet (wider than 48rem) it is closed on every load, behind an
@@ -150,7 +153,10 @@ then the piece's `z` within that zone — and never DOM insertion order.
 Another person's piece interpolates over 120 ms; the piece under your own
 hand never does. Your own private zone is drawn in a hand tray docked below
 the table, outside the world transform, so it stays put when the table moves;
-it is there whenever you have a private hand, empty or not. It is closed
+it is there whenever you have a private hand, empty or not. Anyone else's private hand is not drawn on the table at all, neither its
+outline nor the backs of the cards in it, and a hand is named for whoever
+holds it, by the name they joined with ("Ada's hand"), on the table, in
+announcements and in the "Move to…" menu, never by seat. It is closed
 on every load, one row naming the hand for whoever holds it, with the name
 they joined with ("Tomer's Hand"), which opens and closes it; closed and
 not empty, the row adds a count ("(3 cards)", or "(4 pieces)" once
@@ -164,7 +170,7 @@ takes the same share of every card, so a deck shows its pictures at one size.
 `?pieces=300&measure=1` is the frame-rate harness.
 
 "Fit table" (and the first view of a table nobody has moved) fits what is on
-the table - every zone but the table's own and your hand, every piece -
+the table - every zone but the table's own and anyone's hand, every piece -
 to the window's width, 16px (`FIT_PADDING`) from each side, but never
 zooms past 100% (`FIT_MAX_SCALE`); narrower than that, it is centred across.
 With nothing on the table, the table zone's area is fitted instead. Up and down it is centred in the room below the

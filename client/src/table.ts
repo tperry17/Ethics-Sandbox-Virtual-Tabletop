@@ -132,6 +132,9 @@ export class TableRenderer {
   private readonly fittedActivities = new Set<string>();
   /** Set once the first snapshot has been seen, so a reload does not refit. */
   private activitiesSeen = false;
+  /** The Draw menu (pen and clearing ink) and the Point button, filled by the interaction half. */
+  private readonly drawSlot = element("div", "tabletop__pieces-slot");
+  private readonly pointSlot = element("div", "tabletop__pieces-slot");
   /** Sign-ups this person has seen with the side panel open. */
   private readonly seenSignups = new Set<string>();
   private piecesAdded = 0;
@@ -381,7 +384,12 @@ export class TableRenderer {
         continue;
       }
       const area = [...this.model.zones.values()]
-        .filter((zone) => zone.id.startsWith(`${activity.id}:`) && !this.isInMyHand(zone.id))
+        .filter(
+          (zone) =>
+            zone.id.startsWith(`${activity.id}:`) &&
+            !this.isInMyHand(zone.id) &&
+            !this.isOthersHand(zone.id),
+        )
         .map((zone) => geometryBounds(zone.geometry));
       const bounds = unionBounds(area);
       // Its zones may arrive a message after it is marked running: try again then.
@@ -613,12 +621,13 @@ export class TableRenderer {
     if (id === this.dropTargetZone) classes.push("is-drop-target");
     const className = classes.join(" ");
     if (node.className !== className) node.className = className;
-    // Your own private hand is drawn in the tray docked below the table.
-    const docked = this.isInMyHand(id);
+    // Your own private hand is drawn in the tray docked below the table;
+    // anyone else's is not drawn at all.
+    const docked = this.isInMyHand(id) || this.isOthersHand(id);
     if (node.hidden !== docked) node.hidden = docked;
 
     const label = node.firstElementChild;
-    let text = this.zoneLabel(zone.label, zone.owner_seat);
+    let text = this.zoneLabel(zone);
     // A deck says how many cards it holds ("Core deck · 18"): the count of
     // backs the server sent, never anything about their faces.
     if (zone.kind === "deck") text = `${text} · ${this.piecesIn(id)}`;
@@ -641,12 +650,33 @@ export class TableRenderer {
     }
   }
 
-  private zoneLabel(label: string, ownerSeat: string | null): string {
+  /**
+   * A zone's name as this viewer reads it. A hand is named for whoever holds
+   * it, by the name they joined with ("Ada's hand"), not for their seat.
+   */
+  private zoneLabel(zone: ZoneView): string {
+    const { label, owner_seat: ownerSeat } = zone;
     if (ownerSeat === null) return label;
     const seat = this.model.seats.get(ownerSeat);
     const name = seat?.display_name ?? seat?.label ?? null;
     if (name === null) return label;
+    if (zone.kind === "hand") return ownerSeat === this.model.seatId ? "your hand" : `${name}'s hand`;
     return ownerSeat === this.model.seatId ? `${label} · you` : `${label} · ${name}`;
+  }
+
+  /**
+   * Someone else's private hand: not drawn on the table, nor the backs of
+   * the cards in it. An open hand stays on the table, to be read in place.
+   */
+  private isOthersHand(zoneId: string): boolean {
+    const zone = this.model.zones.get(zoneId);
+    return (
+      zone !== undefined &&
+      zone.kind === "hand" &&
+      zone.visibility === "private_to_owner" &&
+      zone.owner_seat !== null &&
+      zone.owner_seat !== this.model.seatId
+    );
   }
 
   // -- pieces ---------------------------------------------------------------------
@@ -705,11 +735,15 @@ export class TableRenderer {
     node.setZ(this.model.stackingOrder(piece.zone_id, piece.z));
     node.setFace(shown, component, this.model.zones.get(piece.zone_id)?.label ?? "");
     this.syncHolder(id);
+    // Kept current in the tray too, where setTarget (which also sets it) is not called.
+    if (node.element.dataset.zoneId !== piece.zone_id) node.element.dataset.zoneId = piece.zone_id;
 
     if (home === "tray") {
       this.trayDirty = true;
       return;
     }
+    const elsewhere = this.isOthersHand(piece.zone_id) && !pinned;
+    if (node.element.hidden !== elsewhere) node.element.hidden = elsewhere;
 
     if (pinned) {
       // The piece under this person's own hand goes exactly where the hand
@@ -849,8 +883,9 @@ export class TableRenderer {
 
   private controls(): HTMLElement {
     const controls = element("div", "tabletop__controls");
-    // The Table buttons and Pieces menus drop down over the same corner, so
-    // opening one closes the other. "toggle" does not bubble; capture it.
+    // The Table buttons, Draw and Pieces menus drop down over the same
+    // corner, so opening one closes the others. "toggle" does not bubble;
+    // capture it.
     controls.addEventListener(
       "toggle",
       (event) => {
@@ -864,7 +899,9 @@ export class TableRenderer {
     );
     controls.append(
       this.buttonsSlot,
+      this.drawSlot,
       this.piecesSlot,
+      this.pointSlot,
       button("Fit table", () => this.controller.fit(true)),
       button("Zoom out", () => this.controller.zoomBy(1 / 1.2), "−"),
       button("Zoom in", () => this.controller.zoomBy(1.2), "+"),
@@ -879,6 +916,16 @@ export class TableRenderer {
    */
   get toolArea(): HTMLElement {
     return this.toolGroup;
+  }
+
+  /** Where the Draw menu goes: beside the Table buttons, among the table's controls. */
+  get drawArea(): HTMLElement {
+    return this.drawSlot;
+  }
+
+  /** Where the Point button goes: on the same row as the menus. */
+  get pointArea(): HTMLElement {
+    return this.pointSlot;
   }
 
   /** The room's Pieces menu, among the camera controls; redrawn with the toolbar. */
@@ -1325,7 +1372,7 @@ export class TableRenderer {
   zoneLabelOf(zoneId: string): string {
     const zone = this.model.zones.get(zoneId);
     if (zone === undefined) return "the table";
-    return this.zoneLabel(zone.label, zone.owner_seat);
+    return this.zoneLabel(zone);
   }
 
   nameOf(seatId: string): string {
@@ -1444,11 +1491,11 @@ export class TableRenderer {
     // is nothing else. The fit never zooms past 100% (FIT_MAX_SCALE).
     const tables: Bounds[] = [];
     for (const zone of this.model.zones.values()) {
-      if (this.isInMyHand(zone.id)) continue;
+      if (this.isInMyHand(zone.id) || this.isOthersHand(zone.id)) continue;
       (zone.kind === "table" ? tables : boxes).push(geometryBounds(zone.geometry));
     }
     for (const piece of this.model.pieces.values()) {
-      if (this.isInMyHand(piece.zone_id)) continue;
+      if (this.isInMyHand(piece.zone_id) || this.isOthersHand(piece.zone_id)) continue;
       const component =
         piece.component_id === null
           ? undefined

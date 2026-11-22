@@ -355,6 +355,8 @@
 }
 
 .tabletop__zones .zone[hidden] { display: none; }
+/* Someone else's private hand is not drawn, nor the cards in it. */
+.tabletop__pieces-layer .piece[hidden] { display: none; }
 .tabletop__zones .zone {
   position: absolute;
   inset-block-start: 0;
@@ -932,15 +934,21 @@
 /* Static, so each drop-down hangs from the right edge of the whole row of
    controls, not from its own button, and stays on a narrow table. */
 .pieces-menu,
-.table-buttons { position: static; }
+.table-buttons,
+.draw-menu { position: static; }
 .pieces-menu > summary,
-.table-buttons > summary { list-style: none; cursor: pointer; }
+.table-buttons > summary,
+.draw-menu > summary { list-style: none; cursor: pointer; }
 .pieces-menu > summary::-webkit-details-marker,
-.table-buttons > summary::-webkit-details-marker { display: none; }
+.table-buttons > summary::-webkit-details-marker,
+.draw-menu > summary::-webkit-details-marker { display: none; }
 .pieces-menu[open] > summary,
-.table-buttons[open] > summary { background: var(--text-primary); color: var(--surface-page); }
+.table-buttons[open] > summary,
+.draw-menu[open] > summary,
+.draw-menu > summary.is-active { background: var(--text-primary); color: var(--surface-page); }
 .pieces-menu__panel,
-.table-buttons__panel {
+.table-buttons__panel,
+.draw-menu__panel {
   position: absolute;
   max-width: calc(100vw - 2 * var(--space-3));
   z-index: 5;
@@ -961,6 +969,10 @@
 /* The table's buttons: the same disclosure, its buttons two to a row. */
 .table-buttons__panel { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 18rem; }
 .table-buttons__panel .button { justify-content: center; }
+/* Drawing: the pen and clearing ink, one to a row. */
+.draw-menu__panel { width: 12rem; }
+.draw-menu__panel .button { justify-content: center; }
+.draw-menu__panel .button[hidden] { display: none; }
 .pieces-menu__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .pieces-menu__heading { margin: var(--space-2) 0 0; font-weight: 600; color: var(--text-secondary); }
 .pieces-menu__swatches { display: flex; flex-wrap: wrap; gap: var(--space-2); }

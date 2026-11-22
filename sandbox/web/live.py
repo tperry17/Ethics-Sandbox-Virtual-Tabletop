@@ -136,6 +136,7 @@ from sandbox.model import (
     sort_into_tables,
 )
 from sandbox.model.entities import Geometry
+from sandbox.model.types import ZoneKind
 from sandbox.model.visibility import project_patches
 from sandbox.web import rooms
 from sandbox.web.identity import participant_id_from_cookies
@@ -2011,7 +2012,14 @@ class RoomRuntime:
             label = entry.label
             name = None if entry.seat_id is None else self._names.get(entry.seat_id)
             if name is not None:
-                label = name if entry.group == "Show to…" else f"{label} · {name}"
+                zone = self.table.zones.get(entry.key.removeprefix("move:"))
+                if entry.group == "Show to…":
+                    label = name
+                elif zone is not None and zone.kind is ZoneKind.HAND:
+                    # A hand is named for whoever holds it, not for their seat.
+                    label = f"{name}'s hand"
+                else:
+                    label = f"{label} · {name}"
             items.append(
                 MenuItemView(
                     id=entry.key,
