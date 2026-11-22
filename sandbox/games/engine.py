@@ -53,6 +53,7 @@ from sandbox.model import (
     Despawn,
     Draw,
     Flip,
+    JoinRunningActivity,
     Lock,
     Move,
     MoveToZone,
@@ -732,6 +733,38 @@ def _return_cards(builder: _Builder, scope: Scope, gone: set[str]) -> None:
             builder.run(Shuffle(zone_id=home_id))
 
 
+def _zones_for_newcomers(
+    builder: _Builder,
+    scope: Scope,
+    staying: tuple[str, ...],
+    newcomers: Sequence[str],
+) -> list[str]:
+    """Lay out a begun activity's per-seat zones for people new to it.
+
+    Each newcomer takes the first place along the zones' step that nobody
+    staying holds. Returns the ids of the zones made.
+    """
+    used = _used_seat_indexes(builder, scope, staying)
+    added: list[str] = []
+    for seat_id in newcomers:
+        limit = len(staying) + len(newcomers) + len(used) + 1
+        index = next(i for i in range(limit) if i not in used)
+        used.add(index)
+        label = builder.trial.seats[seat_id].label
+        for spec in builder._game().definition.zones:
+            if spec.per_seat and builder._wanted(spec):
+                zone = _add_zone(
+                    spec,
+                    seat_id=seat_id,
+                    seat_index=index,
+                    label=f"{spec.label} · {label}",
+                    scope=scope,
+                )
+                builder.run(zone)
+                added.append(zone.zone_id)
+    return added
+
+
 def _change_seats(builder: _Builder, activity_id: str, seats: tuple[str, ...]) -> None:
     """Add the steps that change who sits at one table, making zones for new people."""
     activity = builder.trial.activities[activity_id]
@@ -741,23 +774,36 @@ def _change_seats(builder: _Builder, activity_id: str, seats: tuple[str, ...]) -
     if activity.status == "running":
         _return_cards(builder, scope, set(activity.seats) - set(seats))
         staying = tuple(seat for seat in seats if seat in activity.seats)
-        used = _used_seat_indexes(builder, scope, staying)
-        for seat_id in (seat for seat in seats if seat not in activity.seats):
-            index = next(i for i in range(len(seats) + len(used) + 1) if i not in used)
-            used.add(index)
-            label = builder.trial.seats[seat_id].label
-            for spec in builder._game().definition.zones:
-                if spec.per_seat and builder._wanted(spec):
-                    zone = _add_zone(
-                        spec,
-                        seat_id=seat_id,
-                        seat_index=index,
-                        label=f"{spec.label} · {label}",
-                        scope=scope,
-                    )
-                    builder.run(zone)
-                    added.append(zone.zone_id)
+        newcomers = [seat for seat in seats if seat not in activity.seats]
+        added = _zones_for_newcomers(builder, scope, staying, newcomers)
     builder.run(ChangeActivitySeats(activity_id, seats, tuple(added)))
+
+
+def build_join_running(
+    game: Game, table: Table, actor_seat: str, activity_id: str
+) -> Transaction | Reject:
+    """Seat someone at an activity that has already begun, with zones of their own.
+
+    One transaction: their zones are laid out and they join together, or
+    neither happens.
+    """
+    activity = table.activities.get(activity_id)
+    if activity is None:
+        return Reject("That activity is not running any more.")
+    reason = JoinRunningActivity(activity_id, actor_seat).validate(table, actor_seat)
+    if reason is not None:
+        return Reject(reason)
+    scope = scope_of(table, activity_id)
+    builder = _Builder(game, table, actor_seat, scope)
+    try:
+        added = _zones_for_newcomers(builder, scope, activity.seats, [actor_seat])
+        builder.run(JoinRunningActivity(activity_id, actor_seat, tuple(added)))
+    except _Refused as refusal:
+        return Reject(refusal.reason)
+    return dataclasses.replace(
+        builder.transaction(name=f"join:{activity_id}", label=f"Join {activity.title}"),
+        activity_id=activity_id,
+    )
 
 
 def build_seat_move(
@@ -1076,6 +1122,7 @@ __all__ = [
     "Scope",
     "SetupFailedError",
     "build_activity_start",
+    "build_join_running",
     "scope_of",
     "announcement",
     "build_macro",

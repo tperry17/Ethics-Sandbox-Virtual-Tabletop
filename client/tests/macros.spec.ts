@@ -143,7 +143,42 @@ test("an open room starts an activity for those who sign up, and its buttons are
   ).toBeVisible();
   await expect(host.locator(".table-buttons button[data-activity-id]")).toHaveCount(0);
 
-  await host.getByRole("button", { name: "End" }).click();
+  // Finishing asks first: the activity's zones leave the table.
+  host.once("dialog", (dialog) => void dialog.accept());
+  await host.getByRole("button", { name: "Finish Pairs" }).click();
   await expect(host.getByText(/Pairs: running/)).toBeHidden();
   await expect(guest.locator("button[data-activity-id]")).toHaveCount(0);
+});
+
+test("while an activity is going the panel is that activity, and anyone may join it", async ({
+  browser,
+}) => {
+  const { page: host, code } = await openRoom(browser, "Ines");
+  const guest = await join(browser, code, "Tomas");
+  const startList = (page: Page) => page.getByRole("heading", { name: "Start an activity" });
+  await expect(startList(host)).toBeVisible();
+
+  await host.getByRole("button", { name: "Start Hooked", exact: true }).click();
+  // The list of activities to start gives way to the activity, for everyone.
+  for (const page of [host, guest]) {
+    await expect(page.getByText(/Hooked: signing up, 1 of 1–3/)).toBeVisible();
+    await expect(startList(page)).toBeHidden();
+    await expect(page.getByRole("button", { name: "Start Pairs", exact: true })).toHaveCount(0);
+  }
+  await host.getByRole("button", { name: "Begin now" }).click();
+  await expect(guest.getByText("Hooked: running (Ines)")).toBeVisible();
+  await expect(guest.getByRole("heading", { name: "In progress" })).toBeVisible();
+
+  // Someone who was not there at the start joins it while it runs.
+  await guest.getByRole("button", { name: "Join Hooked" }).click();
+  await expect(host.getByText("Hooked: running (Ines, Tomas)")).toBeVisible();
+  await expect(guest.getByRole("button", { name: "Finish Hooked" })).toBeVisible();
+
+  // Finished, the panel goes back to the activities to start.
+  host.once("dialog", (dialog) => void dialog.accept());
+  await host.getByRole("button", { name: "Finish Hooked" }).click();
+  for (const page of [host, guest]) {
+    await expect(startList(page)).toBeVisible();
+    await expect(page.getByText(/Hooked: running/)).toBeHidden();
+  }
 });

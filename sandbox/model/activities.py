@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from sandbox.model.entities import Activity, Table
+from sandbox.model.entities import SYSTEM_SEAT, Activity, Table
 from sandbox.model.ops import new_op_id
 from sandbox.model.results import Patch
 
@@ -106,6 +106,50 @@ class JoinActivity:
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         activity = table.activities[self.activity_id]
         activity.seats = (*activity.seats, actor_seat)
+        return [_patch(activity)]
+
+
+@dataclass(frozen=True)
+class JoinRunningActivity:
+    """Join an activity that has already begun, while it has room.
+
+    ``seat_id`` is who joins: themselves, or anyone when the room acts for
+    them inside the transaction that lays out their zones. ``added_zones``
+    are the zones the game layer has just made for the new player, in the
+    same transaction. A table of a class is joined through the
+    facilitator's moves instead.
+    """
+
+    activity_id: str
+    seat_id: str
+    added_zones: tuple[str, ...] = ()
+    op_id: str = field(default_factory=new_op_id)
+
+    def validate(self, table: Table, actor_seat: str) -> str | None:
+        if (reason := _reason_missing(table, self.activity_id)) is not None:
+            return reason
+        if actor_seat not in (self.seat_id, SYSTEM_SEAT):
+            return "You can only join an activity yourself."
+        activity = table.activities[self.activity_id]
+        if activity.status != "running":
+            return "That activity has not begun. Sign up instead."
+        if activity.class_id:
+            return "A table of a class is joined when the facilitator moves you there."
+        if self.seat_id in activity.seats:
+            return "You are already playing."
+        if len(activity.seats) >= activity.max_players:
+            return "That activity is full."
+        if self.seat_id not in table.seats:
+            return "Take a seat at the table first."
+        for zone_id in self.added_zones:
+            if zone_id not in table.zones:
+                return f"There is no zone {zone_id!r} on the table."
+        return None
+
+    def apply(self, table: Table, actor_seat: str) -> list[Patch]:
+        activity = table.activities[self.activity_id]
+        activity.seats = (*activity.seats, self.seat_id)
+        activity.zones = (*activity.zones, *self.added_zones)
         return [_patch(activity)]
 
 

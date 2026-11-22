@@ -51,6 +51,7 @@ from sandbox.games.engine import (
     announcement,
     build_activity_start,
     build_add_piece,
+    build_join_running,
     build_macro,
     build_remove_deck,
     build_seat_move,
@@ -1516,6 +1517,17 @@ class RoomRuntime:
         elif action in ("join", "leave", "end", "begin", "choose") and isinstance(
             activity_id, str
         ):
+            running = self.table.activities.get(activity_id)
+            if action == "join" and running is not None and running.status == "running":
+                # Everyone in the room may join an activity that is going,
+                # while it has room: they get its zones of their own.
+                joined = self._join_running(seat_id, activity_id)
+                if isinstance(joined, Reject):
+                    self._reject(connection, message.client_id, joined.reason)
+                    return
+                connection.send(AckMessage(client_id=message.client_id))
+                self._resend_everyone()
+                return
             if action == "join":
                 operation = JoinActivity(activity_id)
             elif action == "leave":
@@ -1823,6 +1835,17 @@ class RoomRuntime:
         if began == 0 and waiting:
             return Reject("No table has the number of people it needs.")
         return Ok([])
+
+    def _join_running(self, seat_id: str, activity_id: str) -> OpOutcome:
+        """Seat ``seat_id`` at an activity that has begun, with zones of their own."""
+        activity = self.table.activities.get(activity_id)
+        game = None if activity is None else GAMES.get(activity.kind)
+        if activity is None or game is None:
+            return Reject("That activity is not running any more.")
+        built = build_join_running(game, self.table, seat_id, activity_id)
+        if not isinstance(built, Transaction):
+            return built
+        return self._apply(seat_id, built, log=True)
 
     def _begin(self, seat_id: str, activity_id: str) -> OpOutcome:
         """Lay out an activity's zones and mark it running, as ``seat_id``."""

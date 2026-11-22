@@ -88,6 +88,16 @@ function activityCards(choices: ActivityChoiceView[], send: SendActivity): HTMLE
   return list;
 }
 
+/**
+ * Whether the side panel is in an activity's mode: an activity (not a table
+ * of a class, which the class's own section shows) has been started and not
+ * yet finished. While it is, the panel shows that activity instead of the
+ * list of activities to start.
+ */
+export function activityInProgress(model: TableModel): boolean {
+  return [...model.activities.values()].some((activity) => !activity.class_id);
+}
+
 /** The activities section of the toolbar, or null when there is nothing to show. */
 export function renderActivities(model: TableModel, send: SendActivity): HTMLElement | null {
   const mine = model.seatId;
@@ -97,49 +107,80 @@ export function renderActivities(model: TableModel, send: SendActivity): HTMLEle
   root.setAttribute("role", "group");
   root.setAttribute("aria-label", "Activities");
 
-  // Each activity the room offers, as a card with its own choices and a
-  // Start button; its debriefs follow under their own heading. One offered
-  // only as a class is started from the class controls, so its card says so
-  // instead. The server judges what is sent.
-  const activities = model.activityChoices.filter((choice) => choice.debrief !== true);
-  const debriefs = model.activityChoices.filter((choice) => choice.debrief === true);
-  if (activities.length > 0) {
-    const intro = document.createElement("p");
-    intro.className = "room-panel__intro";
-    intro.textContent =
-      "An activity opens a sign-up for its players. Everyone else keeps using the table.";
-    root.append(panelHeading("Start an activity"), intro, activityCards(activities, send));
-  }
-  if (debriefs.length > 0) {
-    root.append(panelHeading("Debrief"), activityCards(debriefs, send));
+  const going = [...model.activities.values()].filter((activity) => !activity.class_id);
+  if (going.length === 0) {
+    // Each activity the room offers, as a card with its own choices and a
+    // Start button; its debriefs follow under their own heading. One offered
+    // only as a class is started from the class controls, so its card says so
+    // instead. The server judges what is sent.
+    const activities = model.activityChoices.filter((choice) => choice.debrief !== true);
+    const debriefs = model.activityChoices.filter((choice) => choice.debrief === true);
+    if (activities.length > 0) {
+      const intro = document.createElement("p");
+      intro.className = "room-panel__intro";
+      intro.textContent =
+        "An activity opens a sign-up for its players. Everyone else keeps using the table.";
+      root.append(panelHeading("Start an activity"), intro, activityCards(activities, send));
+    }
+    if (debriefs.length > 0) {
+      root.append(panelHeading("Debrief"), activityCards(debriefs, send));
+    }
+    return root.childElementCount === 0 ? null : root;
   }
 
-  for (const activity of model.activities.values()) {
-    // A table of a class is listed with its class.
-    if (activity.class_id) continue;
-    const row = document.createElement("div");
-    row.className = "toolbar__activity";
-    row.dataset.activityId = activity.id;
+  // An activity is going: the panel is that activity until it is finished.
+  // Everyone sees it, and anyone may join while it has room.
+  for (const activity of going) {
+    const view = document.createElement("div");
+    view.className = "toolbar__activity activity-mode";
+    view.dataset.activityId = activity.id;
+    view.append(panelHeading(activity.status === "signup" ? "Signing up" : "In progress"));
     const signedUp = activity.seats.includes(mine);
-    const label = document.createElement("span");
+    const places =
+      activity.min_players === activity.max_players
+        ? `${activity.min_players}`
+        : `${activity.min_players}–${activity.max_players}`;
+    const label = document.createElement("p");
+    label.className = "activity-mode__status";
     label.textContent =
       activity.status === "signup"
-        ? `${activity.title}: signing up, ${activity.seats.length} of ${activity.min_players === activity.max_players ? activity.min_players : `${activity.min_players}–${activity.max_players}`} (${names(model, activity)})`
+        ? `${activity.title}: signing up, ${activity.seats.length} of ${places} (${names(model, activity)})`
         : `${activity.title}: running (${names(model, activity)})`;
-    row.append(label);
+    view.append(label);
+    const actions = document.createElement("div");
+    actions.className = "activity-mode__actions";
+    const full = activity.seats.length >= activity.max_players;
+    if (!signedUp && !full) {
+      const join = button("Join", () => send({ action: "join", activity_id: activity.id }));
+      join.classList.add("button--primary");
+      join.setAttribute("aria-label", `Join ${activity.title}`);
+      actions.append(join);
+    }
+    if (!signedUp && full) {
+      const note = document.createElement("span");
+      note.className = "activity-card__note";
+      note.textContent = "Full: every place is taken.";
+      actions.append(note);
+    }
     if (activity.status === "signup") {
-      if (!signedUp) row.append(button("Join", () => send({ action: "join", activity_id: activity.id })));
-      if (signedUp) row.append(button("Leave", () => send({ action: "leave", activity_id: activity.id })));
+      if (signedUp) actions.append(button("Leave", () => send({ action: "leave", activity_id: activity.id })));
       if (activity.seats.length >= activity.min_players) {
-        row.append(button("Begin now", () => send({ action: "begin", activity_id: activity.id })));
+        actions.append(button("Begin now", () => send({ action: "begin", activity_id: activity.id })));
       }
     }
     if (signedUp || model.you?.is_facilitator === true) {
-      row.append(button("End", () => send({ action: "end", activity_id: activity.id })));
+      const finish = button("Finish", () => {
+        // Finishing takes the activity's zones, and what is in them, off the table.
+        if (!window.confirm(`Finish ${activity.title}? Its zones and the cards in them leave the table.`)) return;
+        send({ action: "end", activity_id: activity.id });
+      });
+      finish.setAttribute("aria-label", `Finish ${activity.title}`);
+      actions.append(finish);
     }
-    root.append(row);
+    view.append(actions);
+    root.append(view);
   }
-  return root.childElementCount === 0 ? null : root;
+  return root;
 }
 
 export type SendOp = (opType: string, payload: Record<string, unknown>) => void;

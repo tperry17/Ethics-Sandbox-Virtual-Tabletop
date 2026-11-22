@@ -267,6 +267,16 @@ Sign up for an activity that has not begun.
 | --- | --- |
 | `activity_id` | `str` |
 
+### JoinRunningActivity
+
+Join an activity that has already begun, while it has room.
+
+| Field | Type |
+| --- | --- |
+| `activity_id` | `str` |
+| `seat_id` | `str` |
+| `added_zones` | `tuple[str, ...]` |
+
 ### LeaveActivity
 
 Take your name off an activity that has not begun. The last one out closes it.

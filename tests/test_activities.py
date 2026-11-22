@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from _games_support import pairs
+from _games_support import hooked, pairs
 
 from sandbox.games.engine import (
     build_activity_start,
+    build_join_running,
     build_macro,
     build_seat,
     build_table,
@@ -13,6 +14,7 @@ from sandbox.games.engine import (
 from sandbox.model import (
     EndActivity,
     JoinActivity,
+    JoinRunningActivity,
     LeaveActivity,
     MoveToZone,
     Ok,
@@ -201,3 +203,73 @@ def test_the_facilitator_may_choose_the_players() -> None:
     assert table.activities[activity_id].seats == ("seat-2", "seat-4")
     wrong_count = SetActivityPlayers(activity_id, ("seat-2",))
     assert isinstance(run_op(table, "seat-3", wrong_count), Reject)
+
+
+# -- joining an activity that has already begun -----------------------------------
+
+
+def _begun_with_room(table: Table) -> str:
+    """Hooked (one to three players), begun by seat-1 alone."""
+    game = hooked()
+    meta = game.definition.meta
+    op = OpenActivity(
+        kind=game.slug,
+        title=meta.title,
+        min_players=meta.players.min,
+        max_players=meta.players.max,
+    )
+    assert isinstance(run_op(table, "seat-1", op), Ok)
+    activity_id = next(reversed(table.activities))
+    built = build_activity_start(game, table, "seat-1", activity_id)
+    assert not isinstance(built, Reject), built
+    assert isinstance(run_op(table, "seat-1", built), Ok)
+    return activity_id
+
+
+def test_someone_may_join_a_running_activity_and_gets_zones_of_their_own() -> None:
+    table = _room()
+    activity_id = _begun_with_room(table)
+    before = set(table.activities[activity_id].zones)
+    built = build_join_running(hooked(), table, "seat-2", activity_id)
+    assert not isinstance(built, Reject), built
+    assert isinstance(run_op(table, "seat-2", built), Ok)
+    activity = table.activities[activity_id]
+    assert activity.seats == ("seat-1", "seat-2")
+    added = set(activity.zones) - before
+    assert added, "the newcomer has no zones"
+    assert {table.zones[z].owner_seat for z in added} == {"seat-2"}
+    # Their tray sits beside the first player's, not on top of it.
+    trays = [table.zones[z] for z in activity.zones if table.zones[z].owner_seat]
+    rects = [t.geometry for t in trays if isinstance(t.geometry, Rect)]
+    places = {(rect.x, rect.y) for rect in rects}
+    assert len(places) == len(trays)
+    # Ending it takes the newcomer's zones away with the rest.
+    assert isinstance(run_op(table, "seat-1", EndActivity(activity_id)), Ok)
+    assert not added & set(table.zones)
+
+
+def test_joining_a_running_activity_is_refused_when_full_or_already_in_it() -> None:
+    table = _room()
+    activity_id = _begun_with_room(table)
+    already = build_join_running(hooked(), table, "seat-1", activity_id)
+    assert isinstance(already, Reject) and "already" in already.reason
+    for seat in ("seat-2", "seat-3"):
+        built = build_join_running(hooked(), table, seat, activity_id)
+        assert not isinstance(built, Reject), built
+        assert isinstance(run_op(table, seat, built), Ok)
+    full = build_join_running(hooked(), table, "seat-4", activity_id)
+    assert isinstance(full, Reject) and "full" in full.reason
+
+
+def test_a_sign_up_is_joined_by_signing_up_not_by_joining_a_running_activity() -> None:
+    table = _room()
+    activity_id = _open(table)
+    refused = run_op(table, "seat-2", JoinRunningActivity(activity_id, "seat-2"))
+    assert "not begun" in str(refused)
+
+
+def test_nobody_joins_a_running_activity_for_someone_else() -> None:
+    table = _room()
+    activity_id = _begun_with_room(table)
+    refused = run_op(table, "seat-2", JoinRunningActivity(activity_id, "seat-3"))
+    assert "yourself" in str(refused)
