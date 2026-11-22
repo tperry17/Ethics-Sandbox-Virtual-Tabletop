@@ -128,6 +128,9 @@ export class TableRenderer {
   private readonly toolGroup = element("div", "tabletop__palette");
   private readonly piecesSlot = element("div", "tabletop__pieces-slot");
   private readonly buttonsSlot = element("div", "tabletop__pieces-slot");
+  /** The Draw menu (pen and clearing ink) and the Point button, filled by the interaction half. */
+  private readonly drawSlot = element("div", "tabletop__pieces-slot");
+  private readonly pointSlot = element("div", "tabletop__pieces-slot");
   /** Sign-ups this person has seen with the side panel open. */
   private readonly seenSignups = new Set<string>();
   private piecesAdded = 0;
@@ -837,8 +840,9 @@ export class TableRenderer {
 
   private controls(): HTMLElement {
     const controls = element("div", "tabletop__controls");
-    // The Table buttons and Pieces menus drop down over the same corner, so
-    // opening one closes the other. "toggle" does not bubble; capture it.
+    // The Table buttons, Draw and Pieces menus drop down over the same
+    // corner, so opening one closes the others. "toggle" does not bubble;
+    // capture it.
     controls.addEventListener(
       "toggle",
       (event) => {
@@ -852,7 +856,9 @@ export class TableRenderer {
     );
     controls.append(
       this.buttonsSlot,
+      this.drawSlot,
       this.piecesSlot,
+      this.pointSlot,
       button("Fit table", () => this.controller.fit(true)),
       button("Zoom out", () => this.controller.zoomBy(1 / 1.2), "−"),
       button("Zoom in", () => this.controller.zoomBy(1.2), "+"),
@@ -867,6 +873,16 @@ export class TableRenderer {
    */
   get toolArea(): HTMLElement {
     return this.toolGroup;
+  }
+
+  /** Where the Draw menu goes: beside the Table buttons, among the table's controls. */
+  get drawArea(): HTMLElement {
+    return this.drawSlot;
+  }
+
+  /** Where the Point button goes: on the same row as the menus. */
+  get pointArea(): HTMLElement {
+    return this.pointSlot;
   }
 
   /** The room's Pieces menu, among the camera controls; redrawn with the toolbar. */
