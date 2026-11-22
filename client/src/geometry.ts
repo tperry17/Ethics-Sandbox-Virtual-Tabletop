@@ -72,8 +72,9 @@ const PILE_GAP = 12;
 
 /**
  * Where a piece let go at (`x`, `y`) should land so that it is not left
- * half under a pile: `{ join }` if its centre is on one it can go into,
- * otherwise a spot clear of every pile it overlapped, as near as possible.
+ * half under a pile: `{ join }` if more than half of it lies over a pile it
+ * can go into (the one it overlaps most), otherwise a spot clear of every
+ * pile it overlapped, as near as possible.
  *
  * This reads where the hand let go, as finding the zone under the pointer
  * does; whether the piece may go there is still the server's to say.
@@ -87,8 +88,10 @@ export function landingBesidePiles(
   canJoin: boolean,
 ): { join: number } | { x: number; y: number } {
   if (canJoin) {
-    const under = piles.findIndex((pile) => boundsContain(pile, x, y));
-    if (under !== -1) return { join: under };
+    const box = { minX: x - width / 2, minY: y - height / 2, maxX: x + width / 2, maxY: y + height / 2 };
+    const overlaps = piles.map((pile) => overlapArea(box, pile));
+    const most = Math.max(0, ...overlaps);
+    if (most > (width * height) / 2) return { join: overlaps.indexOf(most) };
   }
   // Moving clear of one pile can land on another; a few rounds settle it.
   for (let round = 0; round < 4; round++) {
@@ -108,4 +111,10 @@ export function landingBesidePiles(
     );
   }
   return { x, y };
+}
+
+function overlapArea(a: Bounds, b: Bounds): number {
+  const width = Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX);
+  const height = Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY);
+  return width > 0 && height > 0 ? width * height : 0;
 }
