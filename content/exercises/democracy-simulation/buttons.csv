@@ -5,7 +5,7 @@ start_meeting,Start the meeting,"Keeps who holds which card and its interest, an
 open_assembly,Open the public assembly,"A king opens the council's meeting to the townspeople to question and heckle. Hudrosia only.",,{name} opened the public assembly.
 put_to_vote,Call the vote,"Calls a vote on the written proposal you moved onto the floor and hands out the ballots. A co-Chair or king, or the facilitator.",,{name} called a vote.
 close_vote,Count the vote,"Anyone without a hand up counts against. A co-Chair or king, or the facilitator.",,{name} counted the vote.
-new_proposal,Add a proposal,"A blank proposal note. Double-click it to write the proposal.",,{name} added a proposal.
+new_proposal,Add a proposal,"A blank proposal note. Click it to select it, then click it again to write the proposal.",,{name} added a proposal.
 join_queue,Join the queue,"Put your name on the speaking queue.",,{name} joined the speaking queue.
 next_speaker,Next speaker,"Take the first speaker off the queue. A co-Chair or king, or the facilitator.",,{name} called the next speaker.
 clear_queue,Clear the queue,,,{name} cleared the speaking queue.

@@ -315,51 +315,122 @@ test.describe("selecting", () => {
 });
 
 test.describe("flipping and rotating", () => {
-  test("a double-click turns a card over, hiding its face at once", async ({ page }) => {
+  test("a click on a selected card turns it over, hiding its face at once", async ({ page }) => {
     await page.goto(PREVIEW);
+    await cameraSettled(page);
     const card = piece(page, "claim-1");
-    await card.dblclick();
+    const at = await centre(card);
 
+    // The first click only selects.
+    await page.mouse.click(at.x, at.y);
+    await expect(card).toHaveClass(/is-selected/);
+    await page.waitForTimeout(500);
+    expect((await intents(page)).filter((intent) => intent.op_type === "flip")).toHaveLength(0);
+
+    // The second turns it over.
+    await page.mouse.click(at.x, at.y);
     await expect(card).toHaveClass(/is-face-down/);
     await expect(card.locator(".piece__title")).toHaveCount(0);
-    const flip = (await intents(page)).find((intent) => intent.op_type === "flip")!;
-    expect(flip.payload["piece_id"]).toBe("claim-1");
+    const flips = (await intents(page)).filter((intent) => intent.op_type === "flip");
+    expect(flips).toHaveLength(1);
+    expect(flips[0]!.payload["piece_id"]).toBe("claim-1");
+    await expect(card).toHaveClass(/is-selected/);
 
     // Refused: the face comes back.
-    await inject(page, { type: "reject", client_id: flip.client_id, reason: "That piece is locked." });
+    await inject(page, { type: "reject", client_id: flips[0]!.client_id, reason: "That piece is locked." });
     await expect(card.locator(".piece__title")).toHaveText("Equal standing");
   });
+
+  test("a double-click on an unselected card selects it, then turns it over once", async ({ page }) => {
+    await page.goto(PREVIEW);
+    await cameraSettled(page);
+    const card = piece(page, "claim-1");
+    await card.dblclick();
+    await expect(card).toHaveClass(/is-face-down/);
+    await page.waitForTimeout(300);
+    expect((await intents(page)).filter((intent) => intent.op_type === "flip")).toHaveLength(1);
+  });
+
+  test("a click on another piece selects it rather than turning anything over", async ({ page }) => {
+    await page.goto(PREVIEW);
+    await cameraSettled(page);
+    const card = piece(page, "claim-1");
+    const other = piece(page, "token-1");
+    await page.mouse.click(...(Object.values(await centre(card)) as [number, number]));
+    await expect(card).toHaveClass(/is-selected/);
+    await page.waitForTimeout(500);
+    await page.mouse.click(...(Object.values(await centre(other)) as [number, number]));
+    await expect(other).toHaveClass(/is-selected/);
+    await expect(card).not.toHaveClass(/is-selected/);
+    await page.waitForTimeout(300);
+    expect((await intents(page)).filter((intent) => ["flip", "set_text"].includes(intent.op_type))).toHaveLength(0);
+  });
+
+  test("Shift-click on a selected card takes it out of the selection", async ({ page }) => {
+    await page.goto(PREVIEW);
+    await cameraSettled(page);
+    const card = piece(page, "claim-1");
+    const at = await centre(card);
+    await page.mouse.click(at.x, at.y);
+    await expect(card).toHaveClass(/is-selected/);
+    await page.waitForTimeout(500);
+    await page.keyboard.down("Shift");
+    await page.mouse.click(at.x, at.y);
+    await page.keyboard.up("Shift");
+    await expect(card).not.toHaveClass(/is-selected/);
+    expect((await intents(page)).filter((intent) => intent.op_type === "flip")).toHaveLength(0);
+  });
+});
+
+test("a card in the hand, which is never selected, turns over with a double-click", async ({ page }) => {
+  await page.goto(PREVIEW);
+  await settledTray(page);
+  const card = piece(page, "hand-1-a");
+  await card.dblclick();
+  await expect(card).not.toHaveClass(/is-selected/);
+  await page.waitForTimeout(300);
+  const flips = (await intents(page)).filter((intent) => intent.op_type === "flip");
+  expect(flips).toHaveLength(1);
+  expect(flips[0]!.payload["piece_id"]).toBe("hand-1-a");
 });
 
 test.describe("flipping by touch", () => {
   test.use({ hasTouch: true });
 
-  test("a double tap turns a card over once, and leaves the selection as it was", async ({ page }) => {
+  test("one tap selects a card, and a tap on it while selected turns it over", async ({ page }) => {
     await page.goto(PREVIEW);
+    await cameraSettled(page);
     const card = piece(page, "claim-1");
-    const box = (await card.boundingBox())!;
-    const x = box.x + box.width / 2;
-    const y = box.y + box.height / 2;
+    const { x, y } = await centre(card);
 
-    // One tap selects, as before.
     await page.touchscreen.tap(x, y);
     await expect(card).toHaveClass(/is-selected/);
-    // A second tap well after the first toggles it off again.
     await page.waitForTimeout(500);
-    await page.touchscreen.tap(x, y);
-    await expect(card).not.toHaveClass(/is-selected/);
     expect((await intents(page)).filter((intent) => intent.op_type === "flip")).toHaveLength(0);
 
-    // Two quick taps turn it over, once, and do not select it.
-    await page.waitForTimeout(500);
-    await page.touchscreen.tap(x, y);
+    // However long after, a second tap turns it over, once, and it stays selected.
     await page.touchscreen.tap(x, y);
     await expect(card).toHaveClass(/is-face-down/);
     await page.waitForTimeout(300);
     const flips = (await intents(page)).filter((intent) => intent.op_type === "flip");
     expect(flips).toHaveLength(1);
     expect(flips[0]!.payload["piece_id"]).toBe("claim-1");
-    await expect(card).not.toHaveClass(/is-selected/);
+    await expect(card).toHaveClass(/is-selected/);
+  });
+
+  test("a tap on another piece selects it first", async ({ page }) => {
+    await page.goto(PREVIEW);
+    await cameraSettled(page);
+    const card = piece(page, "claim-1");
+    const other = piece(page, "token-1");
+    const at = await centre(card);
+    await page.touchscreen.tap(at.x, at.y);
+    await page.waitForTimeout(500);
+    const there = await centre(other);
+    await page.touchscreen.tap(there.x, there.y);
+    await expect(other).toHaveClass(/is-selected/);
+    await page.waitForTimeout(300);
+    expect((await intents(page)).filter((intent) => ["flip", "set_text"].includes(intent.op_type))).toHaveLength(0);
   });
 });
 
