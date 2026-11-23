@@ -476,8 +476,8 @@
 .toast--compact .toast__message { margin: 0; }
 .toast--compact[data-level="warning"] { border-color: var(--accent-rubric); }
 
-/* The tray lies over the bottom edge of the table, see-through but for a
-   faint shade behind the fan, so the table shows round and between the cards. Only what is
+/* The tray lies over the bottom edge of the table and has no background of
+   its own, so the table shows round and between the cards. Only what is
    drawn in it - its cards, its name, the empty-hand note - takes a press;
    anywhere else in it, a press reaches the table beneath. Its name is a small
    tab in the bottom corner, over the fan, not a row of its own. */
@@ -492,12 +492,6 @@
   overflow: hidden;
   background: var(--transparent);
   pointer-events: none;
-}
-
-/* Open, a faint shade rises behind the fan, so the cards stand off the
-   table; closed, there is no fan to set off. */
-.hand-tray:not(.is-collapsed) {
-  background: linear-gradient(to top, var(--shadow-color), var(--transparent));
 }
 
 .hand-tray.is-collapsed { block-size: auto; }
