@@ -176,6 +176,9 @@ takes the same share of every card, so a deck shows its pictures at one size.
 the table - every zone but the table's own and anyone's hand, every piece -
 to the window's width, 16px (`FIT_PADDING`) from each side, but never
 zooms past 100% (`FIT_MAX_SCALE`); narrower than that, it is centred across.
+It zooms out as far as it must to show all of it (down to `FIT_MIN_SCALE`),
+past the 10% (`MIN_SCALE`) that the wheel, a pinch and the zoom buttons
+stop at; from there, zooming in works and zooming out stays put.
 With nothing on the table, the table zone's area is fitted instead. Up and down it is centred in the room below the
 row of table controls (`FIT_TOP`, 64px) where it fits; where it is taller,
 its top edge is put just below the controls and the rest is a pan away.

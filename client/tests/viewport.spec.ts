@@ -68,12 +68,20 @@ test.describe("viewport arithmetic", () => {
     expect(phone.scale).toBeCloseTo((390 - 32) / 520, 6);
   });
 
-  test("puts a table too wide for the smallest zoom at its left edge, not cut in half", () => {
-    const bounds = { minX: 0, minY: 0, maxX: 1400, maxY: 1000 };
+  test("fits a table wider than the smallest manual zoom on a phone, all of it across", () => {
+    // A room's table and a card put to its side: wider than MIN_SCALE shows on a phone.
+    const bounds = { minX: 0, minY: 0, maxX: 5200, maxY: 1000 };
     const viewport = fitBounds(bounds, { width: 390, height: 400 }, 16, 16);
-    expect(viewport.scale).toBe(MIN_SCALE);
-    const [left, top] = worldToScreen(viewport, bounds.minX, bounds.minY);
+    expect(viewport.scale).toBeLessThan(MIN_SCALE);
+    const [left] = worldToScreen(viewport, bounds.minX, bounds.minY);
+    const [right] = worldToScreen(viewport, bounds.maxX, bounds.maxY);
     expect(left).toBeCloseTo(16, 3);
-    expect(top).toBeCloseTo(16, 3);
+    expect(right).toBeCloseTo(390 - 16, 3);
+  });
+
+  test("fitted out past the smallest zoom, zooming out stays put and zooming in works", () => {
+    const fitted = { offsetX: 0, offsetY: 0, scale: MIN_SCALE / 2 };
+    expect(zoomAt(fitted, 0, 0, 0.5)).toBe(fitted);
+    expect(zoomAt(fitted, 0, 0, 1.2).scale).toBeCloseTo((MIN_SCALE / 2) * 1.2, 6);
   });
 });

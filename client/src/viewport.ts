@@ -6,8 +6,15 @@
  * fitting a table into a window - are testable without a browser.
  */
 
-export const MIN_SCALE = 0.4;
+/**
+ * How far the wheel, a pinch or the zoom buttons go out. "Fit table" goes
+ * further when what is on the table needs it (FIT_MIN_SCALE): a phone is
+ * 390px across and a room's table 1700 world units, a class several times that.
+ */
+export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 2.5;
+/** Below this a fit is degenerate: something lies absurdly far away. */
+export const FIT_MIN_SCALE = 0.01;
 
 export interface Viewport {
   /** Where world (0, 0) sits on screen, in CSS pixels. */
@@ -68,7 +75,9 @@ export function zoomAt(
   screenY: number,
   factor: number,
 ): Viewport {
-  const scale = clampScale(viewport.scale * factor);
+  // Fitted out past MIN_SCALE, zooming in still works and zooming out stays put.
+  const lowest = Math.min(MIN_SCALE, viewport.scale);
+  const scale = Math.min(MAX_SCALE, Math.max(lowest, viewport.scale * factor));
   if (scale === viewport.scale) return viewport;
   const [worldX, worldY] = screenToWorld(viewport, screenX, screenY);
   return {
@@ -111,7 +120,8 @@ export function fitBounds(
   const height = Math.max(bounds.maxY - bounds.minY, 1);
   const usableWidth = Math.max(size.width - padding * 2, 1);
   const usableHeight = Math.max(size.height - top - padding, 1);
-  const scale = clampScale(Math.min(usableWidth / width, maxScale));
+  // Everything fits, however far out that takes the view: the point of a fit.
+  const scale = Math.min(MAX_SCALE, Math.max(FIT_MIN_SCALE, Math.min(usableWidth / width, maxScale)));
   // Narrower than the window (held back by maxScale), it is centred across.
   const spareX = Math.max(usableWidth - width * scale, 0);
   // Up and down it is centred where it fits; where it is taller than the
