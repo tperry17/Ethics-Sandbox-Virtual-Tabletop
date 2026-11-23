@@ -247,8 +247,9 @@ is not.
 
 Touch: one finger drags a piece, and a long press opens its menu; one
 finger on empty table pans the view, and two fingers pan and pinch; tap
-pieces to select them. Mouse: the main button drags a piece or, on empty
-table, pans; the middle button draws a selection box anywhere on the table,
+pieces to select them, and tap one twice quickly to turn it over (or write
+on a note or token), as a double-click does. Mouse: the main button drags a
+piece or, on empty table, pans; a double-click turns a piece over; the middle button draws a selection box anywhere on the table,
 and so does Shift with the main button, for a trackpad.
 
 Keyboard: Tab reaches every piece; arrow keys move by a 20-unit step (Shift

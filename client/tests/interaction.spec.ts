@@ -331,6 +331,38 @@ test.describe("flipping and rotating", () => {
   });
 });
 
+test.describe("flipping by touch", () => {
+  test.use({ hasTouch: true });
+
+  test("a double tap turns a card over once, and leaves the selection as it was", async ({ page }) => {
+    await page.goto(PREVIEW);
+    const card = piece(page, "claim-1");
+    const box = (await card.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    // One tap selects, as before.
+    await page.touchscreen.tap(x, y);
+    await expect(card).toHaveClass(/is-selected/);
+    // A second tap well after the first toggles it off again.
+    await page.waitForTimeout(500);
+    await page.touchscreen.tap(x, y);
+    await expect(card).not.toHaveClass(/is-selected/);
+    expect((await intents(page)).filter((intent) => intent.op_type === "flip")).toHaveLength(0);
+
+    // Two quick taps turn it over, once, and do not select it.
+    await page.waitForTimeout(500);
+    await page.touchscreen.tap(x, y);
+    await page.touchscreen.tap(x, y);
+    await expect(card).toHaveClass(/is-face-down/);
+    await page.waitForTimeout(300);
+    const flips = (await intents(page)).filter((intent) => intent.op_type === "flip");
+    expect(flips).toHaveLength(1);
+    expect(flips[0]!.payload["piece_id"]).toBe("claim-1");
+    await expect(card).not.toHaveClass(/is-selected/);
+  });
+});
+
 test.describe("the context menu", () => {
   const menu = (pieceId: string, clientId: string): ServerMessage => ({
     type: "menu",
