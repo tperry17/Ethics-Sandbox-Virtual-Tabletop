@@ -1017,7 +1017,8 @@ class ClearInk:
     op_id: str = field(default_factory=new_op_id)
 
     def validate(self, table: Table, actor_seat: str) -> str | None:
-        if actor_seat not in table.seats:
+        # The room itself (an activity's or a room's button acting for it) may too.
+        if actor_seat not in table.seats and actor_seat != SYSTEM_SEAT:
             return "Only a seated participant may clear ink."
         if self.everyone and not table.is_facilitator(actor_seat):
             return "Only the facilitator may clear everyone's ink."

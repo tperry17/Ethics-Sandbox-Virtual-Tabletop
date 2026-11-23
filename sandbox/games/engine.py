@@ -62,7 +62,6 @@ from sandbox.model import (
     Rect,
     Reject,
     RemoveZone,
-    ResetTable,
     ResetZone,
     SetProp,
     SetText,
@@ -424,7 +423,11 @@ class _Builder:
                         self.run(Flip(piece_id=piece.id, face_up=step.face_up))
         elif isinstance(step, ResetTableStep):
             if self.scope is None:
-                self.run(ResetTable())
+                # The room's own zones and all ink, not a running activity's
+                # cards: those are its players', and its own Reset is theirs.
+                for zone in self.scope_zones():
+                    self.run(ResetZone(zone_id=zone))
+                self.run(ClearInk(everyone=True))
                 # Piles added from the Pieces menu go with what was on them.
                 for zone_id in list(self.trial.zones):
                     if zone_id.startswith(ADDED_DECK_PREFIX):

@@ -125,7 +125,6 @@ async def test_the_snapshot_carries_the_exercises_buttons_and_no_deck_faces() ->
 
         snapshot = host.socket.of_type("snapshot")[-1]
         assert [macro["id"] for macro in snapshot["macros"]] == [
-            "setup",
             "deal",
             "call_pairs",
             "reset",
@@ -134,7 +133,7 @@ async def test_the_snapshot_carries_the_exercises_buttons_and_no_deck_faces() ->
             "clear_ink",
         ]
         reset = next(m for m in snapshot["macros"] if m["id"] == "reset")
-        assert reset["confirm"].startswith("This removes every card")
+        assert reset["confirm"].startswith("This takes every card off the table")
         assert snapshot["components"] == []
 
 

@@ -25,8 +25,8 @@ Identifier = Annotated[str, Field(pattern=r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")]
 
 # Every exercise offers at least these, so a facilitator finds the same
 # controls whichever exercise they are running.
+# "reset" puts the table back as setup left it: there is no separate "setup".
 STANDARD_MACROS: tuple[str, ...] = (
-    "setup",
     "deal",
     "reset",
     "shuffle",

@@ -1,3 +1,3 @@
 id,label,hint,confirm,announce
-reset,Reset,Clear the table and lay out the two cities again.,"Are you sure? This clears the whole table for everyone, including all ink and the cards of any activity that is running, and lays out the two cities again.",{name} reset the table.
+reset,Reset,Clear the table and lay out the two cities again.,"Are you sure? This clears the table for everyone, including all ink, and lays out the two cities again. A running activity's cards are left as they are.",{name} reset the table.
 clear_ink,Clear ink,,This erases everyone's ink. Continue?,{name} cleared all ink.

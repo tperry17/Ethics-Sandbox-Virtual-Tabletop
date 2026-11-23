@@ -324,8 +324,11 @@ server do.
   seat. A `private_to_owner` zone must be per-seat.
 - `setup` — steps that build the activity's starting zones and pieces when it is started in a room.
 - `macros` — buttons: `id`, `who` (facilitator or anyone), and either
-  `steps` or `python: <function>`. Every game has `setup`, `deal`,
-  `reset`, `shuffle`, `collect` and `clear_ink`. On a room type only,
+  `steps` or `python: <function>`. Every game has `deal`, `reset`,
+  `shuffle`, `collect` and `clear_ink`; there is no separate "Set up":
+  `reset` (`reset_table` then `setup`) puts the activity's table back as it
+  was when it began, and is the facilitator's (or, with nobody
+  facilitating, its players'). On a room type only,
   `acts_for_room: true` runs the button's steps for the room, as an
   activity's buttons are, so they may do what only the facilitator may
   whoever pressed it; the operations themselves still refuse anyone else.
@@ -334,7 +337,7 @@ server do.
   anything destructive) and `announce` (`{name}` and `{label}`).
 - `prompts` — `source:` a CSV with `id` and `text` columns.
 - `pairing` — optional: `source:` a CSV of `our_choice`, `their_choice` and `text`, and `when:` the options it applies to (Leadership and Knowledge in Popular Rule, scenario 2). A class may pair two of its tables, or one table with a hypothetical partner (`HYPOTHETICAL_TABLE`); someone at a table proposes that table's choice, the facilitator confirms it (or sets it, and alone sets a hypothetical partner's), and once both are confirmed the facilitator sees the matching row. While a hypothetical partner is undecided, the facilitator sees the row for each choice it could make.
-- `room` — only on a room type (`sandbox/games/value_cards_room/`, `democracy_room/`): `exercise` (the catalog slug whose page opens it), `label` (its button), `activities` (each an `id`, a `game`, optional `title`, `options` it fixes, `class_only`, and `debrief`, which lists it under the side panel's own "Debrief" heading, below the activities), `pieces` (the components of its Pieces menu), `decks` (further piles that menu adds, each an `id`, a `title`, a `deck`, an optional `where`, and the zone it is `shaped_like`) and `pieces_zone`. A room type needs only the `reset` and `clear_ink` macros; its `reset` is the room's one way back to the start: anyone may press it (`who: anyone`, `acts_for_room: true`), it asks "Are you sure?" first, and it clears the whole table (added decks, ink, and any running activity's cards included) and runs the setup again; `sandbox/games/room_types.py` reads it, and validation checks every catalog exercise has one room.
+- `room` — only on a room type (`sandbox/games/value_cards_room/`, `democracy_room/`): `exercise` (the catalog slug whose page opens it), `label` (its button), `activities` (each an `id`, a `game`, optional `title`, `options` it fixes, `class_only`, and `debrief`, which lists it under the side panel's own "Debrief" heading, below the activities), `pieces` (the components of its Pieces menu), `decks` (further piles that menu adds, each an `id`, a `title`, a `deck`, an optional `where`, and the zone it is `shaped_like`) and `pieces_zone`. A room type needs only the `reset` and `clear_ink` macros; its `reset` is the room's one way back to the start: anyone may press it (`who: anyone`, `acts_for_room: true`), it asks "Are you sure?" first, and it clears the room's own zones (added decks and all ink included, but not a running activity's cards) and runs the setup again; `sandbox/games/room_types.py` reads it, and validation checks every catalog exercise has one room.
 
 Steps are `{op: ..., ...}`: `setup` (run the setup steps here),
 `spawn_deck`, `spawn`, `shuffle`, `deal` and `draw` (`from`, `to`,

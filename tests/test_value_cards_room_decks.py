@@ -194,6 +194,37 @@ def test_collect_leaves_a_running_activitys_cards_alone() -> None:
     assert len(table.pieces_in_zone("sidebar")) == 18
 
 
+def test_the_rooms_reset_leaves_a_running_activitys_cards_alone() -> None:
+    """Anyone may reset the room, but an activity's cards are its players'."""
+    table = seated(ROOM, 3)
+    trading = GAMES["value-cards-trading"]
+    meta = trading.definition.meta
+    opened = OpenActivity(
+        kind=meta.slug, title=meta.title, min_players=3, max_players=3
+    )
+    assert isinstance(run_op(table, "seat-1", opened), Ok)
+    activity_id = next(reversed(table.activities))
+    for seat in ("seat-2", "seat-3"):
+        assert isinstance(run_op(table, seat, JoinActivity(activity_id)), Ok)
+    started = build_activity_start(trading, table, "seat-1", activity_id)
+    assert isinstance(started, Transaction), started
+    assert isinstance(run_op(table, "seat-1", started), Ok)
+    zones = table.activities[activity_id].zones
+    before = {
+        zone: {piece.id for piece in table.pieces_in_zone(zone)} for zone in zones
+    }
+    assert isinstance(press(ROOM, table, "deal", "seat-2"), Ok)
+
+    assert isinstance(press(ROOM, table, "reset", "seat-2"), Ok)
+
+    after = {zone: {piece.id for piece in table.pieces_in_zone(zone)} for zone in zones}
+    assert after == before
+    assert table.activities[activity_id].status == "running"
+    assert table.pieces_in_zone("hand-seat-2") == []
+    assert len(table.pieces_in_zone("deck")) == 18
+    assert len(table.pieces_in_zone("sidebar")) == 18
+
+
 @pytest.mark.parametrize(
     ("macro_id", "pile", "group", "other"),
     [

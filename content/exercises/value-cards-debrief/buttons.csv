@@ -1,8 +1,7 @@
 id,label,hint,confirm,announce
-setup,Set up,"Clear the table and lay out the learning outcomes and the debrief questions.",This clears the table and sets it up again. Continue?,{name} set up the debrief.
 deal,Ask a question,"Turn up the next debrief question for everyone.",,{name} turned up a question.
 add_note,Add a note,"A blank note for anyone to write on.",,{name} added a note.
-reset,Reset,Remove every card and all ink.,This removes every card and all ink from the table. Continue?,{name} cleared the table.
+reset,Reset,"Put the debrief back as it was when it began: the learning outcomes and the debrief questions, laid out again.","Are you sure? This takes every card off the debrief's table and lays it out again, as it was when it began.",{name} reset the debrief.
 shuffle,Shuffle questions,,,{name} shuffled the questions.
 collect,Put questions back,"Every question on the table back into the pile, face down, shuffled.",,{name} put the questions back.
 clear_ink,Clear ink,,This erases everyone's ink. Continue?,{name} cleared all ink.

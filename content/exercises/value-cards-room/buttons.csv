@@ -1,7 +1,7 @@
 id,label,hint,confirm,announce
 deal,Deal 3 core cards,Three cards from the core deck into each person's hand.,,{name} dealt three core cards to each person.
 deal_sidebar,Deal 3 sidebar cards,Three cards from the sidebar into each person's hand.,,{name} dealt three sidebar cards to each person.
-reset,Reset,Clear the table and lay out the core deck and the sidebar again.,"Are you sure? This clears the whole table for everyone, including every added deck, all ink and the cards of any activity that is running, and lays out the core deck and the sidebar again.",{name} reset the table.
+reset,Reset,Clear the table and lay out the core deck and the sidebar again.,"Are you sure? This clears the table for everyone, including every added deck and all ink, and lays out the core deck and the sidebar again. A running activity's cards are left as they are.",{name} reset the table.
 shuffle,Shuffle decks,Shuffle the core deck and the sidebar.,,{name} shuffled the core deck and the sidebar.
 collect,Collect cards,"Every card back into the pile it came from, face down, shuffled.",,{name} collected every card back into its pile.
 clear_ink,Clear ink,,This erases everyone's ink. Continue?,{name} cleared all ink.
