@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { openFromLanding, openControls } from "./rooms";
+import { openFromLanding, openControls, openTableButtons, openView } from "./rooms";
 
 /**
  * Activities started in an open room. Pairs is the reference game: two
@@ -107,6 +107,33 @@ test("with a facilitator in the room, a player gets only the buttons for anyone"
   await expect(host.getByRole("button", { name: "Deal three each" })).toBeVisible();
 });
 
+test("the room's Clear ink is in the Draw menu, not among the Table buttons", async ({
+  browser,
+}) => {
+  const { page } = await openRoom(browser, "Ines");
+  // Clearing everyone's ink was the one room button for anyone, and only the
+  // facilitator may: with nobody facilitating, there is no Table buttons menu.
+  await expect(page.locator("details.table-buttons")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Become facilitator" }).click();
+  await page.locator("details.table-buttons").waitFor();
+  await openTableButtons(page);
+  await expect(page.locator(".table-buttons__panel").getByRole("button", { name: "Reset" })).toBeVisible();
+  await expect(page.locator(".table-buttons__panel").getByRole("button", { name: "Clear ink" })).toHaveCount(0);
+  await page.locator("details.draw-menu > summary").click();
+  const clearAll = page.locator(".draw-menu__panel").getByRole("button", { name: "Clear all ink" });
+  await expect(clearAll).toBeVisible();
+  // It is the room's own button, so it asks its question and is announced.
+  let asked = "";
+  page.once("dialog", (dialog) => {
+    asked = dialog.message();
+    void dialog.accept();
+  });
+  await clearAll.click();
+  await expect.poll(() => asked).toBe("This erases everyone's ink. Continue?");
+  await expect(page.getByText("Ines cleared all ink.")).toBeVisible();
+});
+
 test("nobody is the facilitator until someone takes the seat, and only one at a time", async ({
   browser,
 }) => {
@@ -184,6 +211,7 @@ test("while an activity is going the panel is that activity, and anyone may join
   await host.getByRole("button", { name: "Join Hooked" }).click();
   await expect(guest.getByText(/Hooked: signing up, 1 of 1–3/)).toBeVisible();
   // Zoomed right in, so the activity's area would be off screen unless fitted.
+  await openView(host);
   for (let step = 0; step < 6; step++) await host.getByRole("button", { name: "Zoom in" }).click();
   await host.getByRole("button", { name: "Begin now" }).click();
   await expect(guest.getByText("Hooked: running (Ines)")).toBeVisible();

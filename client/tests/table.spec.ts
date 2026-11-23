@@ -174,6 +174,7 @@ test.describe("the table client renders a recorded session", () => {
     const out = await page.evaluate(() => window.ethicsSandboxTable!.currentViewport.scale);
     expect(out).toBeGreaterThanOrEqual(0.4);
 
+    await page.locator("details.view-menu > summary").click();
     await page.getByRole("button", { name: "Fit table" }).click();
     const refitted = await page.evaluate(() => window.ethicsSandboxTable!.currentViewport.scale);
     expect(refitted).toBeCloseTo(fitted, 2);

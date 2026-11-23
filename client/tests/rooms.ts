@@ -36,10 +36,24 @@ export async function openControls(page: Page): Promise<void> {
   await openTableButtons(page);
 }
 
-/** Open the "Table buttons" menu, once the table has sent its buttons. */
+/** Open the View menu among the table's controls, where "Fit table" and the zoom buttons are. */
+export async function openView(page: Page): Promise<void> {
+  const menu = page.locator("details.view-menu");
+  if (!(await menu.evaluate((node) => (node as HTMLDetailsElement).open))) {
+    await menu.locator("summary").click();
+  }
+}
+
+/**
+ * Open the "Table buttons" menu, once the table has sent its buttons. Every
+ * room has a Pieces menu, drawn with them; someone who may press none of the
+ * room's buttons gets no Table buttons menu at all.
+ */
 export async function openTableButtons(page: Page): Promise<void> {
+  await page.locator("details.pieces-menu").waitFor({ timeout: 10_000 });
   const menu = page.locator("details.table-buttons");
-  await menu.waitFor({ timeout: 10_000 });
+  if ((await menu.count()) === 0) return;
+  await menu.waitFor();
   if (!(await menu.evaluate((node) => (node as HTMLDetailsElement).open))) {
     await menu.locator("summary").click();
   }

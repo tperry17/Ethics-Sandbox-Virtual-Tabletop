@@ -156,12 +156,8 @@ export class InteractionController {
   // -- tools ---------------------------------------------------------------------------
 
   private buildTools(): void {
-    // Point sits on the row of the table's controls; the pen and clearing
-    // ink are in a Draw menu beside the Table buttons, closed until opened.
-    const point = toolButton("Point", "Point at a spot on the table. Alt-click also points.");
-    point.addEventListener("click", () => this.setTool(this.tool === "point" ? "hand" : "point"));
-    this.table.pointArea.replaceChildren(point);
-
+    // The pen, Point and clearing ink are in a Draw menu beside the Table
+    // buttons, closed until opened.
     const draw = document.createElement("details");
     draw.className = "draw-menu";
     const summary = document.createElement("summary");
@@ -177,14 +173,24 @@ export class InteractionController {
       // Out of the way of the table, which is what the pen is for.
       draw.open = false;
     });
+    const point = toolButton("Point", "Point at a spot on the table. Alt-click also points.");
+    point.addEventListener("click", () => {
+      this.setTool(this.tool === "point" ? "hand" : "point");
+      // Out of the way of the table, which is where the point goes.
+      draw.open = false;
+    });
     const clearMine = plainButton("Clear my ink", () => {
       this.table.intents.send("clear_ink", { everyone: false });
     });
+    // The room's own "Clear ink" button, when it has one, so its question
+    // and its announcement come with it; otherwise the plain intent.
     const clearAll = plainButton("Clear all ink", () => {
-      this.table.intents.send("clear_ink", { everyone: true });
+      const macro = this.table.roomClearInk;
+      if (macro !== null) this.table.pressMacro(macro);
+      else this.table.intents.send("clear_ink", { everyone: true });
     });
     clearAll.hidden = true;
-    panel.append(pen, clearMine, clearAll);
+    panel.append(pen, point, clearMine, clearAll);
     draw.append(summary, panel);
     this.table.drawArea.replaceChildren(draw);
     this.drawSummary = summary;
@@ -225,8 +231,9 @@ export class InteractionController {
       this.toolButtons.pen.setAttribute("aria-pressed", String(tool === "pen"));
     }
     if (this.drawSummary !== null) {
-      this.drawSummary.textContent = tool === "pen" ? "Draw: pen" : "Draw";
-      this.drawSummary.classList.toggle("is-active", tool === "pen");
+      this.drawSummary.textContent =
+        tool === "pen" ? "Draw: pen" : tool === "point" ? "Draw: point" : "Draw";
+      this.drawSummary.classList.toggle("is-active", tool !== "hand");
     }
     this.table.surfaceElement.dataset.tool = tool;
   }

@@ -674,16 +674,24 @@ test.describe("pointing and ink", () => {
     expect(point.payload["x"]).toBeCloseTo(700, 0);
     expect(point.payload["y"]).toBeCloseTo(250, 0);
 
-    // Point is on the row of the table's controls, with the menus.
-    const button = page.locator(".tabletop__controls").getByRole("button", { name: "Point" });
+    // Point is in the Draw menu, closed at first; choosing it closes the
+    // menu, which says Point is in hand.
+    const view = page.locator(".tabletop__controls details.draw-menu");
+    await expect(view).not.toHaveAttribute("open", "");
+    const button = view.getByRole("button", { name: "Point", includeHidden: true });
+    await expect(button).toBeHidden();
+    await view.locator("summary").click();
     await button.click();
     await expect(button).toHaveAttribute("aria-pressed", "true");
+    await expect(button).toBeHidden();
+    await expect(view.locator("summary")).toHaveText("Draw: point");
     const other = await onScreen(page, 600, 300);
     await page.mouse.click(other.x, other.y);
     point = (await intents(page)).at(-1)!;
     expect(point.op_type).toBe("point");
     expect(point.payload["x"]).toBeCloseTo(600, 0);
     await expect(button).toHaveAttribute("aria-pressed", "false");
+    await expect(view.locator("summary")).toHaveText("Draw");
   });
 
   test("the pen draws one stroke, and ink can be cleared", async ({ page }) => {

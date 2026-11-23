@@ -30,10 +30,13 @@ A class is an activity run as several tables at once. Someone presses "Start a c
 Scenario 2 of Leadership and Knowledge in Popular Rule always runs as a class, in one room, with one table per city. It is best with two paired cities; it can be run with one, and then the other city is hypothetical: the facilitator may choose its decision, and if nobody does, the facilitator sees all three possible results. On the call the group splits into breakout groups, one per table, so each table is self-contained: its own notes, its own votes, its own list of participants.
 
 The room's buttons (its macros) are in their own "Table buttons" menu among
-the table's controls, beside a "Draw" menu (the pen, "Clear my ink", and for
-the facilitator "Clear all ink") and "Pieces", each closed until it is
-opened (and again on every load); opening one closes the others. "Point"
-sits on the same row, with "Fit table" and the zoom buttons. A press on
+the table's controls, beside a "Draw" menu (the pen, "Point", "Clear my
+ink", and for the facilitator "Clear all ink", which presses the room's own
+`clear_ink` button, so that one is not also among the Table buttons),
+"Pieces" and "View" ("Fit table" and the zoom buttons), each closed until
+it is opened (and again on every load); opening one closes the others. They
+are one row, on a phone too. Someone with none of the room's buttons to
+press gets no "Table buttons" menu. A press on
 these controls never starts a drag, a stroke or a point on the table. An activity's buttons
 are in that activity's own row of the side panel, or its class table's row.
 The room's side panel holds its activities, its debrief and a class. On a
