@@ -306,8 +306,8 @@
  *
  * Pieces are DOM elements inside a single transformed world layer, so card
  * text stays real text at any zoom. One canvas sits above them for ink and
- * pointers. The hand tray sits outside the world transform, docked below the
- * table: your own hand does not move when the table does.
+ * pointers. The hand tray sits outside the world transform, over the bottom
+ * edge of the table: your own hand does not move when the table does.
  */
 
 .tabletop--live {
@@ -439,7 +439,7 @@
 .tabletop__status {
   position: absolute;
   z-index: 3;
-  inset-block-end: var(--space-3);
+  inset-block-end: calc(var(--space-3) + var(--hand-tray-size, 0px));
   inset-inline-start: var(--space-3);
   margin: 0;
   padding: var(--space-1) var(--space-3);
@@ -476,30 +476,36 @@
 .toast--compact .toast__message { margin: 0; }
 .toast--compact[data-level="warning"] { border-color: var(--accent-rubric); }
 
-/* The label is a row of its own above the fan, so a card never covers it. */
+/* The tray lies over the bottom edge of the table and has no background of
+   its own, so the table shows round and between the cards. Only what is
+   drawn in it - its cards, its name, the empty-hand note - takes a press;
+   anywhere else in it, a press reaches the table beneath. Its name is a small
+   tab in the bottom corner, over the fan, not a row of its own. */
 .hand-tray {
-  position: relative;
+  position: absolute;
+  z-index: 3;
+  inset-inline: 0;
+  inset-block-end: 0;
   display: flex;
   flex-direction: column;
-  flex: none;
-  block-size: min(14rem, 30vh);
+  block-size: min(12rem, 30vh);
   overflow: hidden;
-  border-block-start: var(--line-hairline) solid var(--surface-border);
-  background: var(--surface-page);
+  background: var(--transparent);
+  pointer-events: none;
 }
 
 .hand-tray.is-collapsed { block-size: auto; }
 
 .hand-tray__head {
-  position: relative;
+  position: absolute;
   z-index: 1;
-  flex: none;
-  padding: var(--space-1) var(--space-2) 0;
+  inset-block-end: var(--space-2);
+  inset-inline-start: var(--space-2);
   display: flex;
   align-items: baseline;
 }
 
-.hand-tray.is-collapsed .hand-tray__head { padding-block-end: var(--space-1); }
+.hand-tray.is-collapsed .hand-tray__head { position: static; padding: var(--space-2); }
 
 .hand-tray__toggle {
   display: inline-flex;
@@ -507,11 +513,13 @@
   gap: var(--space-2);
   margin: 0;
   padding: var(--space-1) var(--space-2);
-  border: 0;
+  border: var(--line-hairline) solid var(--surface-border);
   border-radius: var(--radius-sm);
-  background: var(--transparent);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raised);
   color: var(--accent-rubric);
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .hand-tray__toggle:hover { background: var(--surface-sunken); }
@@ -550,7 +558,8 @@
 
 .hand-tray__empty {
   position: absolute;
-  inset: var(--space-2) var(--space-4) var(--space-4);
+  /* Clear of the hand's name, in the corner below it. */
+  inset: var(--space-2) var(--space-4) calc(var(--space-4) + 2.75rem);
   display: flex;
   align-items: center;
   margin: 0;
@@ -560,6 +569,7 @@
   background: var(--surface-sunken);
   color: var(--text-secondary);
   font-family: var(--font-reading);
+  pointer-events: auto;
 }
 .hand-tray__empty[hidden] { display: none; }
 
@@ -630,7 +640,7 @@
   box-shadow: var(--shadow-piece), 0 0 0 0.35rem var(--accent-rubric-soft), 0 0 0 0.5rem var(--accent-rubric);
 }
 
-.piece--in-tray { cursor: grab; }
+.piece--in-tray { cursor: grab; pointer-events: auto; }
 
 .hand-tray.is-drop-target {
   box-shadow: inset 0 0 0 var(--space-1) var(--table-drop-target);
@@ -1253,7 +1263,7 @@
 .tabletop__palette {
   position: absolute;
   z-index: 3;
-  inset-block-end: var(--space-4);
+  inset-block-end: calc(var(--space-4) + var(--hand-tray-size, 0px));
   inset-inline-start: 50%;
   transform: translateX(-50%);
   display: flex;
