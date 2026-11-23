@@ -26,6 +26,11 @@ interface Options {
   onChange: (viewport: Viewport) => void;
   bounds: () => Bounds | null;
   size: () => Size;
+  /**
+   * The part of the surface a fit fills, if not all of it: what an open
+   * hand tray, lying over the bottom edge, leaves of it.
+   */
+  fitSize?: () => Size;
   /** Where this room's view is kept between visits, if anywhere. */
   storageKey?: string;
 }
@@ -165,13 +170,17 @@ export class ViewportController {
     const bounds = this.options.bounds();
     if (bounds === null) return;
     if (byPerson) this.touchedByPerson = true;
-    this.set(fitBounds(bounds, this.options.size(), FIT_PADDING, FIT_TOP, FIT_MAX_SCALE));
+    this.set(fitBounds(bounds, this.fitSize(), FIT_PADDING, FIT_TOP, FIT_MAX_SCALE));
+  }
+
+  private fitSize(): Size {
+    return (this.options.fitSize ?? this.options.size)();
   }
 
   /** Fit the view to one area of the table, as "Fit table" fits the whole. */
   fitTo(bounds: Bounds): void {
     this.touchedByPerson = true;
-    this.set(fitBounds(bounds, this.options.size(), FIT_PADDING, FIT_TOP, FIT_MAX_SCALE));
+    this.set(fitBounds(bounds, this.fitSize(), FIT_PADDING, FIT_TOP, FIT_MAX_SCALE));
   }
 
   zoomBy(factor: number): void {

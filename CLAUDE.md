@@ -153,10 +153,12 @@ then the piece's `z` within that zone — and never DOM insertion order.
 Another person's piece interpolates over 120 ms; the piece under your own
 hand never does. Your own private zone is drawn in a hand tray laid over the
 bottom edge of the table, outside the world transform, so it stays put when
-the table moves. It has no background, so the table shows round and between
-its cards, and a press on its empty part reaches the table; its name is a
-small tab in its bottom corner, over the fan, not a row of its own. It is
-there whenever you have a private hand, empty or not. Anyone else's private hand is not drawn on the table at all, neither its
+the table moves. It is see-through but for a faint shade behind its cards
+while open, so the table shows round and between them, and a press on its
+empty part reaches the table; its name is a small tab in its bottom corner,
+over the fan, not a row of its own. A card let go anywhere over it goes into
+the hand. "Fit table" leaves room for it while it is open. It is there
+whenever you have a private hand, empty or not. Anyone else's private hand is not drawn on the table at all, neither its
 outline nor the backs of the cards in it, and a hand is named for whoever
 holds it, by the name they joined with ("Ada's hand"), on the table, in
 announcements and in the "Move to…" menu, never by seat. It is closed
