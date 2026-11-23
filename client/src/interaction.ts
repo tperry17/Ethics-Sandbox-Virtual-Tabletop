@@ -446,14 +446,29 @@ export class InteractionController {
    * first always selects it: alone with a mouse, added to the selection with
    * a finger. On a piece already selected, it turns it over (the selection
    * with it), or writes on a note or token, as a double-click once did.
-   * With Shift it only adds the piece to the selection or takes it out.
+   * A card still in a deck is not turned over by a click, alone or as part
+   * of the selection: the click only selects it. F, Enter and the menu still
+   * ask; the server judges those. With Shift a click only adds the piece to
+   * the selection or takes it out.
    */
   private click(pieceId: string | null, additive: boolean, shift: boolean): void {
     if (pieceId !== null && !shift && this.table.selected.has(pieceId) && !this.table.isInTray(pieceId)) {
-      this.turnOver(pieceId);
+      if (this.inDeck(pieceId)) return;
+      const piece = this.model.pieces.get(pieceId);
+      if (piece?.kind === "note" || piece?.kind === "token") {
+        this.write(pieceId, piece.kind);
+        return;
+      }
+      this.flip(this.targetsFor(pieceId).filter((id) => !this.inDeck(id)));
       return;
     }
     this.select(pieceId, additive);
+  }
+
+  /** Whether a piece lies in a zone of kind deck, as drawn: where it is, not what may be done to it. */
+  private inDeck(pieceId: string): boolean {
+    const piece = this.model.pieces.get(pieceId);
+    return piece !== undefined && this.model.zones.get(piece.zone_id)?.kind === "deck";
   }
 
   /** Select `pieceId` alone, or with `additive` add it to the selection or take it out; null clears it. */
@@ -951,7 +966,7 @@ export class InteractionController {
     this.turnOver(pieceId);
   };
 
-  /** What a click on a selected piece does: write on a note or token, turn anything else over. */
+  /** What a double-click or double tap on a card in the hand does: write on a note or token, turn anything else over. */
   private turnOver(pieceId: string): void {
     const piece = this.model.pieces.get(pieceId);
     if (piece?.kind === "note" || piece?.kind === "token") {

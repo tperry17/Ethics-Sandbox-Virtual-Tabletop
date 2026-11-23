@@ -366,6 +366,41 @@ test.describe("flipping and rotating", () => {
     expect((await intents(page)).filter((intent) => ["flip", "set_text"].includes(intent.op_type))).toHaveLength(0);
   });
 
+  test("a click on a selected card still in a deck does not turn it over", async ({ page }) => {
+    await page.goto(PREVIEW);
+    await cameraSettled(page);
+    const top = page.locator('.tabletop__pieces-layer .piece[data-zone-id="deck"]').last();
+    const id = await top.getAttribute("data-piece-id");
+    const at = await centre(top);
+    await page.mouse.click(at.x, at.y);
+    await expect(piece(page, id!)).toHaveClass(/is-selected/);
+    await page.waitForTimeout(500);
+    await page.mouse.click(at.x, at.y);
+    await page.waitForTimeout(300);
+    expect((await intents(page)).filter((intent) => intent.op_type === "flip")).toHaveLength(0);
+    await expect(piece(page, id!)).toHaveClass(/is-selected/);
+  });
+
+  test("a click turning a selection over leaves out a card in a deck", async ({ page }) => {
+    await page.goto(PREVIEW);
+    await cameraSettled(page);
+    const top = page.locator('.tabletop__pieces-layer .piece[data-zone-id="deck"]').last();
+    const id = (await top.getAttribute("data-piece-id"))!;
+    const card = piece(page, "claim-1");
+    const at = await centre(card);
+    await page.mouse.click(at.x, at.y);
+    await page.keyboard.down("Shift");
+    await page.mouse.click(...(Object.values(await centre(top)) as [number, number]));
+    await page.keyboard.up("Shift");
+    await expect(piece(page, id)).toHaveClass(/is-selected/);
+    await page.waitForTimeout(500);
+    await page.mouse.click(at.x, at.y);
+    await expect(card).toHaveClass(/is-face-down/);
+    await page.waitForTimeout(300);
+    const flips = (await intents(page)).filter((intent) => intent.op_type === "flip");
+    expect(flips.map((flip) => flip.payload["piece_id"])).toEqual(["claim-1"]);
+  });
+
   test("Shift-click on a selected card takes it out of the selection", async ({ page }) => {
     await page.goto(PREVIEW);
     await cameraSettled(page);

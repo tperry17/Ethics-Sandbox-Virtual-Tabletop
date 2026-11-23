@@ -255,7 +255,8 @@ finger on empty table pans the view, and two fingers pan and pinch. The
 first tap or click on a piece always selects it (a tap adds it to the
 selection, a click selects it alone); a tap or click on a piece already
 selected turns it over, the selection with it (or writes on a note or
-token). Shift-click only adds a piece to the selection or takes it out. A
+token), except a card still in a deck, which a click never turns over.
+Shift-click only adds a piece to the selection or takes it out. A
 card in your hand, which is never selected, is turned over by a double
 tap or double-click instead. Mouse: the main button drags a
 piece or, on empty table, pans; the middle button draws a selection box anywhere on the table,
