@@ -457,7 +457,24 @@ class Flip:
         if (reason := _reason_piece_missing(piece, self.piece_id)) is not None:
             return reason
         assert piece is not None
-        return _reason_not_movable(table, piece, actor_seat)
+        if (reason := _reason_not_movable(table, piece, actor_seat)) is not None:
+            return reason
+        # A card is turned face up only once it is off the deck. Turning one
+        # face down in a deck is still allowed: cards go back into a deck
+        # face down.
+        face_up = self.face_up if self.face_up is not None else not piece.face_up
+        zone = table.zones.get(piece.zone_id)
+        if (
+            face_up
+            and not piece.face_up
+            and piece.kind is PieceKind.CARD
+            and zone is not None
+            and zone.kind is ZoneKind.DECK
+        ):
+            return (
+                "A card in a deck cannot be turned face up. Take it off the deck first."
+            )
+        return None
 
     def apply(self, table: Table, actor_seat: str) -> list[Patch]:
         piece = table.pieces[self.piece_id]

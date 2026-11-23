@@ -206,7 +206,10 @@ so does a card put into a hand or onto a discard pile, wherever it came from
 visibility still shows its face to the owner alone. A card going into a
 deck, or into a zone that hides every face, is left as it was. This is
 `MoveToZone` and `StackOnto` in `sandbox/model/ops.py`, so a macro's moves
-follow it too.
+follow it too. A face-down card is never turned face up while it is in a
+deck, by anyone, however asked (`Flip` refuses it, so its menu does not
+offer "Turn over"); it is turned face down there, as cards go back into a
+deck face down.
 
 The table has no edge. A zone of kind `table` is not drawn (no outline,
 no label), and a piece let go outside every other zone lands on it: its
@@ -251,15 +254,19 @@ when they leave the table. Who is showing what to whom is public; the face
 is not.
 
 Touch: one finger drags a piece, and a long press opens its menu; one
-finger on empty table pans the view, and two fingers pan and pinch; tap
-pieces to select them, and tap one twice quickly to turn it over (or write
-on a note or token), as a double-click does. Mouse: the main button drags a
-piece or, on empty table, pans; a double-click turns a piece over; the middle button draws a selection box anywhere on the table,
+finger on empty table pans the view, and two fingers pan and pinch. The
+first tap or click on a piece always selects it (a tap adds it to the
+selection, a click selects it alone); a tap or click on a piece already
+selected turns it over, the selection with it (or writes on a note or
+token), except a card still in a deck, which a click never turns over.
+Shift-click only adds a piece to the selection or takes it out. A
+card in your hand, which is never selected, is turned over by a double
+tap or double-click instead. Mouse: the main button drags a
+piece or, on empty table, pans; the middle button draws a selection box anywhere on the table,
 and so does Shift with the main button, for a trackpad.
 
 Keyboard: Tab reaches every piece; arrow keys move by a 20-unit step (Shift
-for five); X selects (Shift-X adds to the selection; on a touch
-screen, tapping a piece toggles it); Enter turns over; R and Shift-R rotate; M, the context-menu key
+for five); X selects (Shift-X adds to the selection or takes from it); Enter turns over; R and Shift-R rotate; M, the context-menu key
 or Shift-F10 open the menu; P points; Escape clears. With nothing focused,
 R and Enter act on the selection.
 

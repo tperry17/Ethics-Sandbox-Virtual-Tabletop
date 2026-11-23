@@ -21,7 +21,7 @@ import type { TableRenderer } from "./table.js";
 const DRAG_THRESHOLD_PX = 5;
 /** A touch held this long on a piece on the table opens its menu. */
 const LONG_PRESS_MS = 500;
-/** A second tap on the same piece this soon after the first turns it over. */
+/** A second tap on the same card in the hand this soon after the first turns it over. */
 const DOUBLE_TAP_MS = 350;
 /** ...if it lands this close to the first, in CSS pixels. */
 const DOUBLE_TAP_PX = 24;
@@ -69,6 +69,8 @@ type Gesture =
       pieceId: string | null;
       fromTray: boolean;
       additive: boolean;
+      /** Shift was held: a click adds the piece to the selection or takes it out, and never turns it over. */
+      shift: boolean;
       /** Pressed with a mouse's middle button: a drag draws a selection box. */
       middle: boolean;
       timer: number | null;
@@ -99,13 +101,13 @@ type Gesture =
 export class InteractionController {
   private gesture: Gesture | null = null;
   /**
-   * The last tap of a finger on a piece, and the selection before it, so a
-   * second tap can turn the piece over as a double-click does. Browsers do
-   * not reliably make a double-click from two taps on a table that takes
-   * every touch itself (touch-action: none).
+   * The last tap of a finger on a card in the hand, so a second tap can turn
+   * it over as a double-click does. A card in the hand is never selected, so
+   * it cannot be turned over by a tap on it while selected, as one on the
+   * table is. Browsers do not reliably make a double-click from two taps on a
+   * table that takes every touch itself (touch-action: none).
    */
-  private lastTap: { pieceId: string; at: number; x: number; y: number; before: string[] } | null =
-    null;
+  private lastTap: { pieceId: string; at: number; x: number; y: number } | null = null;
   /** When a double tap last turned something over, so a double-click from the same taps does not turn it back. */
   private lastTapFlipAt = -Infinity;
   private tool: Tool = "hand";
@@ -296,6 +298,7 @@ export class InteractionController {
         pieceId: null,
         fromTray: false,
         additive: event.shiftKey,
+        shift: event.shiftKey,
         middle: true,
         timer: null,
       };
@@ -333,6 +336,7 @@ export class InteractionController {
       // A finger has no Shift key: tapping a piece toggles it in the selection,
       // tapping empty table clears it.
       additive: event.shiftKey || (event.pointerType === "touch" && pieceId !== null),
+      shift: event.shiftKey,
       middle: false,
       timer: null,
     };
@@ -382,12 +386,12 @@ export class InteractionController {
     if (gesture.kind === "press") {
       if (gesture.timer !== null) window.clearTimeout(gesture.timer);
       if (gesture.middle) return;
-      if (gesture.pointerType === "touch" && gesture.pieceId !== null) {
-        this.tap(gesture.pieceId, event, gesture.additive);
+      if (gesture.pointerType === "touch" && gesture.pieceId !== null && gesture.fromTray) {
+        this.trayTap(gesture.pieceId, event);
         return;
       }
       this.lastTap = null;
-      this.click(gesture.pieceId, gesture.additive);
+      this.click(gesture.pieceId, gesture.additive, gesture.shift);
       return;
     }
     if (gesture.kind === "drag") this.finishDrag(gesture.pieces, event);
@@ -419,13 +423,8 @@ export class InteractionController {
     }
   }
 
-  /**
-   * A finger's tap on a piece: the first toggles it in the selection; a
-   * second on the same piece soon after puts the selection back as it was
-   * and turns the piece over, as a double-click does (the selection with it,
-   * if it was already in it).
-   */
-  private tap(pieceId: string, event: PointerEvent, additive: boolean): void {
+  /** A finger's tap on a card in the hand: a second on the same card soon after turns it over. */
+  private trayTap(pieceId: string, event: PointerEvent): void {
     const now = performance.now();
     const last = this.lastTap;
     if (
@@ -436,21 +435,45 @@ export class InteractionController {
     ) {
       this.lastTap = null;
       this.lastTapFlipAt = now;
-      if (!this.table.isInTray(pieceId)) this.table.setSelection(last.before);
       this.turnOver(pieceId);
       return;
     }
-    this.lastTap = {
-      pieceId,
-      at: now,
-      x: event.clientX,
-      y: event.clientY,
-      before: [...this.table.selected],
-    };
-    this.click(pieceId, additive);
+    this.lastTap = { pieceId, at: now, x: event.clientX, y: event.clientY };
   }
 
-  private click(pieceId: string | null, additive: boolean): void {
+  /**
+   * A click or a tap on the table. On a piece that is not selected, the
+   * first always selects it: alone with a mouse, added to the selection with
+   * a finger. On a piece already selected, it turns it over (the selection
+   * with it), or writes on a note or token, as a double-click once did.
+   * A card still in a deck is not turned over by a click, alone or as part
+   * of the selection: the click only selects it. (The server refuses to turn
+   * a card face up in a deck however it is asked; a click does not ask, so
+   * it raises no refusal.) With Shift a click only adds the piece to the
+   * selection or takes it out.
+   */
+  private click(pieceId: string | null, additive: boolean, shift: boolean): void {
+    if (pieceId !== null && !shift && this.table.selected.has(pieceId) && !this.table.isInTray(pieceId)) {
+      if (this.inDeck(pieceId)) return;
+      const piece = this.model.pieces.get(pieceId);
+      if (piece?.kind === "note" || piece?.kind === "token") {
+        this.write(pieceId, piece.kind);
+        return;
+      }
+      this.flip(this.targetsFor(pieceId).filter((id) => !this.inDeck(id)));
+      return;
+    }
+    this.select(pieceId, additive);
+  }
+
+  /** Whether a piece lies in a zone of kind deck, as drawn: where it is, not what may be done to it. */
+  private inDeck(pieceId: string): boolean {
+    const piece = this.model.pieces.get(pieceId);
+    return piece !== undefined && this.model.zones.get(piece.zone_id)?.kind === "deck";
+  }
+
+  /** Select `pieceId` alone, or with `additive` add it to the selection or take it out; null clears it. */
+  private select(pieceId: string | null, additive: boolean): void {
     if (pieceId === null) {
       if (!additive) this.table.setSelection([]);
       return;
@@ -821,9 +844,11 @@ export class InteractionController {
     // Which keys are worth mentioning, from what is drawn: whether the server
     // allows any of them is still the server's to say when one is pressed.
     const keys: Array<[string, string]> = [];
+    const inDeck = this.model.zones.get(piece.zone_id)?.kind === "deck";
     if (piece.component_id !== null) keys.push(["Space", "hold to enlarge"]);
-    keys.push(["F", "turn over"]);
-    if (this.model.zones.get(piece.zone_id)?.kind === "deck") keys.push(["S", "shuffle"]);
+    // A face-down card in a deck is not turned over until it is off the deck.
+    if (!(inDeck && piece.kind === "card" && !piece.face_up)) keys.push(["F", "turn over"]);
+    if (inDeck) keys.push(["S", "shuffle"]);
     if (piece.locked) keys.push(["U", "unlock"]);
     else if (piece.kind === "tile") keys.push(["L", "lock"]);
     this.hint.replaceChildren();
@@ -935,12 +960,16 @@ export class InteractionController {
     const pieceId = node?.dataset.pieceId;
     if (pieceId === undefined) return;
     event.preventDefault();
+    // On the table, the second click of a double-click has already turned
+    // the piece over: it landed on a selected piece. Only a card in the hand,
+    // which is never selected, is turned over by a double-click.
+    if (!this.table.isInTray(pieceId)) return;
     // The same two taps, already turned over by the double tap.
     if (performance.now() - this.lastTapFlipAt < 1000) return;
     this.turnOver(pieceId);
   };
 
-  /** What a double-click or a double tap does: write on a note or token, turn anything else over. */
+  /** What a double-click or double tap on a card in the hand does: write on a note or token, turn anything else over. */
   private turnOver(pieceId: string): void {
     const piece = this.model.pieces.get(pieceId);
     if (piece?.kind === "note" || piece?.kind === "token") {
@@ -1124,7 +1153,7 @@ export class InteractionController {
       // Select, as a click does: X picks this piece alone, Shift-X adds it
       // to (or takes it from) the selection. Offers use the selection.
       event.preventDefault();
-      this.click(pieceId, event.shiftKey);
+      this.select(pieceId, event.shiftKey);
       const count = this.table.selected.size;
       this.table.announcer.announce(
         this.table.selected.has(pieceId)
