@@ -178,6 +178,16 @@ def test_an_open_hand_is_never_dealt_to() -> None:
     assert deal.operation.to_zones == (HAND_A,)
 
 
+def test_a_face_down_card_in_a_deck_is_not_offered_to_be_turned_over() -> None:
+    table = _seated(build_sample_table(deck_size=1))
+
+    assert "flip" not in _keys(table, "card-0", SEAT_A)
+    assert "flip" not in _keys(table, "card-0", FACILITATOR)
+
+    table.pieces["card-0"].zone_id = PUBLIC_TABLE
+    assert "flip" in _keys(table, "card-0", SEAT_A)
+
+
 def test_a_card_outside_a_deck_offers_neither_shuffle_nor_deal() -> None:
     table = _seated(build_sample_table(deck_size=1))
     table.pieces["card-0"].zone_id = PUBLIC_TABLE

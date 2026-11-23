@@ -91,6 +91,25 @@ test("hovering a card says what the keys do; Space enlarges it and F turns it ov
   await expect(page.locator(".hand-tray__fan .piece.is-face-down")).toHaveCount(1);
 });
 
+test("a card in the deck is not turned face up, by F or from its menu", async ({ browser }) => {
+  const page = await openRoom(browser, "Value Cards", "Ines");
+  const card = deckCard(page);
+
+  await card.hover();
+  await expect(page.locator(".piece-hint")).toContainText("S shuffle");
+  await expect(page.locator(".piece-hint")).not.toContainText("F turn over");
+
+  await page.keyboard.press("f");
+  await expect(
+    page.getByText("A card in a deck cannot be turned face up. Take it off the deck first."),
+  ).toBeVisible();
+  await expect(card).toHaveClass(/is-face-down/);
+
+  await card.click({ button: "right" });
+  await expect(page.getByRole("menuitem", { name: "Shuffle the deck" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Turn over" })).toHaveCount(0);
+});
+
 test("a city's tile is locked in place, unlocks with U, and keeps its size turned over", async ({
   browser,
 }) => {

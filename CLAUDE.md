@@ -206,7 +206,10 @@ so does a card put into a hand or onto a discard pile, wherever it came from
 visibility still shows its face to the owner alone. A card going into a
 deck, or into a zone that hides every face, is left as it was. This is
 `MoveToZone` and `StackOnto` in `sandbox/model/ops.py`, so a macro's moves
-follow it too.
+follow it too. A face-down card is never turned face up while it is in a
+deck, by anyone, however asked (`Flip` refuses it, so its menu does not
+offer "Turn over"); it is turned face down there, as cards go back into a
+deck face down.
 
 The table has no edge. A zone of kind `table` is not drawn (no outline,
 no label), and a piece let go outside every other zone lands on it: its

@@ -447,9 +447,10 @@ export class InteractionController {
    * a finger. On a piece already selected, it turns it over (the selection
    * with it), or writes on a note or token, as a double-click once did.
    * A card still in a deck is not turned over by a click, alone or as part
-   * of the selection: the click only selects it. F, Enter and the menu still
-   * ask; the server judges those. With Shift a click only adds the piece to
-   * the selection or takes it out.
+   * of the selection: the click only selects it. (The server refuses to turn
+   * a card face up in a deck however it is asked; a click does not ask, so
+   * it raises no refusal.) With Shift a click only adds the piece to the
+   * selection or takes it out.
    */
   private click(pieceId: string | null, additive: boolean, shift: boolean): void {
     if (pieceId !== null && !shift && this.table.selected.has(pieceId) && !this.table.isInTray(pieceId)) {
@@ -843,9 +844,11 @@ export class InteractionController {
     // Which keys are worth mentioning, from what is drawn: whether the server
     // allows any of them is still the server's to say when one is pressed.
     const keys: Array<[string, string]> = [];
+    const inDeck = this.model.zones.get(piece.zone_id)?.kind === "deck";
     if (piece.component_id !== null) keys.push(["Space", "hold to enlarge"]);
-    keys.push(["F", "turn over"]);
-    if (this.model.zones.get(piece.zone_id)?.kind === "deck") keys.push(["S", "shuffle"]);
+    // A face-down card in a deck is not turned over until it is off the deck.
+    if (!(inDeck && piece.kind === "card" && !piece.face_up)) keys.push(["F", "turn over"]);
+    if (inDeck) keys.push(["S", "shuffle"]);
     if (piece.locked) keys.push(["U", "unlock"]);
     else if (piece.kind === "tile") keys.push(["L", "lock"]);
     this.hint.replaceChildren();

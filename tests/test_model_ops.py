@@ -172,6 +172,7 @@ def test_move_to_zone_rejects_an_unknown_zone() -> None:
 
 def test_flip_toggles_face_up_by_default() -> None:
     table = build_sample_table(deck_size=1)
+    table.pieces["card-0"].zone_id = PUBLIC_TABLE
     table.pieces["card-0"].face_up = False
 
     run_op(table, SEAT_A, Flip(piece_id="card-0"))
@@ -181,11 +182,38 @@ def test_flip_toggles_face_up_by_default() -> None:
 
 def test_flip_can_set_an_explicit_face() -> None:
     table = build_sample_table(deck_size=1)
+    table.pieces["card-0"].zone_id = PUBLIC_TABLE
 
     run_op(table, SEAT_A, Flip(piece_id="card-0", face_up=True))
     run_op(table, SEAT_A, Flip(piece_id="card-0", face_up=True))
 
     assert table.pieces["card-0"].face_up is True
+
+
+def test_a_card_in_a_deck_is_not_turned_face_up() -> None:
+    table = build_sample_table(deck_size=1)
+
+    for actor in (SEAT_A, FACILITATOR):
+        for flip in (Flip(piece_id="card-0"), Flip(piece_id="card-0", face_up=True)):
+            outcome = run_op(table, actor, flip)
+            assert isinstance(outcome, Reject)
+            assert outcome.reason == (
+                "A card in a deck cannot be turned face up. Take it off the deck first."
+            )
+
+    assert table.pieces["card-0"].face_up is False
+
+
+def test_a_face_up_card_in_a_deck_may_be_turned_face_down() -> None:
+    table = build_sample_table(deck_size=2)
+    table.pieces["card-0"].face_up = True
+    table.pieces["card-1"].face_up = True
+
+    assert isinstance(run_op(table, SEAT_A, Flip(piece_id="card-0")), Ok)
+    assert isinstance(run_op(table, SEAT_A, Flip(piece_id="card-1", face_up=False)), Ok)
+
+    assert table.pieces["card-0"].face_up is False
+    assert table.pieces["card-1"].face_up is False
 
 
 def test_rotate_wraps_within_a_full_turn() -> None:
