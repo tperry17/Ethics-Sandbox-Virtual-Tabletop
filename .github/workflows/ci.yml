@@ -1,5 +1,14 @@
-# The checks CLAUDE.md requires before a change is called done, on every
-# pull request and on every push to main.
+# The checks CLAUDE.md requires before a change is called done. To keep
+# within the account's Actions minutes, not every job runs on every event:
+#
+#   pull request:   Ruff, mypy, pytest; Playwright in Chromium
+#   push to main:   Ruff, mypy, pytest; Playwright in WebKit and on the iPad
+#
+# A pull request's run already tests the branch merged with main, so the
+# push that merges it repeats only the fast job, which catches two pull
+# requests that pass alone but break together. WebKit runs once per merge
+# rather than on every push to a pull request, so a Safari- or iPad-only
+# fault shows up on main after the merge.
 name: CI
 
 on:
@@ -33,6 +42,7 @@ jobs:
 
   browser:
     name: Playwright
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -59,6 +69,7 @@ jobs:
 
   webkit:
     name: Playwright (WebKit, iPad) ${{ matrix.shard }}
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:

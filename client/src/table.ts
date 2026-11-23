@@ -181,7 +181,7 @@ export class TableRenderer {
 
     this.tray = element("div", "hand-tray");
     this.tray.hidden = true;
-    // Docked below the table, for anyone who has a private hand: it is
+    // Over the table's bottom edge, for anyone who has a private hand: it is
     // there before the first card arrives, so there is always somewhere to
     // drop one.
     // It starts closed on every load, a single row naming the hand; its
@@ -241,6 +241,7 @@ export class TableRenderer {
       },
       bounds: () => this.tableBounds(),
       size: () => this.surfaceSize(),
+      fitSize: () => this.fitSize(),
       ...(this.options.roomCode === ""
         ? {}
         : { storageKey: `sandbox:view:${this.options.roomCode}` }),
@@ -1492,14 +1493,26 @@ export class TableRenderer {
   /**
    * The part of the surface the table gets to use.
    *
-   * The hand tray is docked below the surface, not over it, so the whole
-   * surface is the table's.
+   * The hand tray lies over the surface's bottom edge but is see-through,
+   * so the whole surface is the table's: panning and zooming reach under it.
    */
   private surfaceSize(): { width: number; height: number } {
     return {
       width: this.surface.clientWidth || 960,
       height: Math.max(this.surface.clientHeight || 600, 240),
     };
+  }
+
+  /**
+   * The part of the surface a fit fills: all of it, less the open hand
+   * tray, so "Fit table" puts nothing under your cards. Closed, the tray is
+   * only its name, in a corner, and is left out of the reckoning.
+   */
+  private fitSize(): { width: number; height: number } {
+    const size = this.surfaceSize();
+    const open = !this.tray.hidden && !this.trayBody.hidden;
+    if (!open) return size;
+    return { width: size.width, height: Math.max(size.height - this.tray.offsetHeight, 240) };
   }
 
   private tableBounds(): Bounds | null {
@@ -1546,6 +1559,14 @@ export class TableRenderer {
     }
     this.resizeObserver = new ResizeObserver(apply);
     this.resizeObserver.observe(this.surface);
+    // The tray lies over the table's bottom edge; what else sits along that
+    // edge (the connection status, your tools) is lifted clear of it.
+    const clearTray = (): void => {
+      const size = this.tray.hidden ? 0 : this.tray.offsetHeight;
+      this.root.style.setProperty("--hand-tray-size", `${size}px`);
+    };
+    clearTray();
+    new ResizeObserver(clearTray).observe(this.tray);
   }
 }
 

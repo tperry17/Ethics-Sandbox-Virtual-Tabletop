@@ -41,14 +41,22 @@ test("the deck's menu deals to everyone and shuffles", async ({ browser }) => {
   await expect
     .poll(() => face.evaluate((image) => (image as HTMLImageElement).naturalWidth))
     .toBeGreaterThan(0);
-  // The tray's label sits above the cards, never under one, and each card
-  // ends inside the tray.
-  const head = await page.locator(".hand-tray__head").boundingBox();
-  const tray = await page.locator(".hand-tray").boundingBox();
+  // The tray's name sits in its bottom corner, drawn over the fan rather
+  // than in a row of its own, and never under a card; each card ends inside
+  // the tray.
+  const head = (await page.locator(".hand-tray__head").boundingBox())!;
+  const tray = (await page.locator(".hand-tray").boundingBox())!;
+  expect(head.y + head.height).toBeLessThanOrEqual(tray.y + tray.height);
+  expect(head.y + head.height).toBeGreaterThan(tray.y + tray.height - 48);
+  const onTop = await page.evaluate(
+    ([x, y]) => document.elementFromPoint(x, y)?.closest(".hand-tray__toggle") !== null,
+    [head.x + head.width / 2, head.y + head.height / 2],
+  );
+  expect(onTop).toBe(true);
   for (const card of await page.locator(".hand-tray__fan .piece").all()) {
-    const box = await card.boundingBox();
-    expect(box!.y).toBeGreaterThanOrEqual(head!.y + head!.height);
-    expect(box!.y + box!.height).toBeLessThanOrEqual(tray!.y + tray!.height);
+    const box = (await card.boundingBox())!;
+    expect(box.y).toBeGreaterThanOrEqual(tray.y);
+    expect(box.y + box.height).toBeLessThanOrEqual(tray.y + tray.height);
   }
 
   await deckCard(page).hover();
