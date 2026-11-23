@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { openFromLanding, openControls } from "./rooms";
+import { openFromLanding, openControls, openView } from "./rooms";
 
 /**
  * A card let go partly over a pile goes into it, if more than half of the
@@ -187,6 +187,7 @@ test("the table has no edge: no outline, and a card let go beyond it lands on th
     "rgba(0, 0, 0, 0)",
   );
   // Step back until there is room beside where the table zone's outline was.
+  await openView(page);
   for (let step = 0; step < 8; step++) await page.getByRole("button", { name: "Zoom out" }).click();
   await page.waitForTimeout(300);
   const id = await topOfDeck(page);

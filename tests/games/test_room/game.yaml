@@ -73,13 +73,13 @@ setup:
   - {op: spawn, component: token-3, zone: kit, count: 3}
 
 macros:
-  - id: setup
+  # Clears the table and lays it out again. Anyone may, after being asked.
+  - id: reset
+    who: anyone
+    acts_for_room: true
     steps:
       - {op: reset_table}
       - {op: setup}
-  - id: reset
-    steps:
-      - {op: reset_table}
   - id: clear_ink
     who: anyone
     steps:

@@ -21,6 +21,10 @@ import type { TableRenderer } from "./table.js";
 const DRAG_THRESHOLD_PX = 5;
 /** A touch held this long on a piece on the table opens its menu. */
 const LONG_PRESS_MS = 500;
+/** A second tap on the same piece this soon after the first turns it over. */
+const DOUBLE_TAP_MS = 350;
+/** ...if it lands this close to the first, in CSS pixels. */
+const DOUBLE_TAP_PX = 24;
 /** A card in the hand held this long is lifted up close to be read. */
 const PEEK_HOLD_MS = 450;
 /** At most one move per piece this often while dragging; the server coalesces anyway. */
@@ -94,6 +98,16 @@ type Gesture =
 
 export class InteractionController {
   private gesture: Gesture | null = null;
+  /**
+   * The last tap of a finger on a piece, and the selection before it, so a
+   * second tap can turn the piece over as a double-click does. Browsers do
+   * not reliably make a double-click from two taps on a table that takes
+   * every touch itself (touch-action: none).
+   */
+  private lastTap: { pieceId: string; at: number; x: number; y: number; before: string[] } | null =
+    null;
+  /** When a double tap last turned something over, so a double-click from the same taps does not turn it back. */
+  private lastTapFlipAt = -Infinity;
   private tool: Tool = "hand";
   private readonly touches = new Set<number>();
   private lastCursorAt = 0;
@@ -156,12 +170,8 @@ export class InteractionController {
   // -- tools ---------------------------------------------------------------------------
 
   private buildTools(): void {
-    // Point sits on the row of the table's controls; the pen and clearing
-    // ink are in a Draw menu beside the Table buttons, closed until opened.
-    const point = toolButton("Point", "Point at a spot on the table. Alt-click also points.");
-    point.addEventListener("click", () => this.setTool(this.tool === "point" ? "hand" : "point"));
-    this.table.pointArea.replaceChildren(point);
-
+    // The pen, Point and clearing ink are in a Draw menu beside the Table
+    // buttons, closed until opened.
     const draw = document.createElement("details");
     draw.className = "draw-menu";
     const summary = document.createElement("summary");
@@ -177,14 +187,24 @@ export class InteractionController {
       // Out of the way of the table, which is what the pen is for.
       draw.open = false;
     });
+    const point = toolButton("Point", "Point at a spot on the table. Alt-click also points.");
+    point.addEventListener("click", () => {
+      this.setTool(this.tool === "point" ? "hand" : "point");
+      // Out of the way of the table, which is where the point goes.
+      draw.open = false;
+    });
     const clearMine = plainButton("Clear my ink", () => {
       this.table.intents.send("clear_ink", { everyone: false });
     });
+    // The room's own "Clear ink" button, when it has one, so its question
+    // and its announcement come with it; otherwise the plain intent.
     const clearAll = plainButton("Clear all ink", () => {
-      this.table.intents.send("clear_ink", { everyone: true });
+      const macro = this.table.roomClearInk;
+      if (macro !== null) this.table.pressMacro(macro);
+      else this.table.intents.send("clear_ink", { everyone: true });
     });
     clearAll.hidden = true;
-    panel.append(pen, clearMine, clearAll);
+    panel.append(pen, point, clearMine, clearAll);
     draw.append(summary, panel);
     this.table.drawArea.replaceChildren(draw);
     this.drawSummary = summary;
@@ -225,8 +245,9 @@ export class InteractionController {
       this.toolButtons.pen.setAttribute("aria-pressed", String(tool === "pen"));
     }
     if (this.drawSummary !== null) {
-      this.drawSummary.textContent = tool === "pen" ? "Draw: pen" : "Draw";
-      this.drawSummary.classList.toggle("is-active", tool === "pen");
+      this.drawSummary.textContent =
+        tool === "pen" ? "Draw: pen" : tool === "point" ? "Draw: point" : "Draw";
+      this.drawSummary.classList.toggle("is-active", tool !== "hand");
     }
     this.table.surfaceElement.dataset.tool = tool;
   }
@@ -360,7 +381,13 @@ export class InteractionController {
 
     if (gesture.kind === "press") {
       if (gesture.timer !== null) window.clearTimeout(gesture.timer);
-      if (!gesture.middle) this.click(gesture.pieceId, gesture.additive);
+      if (gesture.middle) return;
+      if (gesture.pointerType === "touch" && gesture.pieceId !== null) {
+        this.tap(gesture.pieceId, event, gesture.additive);
+        return;
+      }
+      this.lastTap = null;
+      this.click(gesture.pieceId, gesture.additive);
       return;
     }
     if (gesture.kind === "drag") this.finishDrag(gesture.pieces, event);
@@ -390,6 +417,37 @@ export class InteractionController {
       }
       this.endDragChrome();
     }
+  }
+
+  /**
+   * A finger's tap on a piece: the first toggles it in the selection; a
+   * second on the same piece soon after puts the selection back as it was
+   * and turns the piece over, as a double-click does (the selection with it,
+   * if it was already in it).
+   */
+  private tap(pieceId: string, event: PointerEvent, additive: boolean): void {
+    const now = performance.now();
+    const last = this.lastTap;
+    if (
+      last !== null &&
+      last.pieceId === pieceId &&
+      now - last.at <= DOUBLE_TAP_MS &&
+      Math.hypot(event.clientX - last.x, event.clientY - last.y) <= DOUBLE_TAP_PX
+    ) {
+      this.lastTap = null;
+      this.lastTapFlipAt = now;
+      if (!this.table.isInTray(pieceId)) this.table.setSelection(last.before);
+      this.turnOver(pieceId);
+      return;
+    }
+    this.lastTap = {
+      pieceId,
+      at: now,
+      x: event.clientX,
+      y: event.clientY,
+      before: [...this.table.selected],
+    };
+    this.click(pieceId, additive);
   }
 
   private click(pieceId: string | null, additive: boolean): void {
@@ -877,13 +935,20 @@ export class InteractionController {
     const pieceId = node?.dataset.pieceId;
     if (pieceId === undefined) return;
     event.preventDefault();
+    // The same two taps, already turned over by the double tap.
+    if (performance.now() - this.lastTapFlipAt < 1000) return;
+    this.turnOver(pieceId);
+  };
+
+  /** What a double-click or a double tap does: write on a note or token, turn anything else over. */
+  private turnOver(pieceId: string): void {
     const piece = this.model.pieces.get(pieceId);
     if (piece?.kind === "note" || piece?.kind === "token") {
       this.write(pieceId, piece.kind);
       return;
     }
     this.flip(this.targetsFor(pieceId));
-  };
+  }
 
   /** Ask what to write on a note or a token. The server judges whether it may be. */
   private write(pieceId: string, kind: "note" | "token" = "note"): void {

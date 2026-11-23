@@ -64,10 +64,6 @@ setup:
   - {op: deal, from: outcome-pile, to: outcomes, count: 3, face_up: true}
 
 macros:
-  - id: setup
-    steps:
-      - {op: reset_table}
-      - {op: setup}
   - id: deal
     steps:
       - {op: draw, from: deck, to: table, count: 1, face_up: true}
@@ -75,9 +71,12 @@ macros:
     who: anyone
     steps:
       - {op: spawn, component: note, zone: table}
+  # Back to how the table was when it began. The facilitator's, or, with
+  # nobody facilitating, its players'.
   - id: reset
     steps:
       - {op: reset_table}
+      - {op: setup}
   - id: shuffle
     steps:
       - {op: shuffle, zone: deck}

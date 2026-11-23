@@ -331,6 +331,38 @@ test.describe("flipping and rotating", () => {
   });
 });
 
+test.describe("flipping by touch", () => {
+  test.use({ hasTouch: true });
+
+  test("a double tap turns a card over once, and leaves the selection as it was", async ({ page }) => {
+    await page.goto(PREVIEW);
+    const card = piece(page, "claim-1");
+    const box = (await card.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    // One tap selects, as before.
+    await page.touchscreen.tap(x, y);
+    await expect(card).toHaveClass(/is-selected/);
+    // A second tap well after the first toggles it off again.
+    await page.waitForTimeout(500);
+    await page.touchscreen.tap(x, y);
+    await expect(card).not.toHaveClass(/is-selected/);
+    expect((await intents(page)).filter((intent) => intent.op_type === "flip")).toHaveLength(0);
+
+    // Two quick taps turn it over, once, and do not select it.
+    await page.waitForTimeout(500);
+    await page.touchscreen.tap(x, y);
+    await page.touchscreen.tap(x, y);
+    await expect(card).toHaveClass(/is-face-down/);
+    await page.waitForTimeout(300);
+    const flips = (await intents(page)).filter((intent) => intent.op_type === "flip");
+    expect(flips).toHaveLength(1);
+    expect(flips[0]!.payload["piece_id"]).toBe("claim-1");
+    await expect(card).not.toHaveClass(/is-selected/);
+  });
+});
+
 test.describe("the context menu", () => {
   const menu = (pieceId: string, clientId: string): ServerMessage => ({
     type: "menu",
@@ -674,16 +706,24 @@ test.describe("pointing and ink", () => {
     expect(point.payload["x"]).toBeCloseTo(700, 0);
     expect(point.payload["y"]).toBeCloseTo(250, 0);
 
-    // Point is on the row of the table's controls, with the menus.
-    const button = page.locator(".tabletop__controls").getByRole("button", { name: "Point" });
+    // Point is in the Draw menu, closed at first; choosing it closes the
+    // menu, which says Point is in hand.
+    const view = page.locator(".tabletop__controls details.draw-menu");
+    await expect(view).not.toHaveAttribute("open", "");
+    const button = view.getByRole("button", { name: "Point", includeHidden: true });
+    await expect(button).toBeHidden();
+    await view.locator("summary").click();
     await button.click();
     await expect(button).toHaveAttribute("aria-pressed", "true");
+    await expect(button).toBeHidden();
+    await expect(view.locator("summary")).toHaveText("Draw: point");
     const other = await onScreen(page, 600, 300);
     await page.mouse.click(other.x, other.y);
     point = (await intents(page)).at(-1)!;
     expect(point.op_type).toBe("point");
     expect(point.payload["x"]).toBeCloseTo(600, 0);
     await expect(button).toHaveAttribute("aria-pressed", "false");
+    await expect(view.locator("summary")).toHaveText("Draw");
   });
 
   test("the pen draws one stroke, and ink can be cleared", async ({ page }) => {

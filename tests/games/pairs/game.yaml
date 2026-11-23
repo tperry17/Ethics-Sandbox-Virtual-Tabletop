@@ -53,19 +53,18 @@ setup:
   - {op: spawn_deck, deck: cards, zone: deck}   # a hidden deck is shuffled as it is made
 
 macros:                    # what each button says: content/.../buttons.csv
-  - id: setup
-    steps:
-      - {op: reset_table}
-      - {op: setup}
   - id: deal
     steps:
       - {op: deal, from: deck, to: hand, count: 3}   # into a private hand, so face up
   - id: call_pairs
     who: anyone
     python: call_pairs
+  # Back to how the table was when it began. The facilitator's, or, with
+  # nobody facilitating, its players'.
   - id: reset
     steps:
       - {op: reset_table}
+      - {op: setup}
   - id: shuffle
     steps:
       - {op: shuffle, zone: deck}

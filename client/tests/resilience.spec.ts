@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page, type WebSocketRoute } from "@playwright/test";
-import { openFromLanding, openControls } from "./rooms";
+import { openFromLanding, openControls, openView } from "./rooms";
 
 /**
  * A flaky network, a locked iPad, a refresh, two hands on one piece. The
@@ -151,7 +151,8 @@ test("a refresh keeps the seat, the hand and the view", async ({ browser }) => {
   const titles = (await hand.allTextContents()).sort();
   const seat = await host.locator("#table-root").getAttribute("data-seat-id");
 
-  await host.getByRole("button", { name: "Zoom in" }).or(host.getByRole("button", { name: "+" })).click();
+  await openView(host);
+  await host.getByRole("button", { name: "Zoom in" }).click();
   const kept = (): Promise<{ scale: number; centreX: number; centreY: number }> =>
     host.evaluate((roomCode) => JSON.parse(window.localStorage.getItem(`sandbox:view:${roomCode}`)!), code);
   await expect.poll(() => kept().catch(() => null)).not.toBeNull();

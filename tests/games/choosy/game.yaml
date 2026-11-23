@@ -29,9 +29,8 @@ setup:
   - {op: spawn_deck, deck: plain, zone: table}
 
 macros:
-  - {id: setup, steps: [{op: reset_table}, {op: setup}]}
   - {id: deal, steps: [{op: deal, from: pile, to: hand, count: 1}]}
-  - {id: reset, steps: [{op: reset_table}]}
+  - {id: reset, steps: [{op: reset_table}, {op: setup}]}
   - {id: shuffle, steps: [{op: shuffle, zone: pile}]}
   - {id: collect, steps: [{op: collect, to: pile}]}
   - {id: clear_ink, who: anyone, steps: [{op: clear_ink}]}

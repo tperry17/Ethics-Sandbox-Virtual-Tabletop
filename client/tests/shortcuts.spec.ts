@@ -162,12 +162,11 @@ test("a card in an added deck offers to remove the deck", async ({ browser }) =>
   await expect(page.locator(".toast")).toContainText("Ines removed Core deck 2.");
 });
 
-test("Reset asks “Are you sure?” first, and clears the whole table only if confirmed", async ({
+test("Reset asks “Are you sure?” first, and lays the table out again only if confirmed", async ({
   browser,
 }) => {
   const page = await openRoom(browser, "Value Cards", "Ines");
-  // Reset is the facilitator's.
-  await page.getByRole("button", { name: "Become facilitator" }).click();
+  // Reset is anyone's: nobody here is the facilitator.
   await expect(page.getByRole("button", { name: "Reset", exact: true })).toBeVisible();
   await page.locator(".pieces-menu summary").click();
   await page.locator(".pieces-menu__row", { hasText: "Sidebar" }).getByRole("button", { name: "Add" }).click();
@@ -188,6 +187,8 @@ test("Reset asks “Are you sure?” first, and clears the whole table only if c
 
   page.once("dialog", (dialog) => void dialog.accept());
   await page.getByRole("button", { name: "Reset", exact: true }).click();
-  await expect(cards).toHaveCount(0);
+  // The added sidebar is gone, and the core deck and the sidebar are laid out again.
   await expect(page.locator('.zone[data-zone-id^="added-deck-"]')).toHaveCount(0);
+  await expect(cards).toHaveCount(36);
+  await expect(page.locator(".toast")).toContainText("Ines reset the table.");
 });

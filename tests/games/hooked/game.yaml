@@ -20,9 +20,8 @@ setup:
   - {op: spawn, component: d6, zone: table}
 
 macros:
-  - {id: setup, steps: [{op: reset_table}, {op: setup}]}
   - {id: deal, python: marker_each}
-  - {id: reset, steps: [{op: reset_table}]}
+  - {id: reset, steps: [{op: reset_table}, {op: setup}]}
   - {id: shuffle, steps: [{op: shuffle, zone: table}]}
   - {id: collect, steps: [{op: collect, to: table}]}
   - {id: clear_ink, who: anyone, steps: [{op: clear_ink}]}

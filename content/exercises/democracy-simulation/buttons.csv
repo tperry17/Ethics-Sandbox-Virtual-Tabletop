@@ -1,5 +1,4 @@
 id,label,hint,confirm,announce
-setup,Set up,"Clear the city's table and lay it out again.",This clears the city's table and sets it up again. Continue?,{name} set up the table.
 deal,Deal role cards,"One role card to each citizen, and the information sheets to the elite. Allowed until the meeting starts.",,{name} dealt the role cards.
 choose_moderators,Choose the co-Chairs,"Two citizens picked at random. Potamosia only.",,{name} chose the co-Chairs.
 start_meeting,Start the meeting,"Keeps who holds which card and its interest, and closes the dealing.",,{name} started the meeting.
@@ -10,7 +9,7 @@ new_proposal,Add a proposal,"A blank proposal note. Double-click it to write the
 join_queue,Join the queue,"Put your name on the speaking queue.",,{name} joined the speaking queue.
 next_speaker,Next speaker,"Take the first speaker off the queue. A co-Chair or king, or the facilitator.",,{name} called the next speaker.
 clear_queue,Clear the queue,,,{name} cleared the speaking queue.
-reset,Reset,Remove every card and all ink.,This removes every card and all ink from the city's table. Continue?,{name} cleared the table.
+reset,Reset,Put the city's table back as it was when the activity began.,"Are you sure? This takes every card off the city's table and lays it out again, as it was when the activity began.",{name} reset the city's table.
 shuffle,Shuffle deck,,,{name} shuffled the deck.
 collect,Collect all cards,"Every role card and sheet back into the box.",,{name} collected every card.
 clear_ink,Clear ink,,This erases everyone's ink. Continue?,{name} cleared all ink.

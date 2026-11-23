@@ -229,24 +229,15 @@ def test_collect_brings_every_card_back_and_the_shuffle_hides_which_is_which() -
     assert any(table.pieces[pid].component_id != cid for pid, cid in shown.items())
 
 
-def test_set_up_starts_the_table_again() -> None:
+def test_reset_puts_the_table_back_as_setup_left_it() -> None:
     game = pairs()
     table = seated(game, 2)
     press(game, table, "deal")
 
-    assert isinstance(press(game, table, "setup"), Ok)
+    assert isinstance(press(game, table, "reset"), Ok)
 
     assert len(table.pieces_in_zone("deck")) == 8
     assert table.pieces_in_zone("hand-seat-1") == []
-
-
-def test_reset_clears_every_piece() -> None:
-    game = pairs()
-    table = seated(game, 2)
-
-    assert isinstance(press(game, table, "reset"), Ok)
-
-    assert table.pieces == {}
     assert list(table.zones) == [
         "table",
         "deck",

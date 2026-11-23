@@ -88,6 +88,10 @@ def test_a_hook_game_registers_every_moment() -> None:
             "this definition needs these macros as well",
         ),
         (
+            lambda raw: raw["macros"][0].update(acts_for_room=True),
+            "only a room type's buttons may act for the room",
+        ),
+        (
             lambda raw: raw["zones"][3].update(per_seat=False),
             "is private_to_owner but not per_seat",
         ),
@@ -96,7 +100,7 @@ def test_a_hook_game_registers_every_moment() -> None:
             "zone ids used more than once",
         ),
         (
-            lambda raw: raw["macros"][1].update(python="call_pairs"),
+            lambda raw: raw["macros"][0].update(python="call_pairs"),
             "exactly one of 'steps' or 'python'",
         ),
         (
@@ -280,7 +284,9 @@ def test_button_wording_comes_from_the_games_csv() -> None:
     button = pairs().buttons["reset"]
 
     assert button.label == "Reset"
-    assert button.confirm is not None and button.confirm.startswith("This removes")
+    assert button.confirm is not None and button.confirm.startswith(
+        "This takes every card off"
+    )
     assert pairs().buttons["shuffle"].hint is None
 
 

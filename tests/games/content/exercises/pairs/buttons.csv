@@ -1,8 +1,7 @@
 id,label,hint,confirm,announce
-setup,Set up,"Clear the table and lay out a fresh, shuffled deck.",This clears the table and sets it up again. Continue?,{name} set up the table.
 deal,Deal three each,"Three cards, face up, into each seat's hand.",,{name} dealt three cards to each seat.
 call_pairs,Catch pairs,"Lay every pair that is held face up in the middle.",,{name} caught the pairs.
-reset,Reset,Remove every card and all ink.,This removes every card and all ink from the table. Continue?,{name} cleared the table.
+reset,Reset,"Put the table back as it was when it began: a fresh, shuffled deck.",This takes every card off the table and lays it out again. Continue?,{name} reset the table.
 shuffle,Shuffle deck,,,{name} shuffled the deck.
 collect,Collect all cards,"Every card back into the deck, face down, shuffled.",,{name} collected every card into the deck.
 clear_ink,Clear ink,,This erases everyone's ink. Continue?,{name} cleared all ink.

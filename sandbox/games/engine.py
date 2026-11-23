@@ -62,7 +62,6 @@ from sandbox.model import (
     Rect,
     Reject,
     RemoveZone,
-    ResetTable,
     ResetZone,
     SetProp,
     SetText,
@@ -228,6 +227,8 @@ class _Builder:
         actor_seat: str,
         scope: Scope | None = None,
         options: Mapping[str, str] | None = None,
+        *,
+        for_room: bool = False,
     ) -> None:
         self.game = game
         self.scope = scope
@@ -241,8 +242,9 @@ class _Builder:
             else ({} if game is None else game.definition.default_options())
         )
         self.trial = copy.deepcopy(table)
-        # Who each step is tried as. An activity's buttons act for the room.
-        self.actor_seat = SYSTEM_SEAT if scope is not None else actor_seat
+        # Who each step is tried as. An activity's buttons act for the room,
+        # and so does a room button whose definition says it does.
+        self.actor_seat = SYSTEM_SEAT if scope is not None or for_room else actor_seat
         self.operator = actor_seat
         self.steps: list[Operation] = []
 
@@ -260,7 +262,7 @@ class _Builder:
             steps=tuple(self.steps),
             name=name,
             label=label,
-            system=self.scope is not None,
+            system=self.actor_seat == SYSTEM_SEAT,
         )
 
     # -- what the definition names ----------------------------------------
@@ -421,7 +423,11 @@ class _Builder:
                         self.run(Flip(piece_id=piece.id, face_up=step.face_up))
         elif isinstance(step, ResetTableStep):
             if self.scope is None:
-                self.run(ResetTable())
+                # The room's own zones and all ink, not a running activity's
+                # cards: those are its players', and its own Reset is theirs.
+                for zone in self.scope_zones():
+                    self.run(ResetZone(zone_id=zone))
+                self.run(ClearInk(everyone=True))
                 # Piles added from the Pieces menu go with what was on them.
                 for zone_id in list(self.trial.zones):
                     if zone_id.startswith(ADDED_DECK_PREFIX):
@@ -940,7 +946,9 @@ def build_macro(
         if actor_seat not in activity.seats and not table.is_facilitator(actor_seat):
             return Reject("That button is for the activity's players.")
         scope = scope_of(table, activity_id)
-    builder = _Builder(game, table, actor_seat, scope)
+    builder = _Builder(
+        game, table, actor_seat, scope, for_room=spec.acts_for_room and scope is None
+    )
     try:
         builder.hooks("before_macro", builder.context(macro_id=macro_id))
         if spec.steps is not None:

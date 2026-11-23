@@ -28,6 +28,7 @@ from sandbox.model import (
     Rect,
     Reject,
     RemoveZone,
+    ResetTable,
     Table,
     Transaction,
     Visibility,
@@ -193,6 +194,37 @@ def test_collect_leaves_a_running_activitys_cards_alone() -> None:
     assert len(table.pieces_in_zone("sidebar")) == 18
 
 
+def test_the_rooms_reset_leaves_a_running_activitys_cards_alone() -> None:
+    """Anyone may reset the room, but an activity's cards are its players'."""
+    table = seated(ROOM, 3)
+    trading = GAMES["value-cards-trading"]
+    meta = trading.definition.meta
+    opened = OpenActivity(
+        kind=meta.slug, title=meta.title, min_players=3, max_players=3
+    )
+    assert isinstance(run_op(table, "seat-1", opened), Ok)
+    activity_id = next(reversed(table.activities))
+    for seat in ("seat-2", "seat-3"):
+        assert isinstance(run_op(table, seat, JoinActivity(activity_id)), Ok)
+    started = build_activity_start(trading, table, "seat-1", activity_id)
+    assert isinstance(started, Transaction), started
+    assert isinstance(run_op(table, "seat-1", started), Ok)
+    zones = table.activities[activity_id].zones
+    before = {
+        zone: {piece.id for piece in table.pieces_in_zone(zone)} for zone in zones
+    }
+    assert isinstance(press(ROOM, table, "deal", "seat-2"), Ok)
+
+    assert isinstance(press(ROOM, table, "reset", "seat-2"), Ok)
+
+    after = {zone: {piece.id for piece in table.pieces_in_zone(zone)} for zone in zones}
+    assert after == before
+    assert table.activities[activity_id].status == "running"
+    assert table.pieces_in_zone("hand-seat-2") == []
+    assert len(table.pieces_in_zone("deck")) == 18
+    assert len(table.pieces_in_zone("sidebar")) == 18
+
+
 @pytest.mark.parametrize(
     ("macro_id", "pile", "group", "other"),
     [
@@ -286,15 +318,40 @@ def test_a_card_from_an_added_deck_offers_to_remove_it_by_its_pile_alone() -> No
     assert all("home" not in str(piece) for piece in shown)
 
 
-@pytest.mark.parametrize("macro_id", ["reset", "setup"])
-def test_resetting_the_table_takes_the_added_decks_away(macro_id: str) -> None:
+def test_resetting_the_table_takes_the_added_decks_away() -> None:
     table = seated(ROOM, 1)
     added = {_add(table, "core-deck", "seat-1"), _add(table, "sidebar-deck", "seat-1")}
 
-    assert isinstance(press(ROOM, table, macro_id), Ok)
+    assert isinstance(press(ROOM, table, "reset"), Ok)
 
     assert not added & set(table.zones)
     assert {"table", "deck", "sidebar", "hand-seat-1"} <= set(table.zones)
+
+
+def test_anyone_may_reset_the_room_which_lays_it_out_again() -> None:
+    """Reset is the room's one way back to the start, and it is anyone's."""
+    table = seated(ROOM, 2)
+    assert not table.is_facilitator("seat-2")
+    added = _add(table, "core-deck", "seat-2")
+    assert isinstance(press(ROOM, table, "deal", seat="seat-2"), Ok)
+    assert table.pieces_in_zone("hand-seat-2")
+
+    assert isinstance(press(ROOM, table, "reset", seat="seat-2"), Ok)
+
+    assert added not in table.zones
+    assert table.pieces_in_zone("hand-seat-1") == []
+    assert table.pieces_in_zone("hand-seat-2") == []
+    assert len(table.pieces_in_zone("deck")) == 18
+    assert len(table.pieces_in_zone("sidebar")) == 18
+
+
+def test_resetting_the_table_directly_is_still_the_facilitators() -> None:
+    """Only the room's own button acts for the room; the bare operation does not."""
+    table = seated(ROOM, 2)
+
+    outcome = run_op(table, "seat-2", ResetTable())
+
+    assert outcome == Reject("Only the facilitator may reset the table.")
 
 
 def test_the_menu_adds_only_the_rooms_own_decks() -> None:

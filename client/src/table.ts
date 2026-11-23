@@ -132,9 +132,8 @@ export class TableRenderer {
   private readonly fittedActivities = new Set<string>();
   /** Set once the first snapshot has been seen, so a reload does not refit. */
   private activitiesSeen = false;
-  /** The Draw menu (pen and clearing ink) and the Point button, filled by the interaction half. */
+  /** The Draw menu (the pen, Point and clearing ink), filled by the interaction half. */
   private readonly drawSlot = element("div", "tabletop__pieces-slot");
-  private readonly pointSlot = element("div", "tabletop__pieces-slot");
   /** Sign-ups this person has seen with the side panel open. */
   private readonly seenSignups = new Set<string>();
   private piecesAdded = 0;
@@ -884,7 +883,7 @@ export class TableRenderer {
 
   private controls(): HTMLElement {
     const controls = element("div", "tabletop__controls");
-    // The Table buttons, Draw and Pieces menus drop down over the same
+    // The Table buttons, Draw, Pieces and View menus drop down over the same
     // corner, so opening one closes the others. "toggle" does not bubble;
     // capture it.
     controls.addEventListener(
@@ -898,16 +897,29 @@ export class TableRenderer {
       },
       true,
     );
-    controls.append(
-      this.buttonsSlot,
-      this.drawSlot,
-      this.piecesSlot,
-      this.pointSlot,
-      button("Fit table", () => this.controller.fit(true)),
+    controls.append(this.buttonsSlot, this.drawSlot, this.piecesSlot, this.renderViewMenu());
+    return controls;
+  }
+
+  /**
+   * The View menu: "Fit table" and the zoom buttons, closed until it is
+   * opened. Pinching and the wheel zoom too, so these need not be on the row
+   * of controls itself.
+   */
+  private renderViewMenu(): HTMLElement {
+    const menu = element("details", "view-menu");
+    const summary = element("summary", "button button--secondary button--sm", "View");
+    const panel = element("div", "view-menu__panel");
+    panel.setAttribute("role", "group");
+    panel.setAttribute("aria-label", "View");
+    const zoom = element("div", "view-menu__zoom");
+    zoom.append(
       button("Zoom out", () => this.controller.zoomBy(1 / 1.2), "−"),
       button("Zoom in", () => this.controller.zoomBy(1.2), "+"),
     );
-    return controls;
+    panel.append(button("Fit table", () => this.controller.fit(true)), zoom);
+    menu.append(summary, panel);
+    return menu;
   }
 
   /**
@@ -924,9 +936,13 @@ export class TableRenderer {
     return this.drawSlot;
   }
 
-  /** Where the Point button goes: on the same row as the menus. */
-  get pointArea(): HTMLElement {
-    return this.pointSlot;
+  /**
+   * The room's own "clear_ink" button, which the Draw menu offers as "Clear
+   * all ink" rather than the Table buttons menu. Where it goes is all the
+   * client decides; whether it may run is the server's.
+   */
+  get roomClearInk(): MacroView | null {
+    return this.model.macros.find((macro) => macro.id === "clear_ink" && !macro.activity_id) ?? null;
   }
 
   /** The room's Pieces menu, among the camera controls; redrawn with the toolbar. */
@@ -957,7 +973,9 @@ export class TableRenderer {
    */
   private renderButtonsMenu(placed: ReadonlySet<MacroView>): void {
     const wasOpen = this.buttonsSlot.querySelector("details")?.open ?? false;
-    const macros = this.model.macros.filter((macro) => !placed.has(macro));
+    // The room's "clear_ink" is in the Draw menu, with the rest of the ink.
+    const clearInk = this.roomClearInk;
+    const macros = this.model.macros.filter((macro) => !placed.has(macro) && macro !== clearInk);
     if (macros.length === 0) {
       this.buttonsSlot.replaceChildren();
       return;
