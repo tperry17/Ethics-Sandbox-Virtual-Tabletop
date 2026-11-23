@@ -14,7 +14,7 @@ Facilitators—teachers, community organisers, and workshop leads—run groups o
 
 ## Rooms and activities
 
-A room belongs to one exercise, and it is that exercise's sandbox. Up to 30 people join it and use its table however they please: the free table and the exercise's own loose pieces. A Value Cards room holds the value cards as two face-down piles, the core deck (`group` "Deck") and the sidebar (`group` "Sidebar"); a Leadership and Knowledge in Popular Rule room holds the two cities' seals and a general account of each city (its own CSV under `content/exercises/democracy-simulation/`), with nothing about either scenario. Every room, whatever its exercise, has a "Pieces" menu that can be opened to add dice, cubes, meeples and tokens to the table; they are not laid out on it. A room type may also list decks in that menu (the Value Cards room lists the core deck and the sidebar): each one added is a further pile of its own ("Sidebar 2", "Sidebar 3"), a deck zone that shuffles and deals like the first (at most 15 at once). Anyone may add one, and anyone may remove one, from the Pieces menu or from the menu of a card lying in it; removing it takes every card that came from it, wherever it is, hands included. The room's reset or setup removes them all. Each of its cards remembers its pile in a server-side property, never sent to a client, so "Collect cards" puts it back there. Cubes, meeples and tokens are one set of player pieces, chosen in a seat colour, and a token can have one word or number written on it.
+A room belongs to one exercise, and it is that exercise's sandbox. Up to 30 people join it and use its table however they please: the free table and the exercise's own loose pieces. A Value Cards room holds the value cards as two face-down piles, the core deck (`group` "Deck") and the sidebar (`group` "Sidebar"); a Leadership and Knowledge in Popular Rule room holds the two cities' seals and a general account of each city (its own CSV under `content/exercises/democracy-simulation/`), with nothing about either scenario. Every room, whatever its exercise, has a "Pieces" menu that can be opened to add dice, cubes, meeples and tokens to the table; they are not laid out on it. A room type may also list decks in that menu (the Value Cards room lists the core deck and the sidebar): each one added is a further pile of its own ("Sidebar 2", "Sidebar 3"), a deck zone that shuffles and deals like the first (at most 15 at once). Anyone may add one, and anyone may remove one, from the Pieces menu or from the menu of a card lying in it; removing it takes every card that came from it, wherever it is, hands included. The room's Reset removes them all. Each of its cards remembers its pile in a server-side property, never sent to a client, so "Collect cards" puts it back there. Cubes, meeples and tokens are one set of player pieces, chosen in a seat colour, and a token can have one word or number written on it.
 
 A room is opened only from its exercise's page, with "Open a room", which opens that exercise's room directly; whoever opened it is then asked for a display name, as anyone joining is. Nothing is started by typing an address: there is no `/start` page, and no room, activity or class is opened by a URL alone. People reach a room from its invite link or by entering its code with "Join a room".
 
@@ -320,13 +320,16 @@ server do.
 - `setup` — steps that build the activity's starting zones and pieces when it is started in a room.
 - `macros` — buttons: `id`, `who` (facilitator or anyone), and either
   `steps` or `python: <function>`. Every game has `setup`, `deal`,
-  `reset`, `shuffle`, `collect` and `clear_ink`.
+  `reset`, `shuffle`, `collect` and `clear_ink`. On a room type only,
+  `acts_for_room: true` runs the button's steps for the room, as an
+  activity's buttons are, so they may do what only the facilitator may
+  whoever pressed it; the operations themselves still refuse anyone else.
 - `buttons` — `source:` a CSV saying what each macro's button says, one
   row per macro: `id`, `label`, `hint`, `confirm` (asked first; give one to
   anything destructive) and `announce` (`{name}` and `{label}`).
 - `prompts` — `source:` a CSV with `id` and `text` columns.
 - `pairing` — optional: `source:` a CSV of `our_choice`, `their_choice` and `text`, and `when:` the options it applies to (Leadership and Knowledge in Popular Rule, scenario 2). A class may pair two of its tables, or one table with a hypothetical partner (`HYPOTHETICAL_TABLE`); someone at a table proposes that table's choice, the facilitator confirms it (or sets it, and alone sets a hypothetical partner's), and once both are confirmed the facilitator sees the matching row. While a hypothetical partner is undecided, the facilitator sees the row for each choice it could make.
-- `room` — only on a room type (`sandbox/games/value_cards_room/`, `democracy_room/`): `exercise` (the catalog slug whose page opens it), `label` (its button), `activities` (each an `id`, a `game`, optional `title`, `options` it fixes, `class_only`, and `debrief`, which lists it under the side panel's own "Debrief" heading, below the activities), `pieces` (the components of its Pieces menu), `decks` (further piles that menu adds, each an `id`, a `title`, a `deck`, an optional `where`, and the zone it is `shaped_like`) and `pieces_zone`. A room type needs only the `setup`, `reset` and `clear_ink` macros; `sandbox/games/room_types.py` reads it, and validation checks every catalog exercise has one room.
+- `room` — only on a room type (`sandbox/games/value_cards_room/`, `democracy_room/`): `exercise` (the catalog slug whose page opens it), `label` (its button), `activities` (each an `id`, a `game`, optional `title`, `options` it fixes, `class_only`, and `debrief`, which lists it under the side panel's own "Debrief" heading, below the activities), `pieces` (the components of its Pieces menu), `decks` (further piles that menu adds, each an `id`, a `title`, a `deck`, an optional `where`, and the zone it is `shaped_like`) and `pieces_zone`. A room type needs only the `reset` and `clear_ink` macros; its `reset` is the room's one way back to the start: anyone may press it (`who: anyone`, `acts_for_room: true`), it asks "Are you sure?" first, and it clears the whole table (added decks, ink, and any running activity's cards included) and runs the setup again; `sandbox/games/room_types.py` reads it, and validation checks every catalog exercise has one room.
 
 Steps are `{op: ..., ...}`: `setup` (run the setup steps here),
 `spawn_deck`, `spawn`, `shuffle`, `deal` and `draw` (`from`, `to`,
@@ -403,7 +406,8 @@ not from being unlocked: anyone who could move a piece may lock it, and
 anyone who could move it but for its lock may unlock it. A hand (a zone of kind `hand`) holds only cards, tiles and tokens; the model
 refuses anything else going into one (`_reason_not_for_hand` in
 `sandbox/model/ops.py`). Only the facilitator may clear a zone, despawn a
-piece or reset the table. When the facilitator takes a piece out of
+piece or reset the table, except through the room's own Reset button,
+which anyone may press. When the facilitator takes a piece out of
 someone's drag, that person's drag so far is logged first, and what they
 send for the piece afterwards is refused until they pick it up again.
 

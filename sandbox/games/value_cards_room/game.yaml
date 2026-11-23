@@ -92,10 +92,6 @@ setup:
   - {op: spawn_deck, deck: values, zone: sidebar, where: {group: Sidebar}}
 
 macros:
-  - id: setup
-    steps:
-      - {op: reset_table}
-      - {op: setup}
   - id: deal
     who: anyone
     steps:
@@ -104,9 +100,13 @@ macros:
     who: anyone
     steps:
       - {op: deal, from: sidebar, to: hand, count: 3}
+  # Clears the table and lays it out again. Anyone may, after being asked.
   - id: reset
+    who: anyone
+    acts_for_room: true
     steps:
       - {op: reset_table}
+      - {op: setup}
   - id: shuffle
     who: anyone
     steps:

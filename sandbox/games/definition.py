@@ -34,8 +34,9 @@ STANDARD_MACROS: tuple[str, ...] = (
     "clear_ink",
 )
 
-# A room type needs fewer: its table may have no deck to deal from.
-ROOM_MACROS: tuple[str, ...] = ("setup", "reset", "clear_ink")
+# A room type needs fewer: its table may have no deck to deal from, and its
+# one "reset" clears the table and lays it out again.
+ROOM_MACROS: tuple[str, ...] = ("reset", "clear_ink")
 
 ANNOUNCE_FIELDS = frozenset({"name", "label"})
 
@@ -355,6 +356,10 @@ class MacroSpec(_Strict):
 
     id: Identifier
     who: Literal["facilitator", "anyone"] = "facilitator"
+    acts_for_room: bool = False
+    """Its steps act for the room, as an activity's buttons do, so they may do
+    what only the facilitator may (reset the table) whoever pressed it. Only a
+    room type's buttons may say so, and the definition says so on purpose."""
     steps: tuple[Step, ...] | None = None
     python: Identifier | None = None
 
@@ -532,6 +537,11 @@ class GameDefinition(_Strict):
                         f"the room's deck {room_deck.id!r} is shaped like "
                         f"{room_deck.shaped_like!r}, which is not a shared zone"
                     )
+        acting = [macro.id for macro in self.macros if macro.acts_for_room]
+        if acting and self.room is None:
+            raise ValueError(
+                f"only a room type's buttons may act for the room: {acting}"
+            )
         missing = [
             macro_id
             for macro_id in (ROOM_MACROS if self.room else STANDARD_MACROS)

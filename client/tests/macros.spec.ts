@@ -85,12 +85,14 @@ test("a destructive button asks first, and does nothing if declined", async ({ b
   await host.getByRole("button", { name: "Deal three each" }).click();
   await expect(host.locator(".hand-tray__fan .piece")).toHaveCount(3);
 
+  // Pairs' own Reset, in its row of the side panel, not the room's.
+  const reset = host.locator(".toolbar__activity-buttons").getByRole("button", { name: "Reset" });
   host.once("dialog", (dialog) => void dialog.dismiss());
-  await host.getByRole("button", { name: "Reset" }).click();
+  await reset.click();
   await expect(host.locator(".hand-tray__fan .piece")).toHaveCount(3);
 
   host.once("dialog", (dialog) => void dialog.accept());
-  await host.getByRole("button", { name: "Reset" }).click();
+  await reset.click();
   await expect(host.locator(".hand-tray__fan .piece")).toHaveCount(0);
 });
 
@@ -111,15 +113,12 @@ test("the room's Clear ink is in the Draw menu, not among the Table buttons", as
   browser,
 }) => {
   const { page } = await openRoom(browser, "Ines");
-  // Clearing everyone's ink was the one room button for anyone, and only the
-  // facilitator may: with nobody facilitating, there is no Table buttons menu.
-  await expect(page.locator("details.table-buttons")).toHaveCount(0);
+  // With nobody facilitating, the Table buttons are Reset, which is anyone's, alone.
+  await expect(page.locator(".table-buttons__panel [data-macro-id]")).toHaveText(["Reset"]);
 
   await page.getByRole("button", { name: "Become facilitator" }).click();
-  await page.locator("details.table-buttons").waitFor();
   await openTableButtons(page);
-  await expect(page.locator(".table-buttons__panel").getByRole("button", { name: "Reset" })).toBeVisible();
-  await expect(page.locator(".table-buttons__panel").getByRole("button", { name: "Clear ink" })).toHaveCount(0);
+  await expect(page.locator(".table-buttons__panel [data-macro-id]")).toHaveText(["Reset"]);
   await page.locator("details.draw-menu > summary").click();
   const clearAll = page.locator(".draw-menu__panel").getByRole("button", { name: "Clear all ink" });
   await expect(clearAll).toBeVisible();

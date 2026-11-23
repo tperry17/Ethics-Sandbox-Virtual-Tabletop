@@ -1,4 +1,3 @@
 id,label,hint,confirm,announce
-setup,Set up,Clear the table and lay out the two cities again.,This clears the table and sets it up again. Continue?,{name} set up the table.
-reset,Reset,Remove every piece and all ink.,This removes every piece and all ink from the table. Continue?,{name} cleared the table.
+reset,Reset,Clear the table and lay out the two cities again.,This clears the table for everyone and lays it out again. Continue?,{name} reset the table.
 clear_ink,Clear ink,,This erases everyone's ink. Continue?,{name} cleared all ink.

@@ -88,6 +88,10 @@ def test_a_hook_game_registers_every_moment() -> None:
             "this definition needs these macros as well",
         ),
         (
+            lambda raw: raw["macros"][0].update(acts_for_room=True),
+            "only a room type's buttons may act for the room",
+        ),
+        (
             lambda raw: raw["zones"][3].update(per_seat=False),
             "is private_to_owner but not per_seat",
         ),
