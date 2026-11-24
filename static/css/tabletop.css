@@ -646,6 +646,13 @@
   box-shadow: inset 0 0 0 var(--space-1) var(--table-drop-target);
 }
 
+/* While a selection box is drawn, the drag selects pieces, not text. */
+.is-drawing-marquee,
+.is-drawing-marquee * {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .tabletop__marquee {
   position: absolute;
   z-index: 2;
