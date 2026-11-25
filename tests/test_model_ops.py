@@ -1029,3 +1029,24 @@ def test_a_token_holds_one_word_or_number() -> None:
     assert SetText("card-0", " 42 ").validate(table, SEAT_A) is None
     assert SetText("card-0", "two words").validate(table, SEAT_A) is not None
     assert SetText("card-0", "x" * 13).validate(table, SEAT_A) is not None
+
+
+def test_a_shuffle_is_told_to_the_table_without_its_order() -> None:
+    table = build_sample_table(seed=2, deck_size=5)
+
+    outcome = run_op(table, SEAT_A, Shuffle(zone_id=DECK))
+
+    assert isinstance(outcome, Ok)
+    events = [p for p in outcome.patches if p.op == "event"]
+    assert [p.fields for p in events] == [
+        {"type": "shuffle", "zone_id": DECK, "by_seat": SEAT_A}
+    ]
+
+
+def test_a_pile_of_one_is_not_told_as_shuffled() -> None:
+    table = build_sample_table(deck_size=1)
+
+    outcome = run_op(table, SEAT_A, Shuffle(zone_id=DECK))
+
+    assert isinstance(outcome, Ok)
+    assert outcome.patches == []

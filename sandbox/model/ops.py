@@ -575,7 +575,16 @@ class Shuffle:
             piece.face_up, piece.props = face_up, props
             # A reveal names a piece, and the piece is now a different card.
             _clear_reveal(piece)
-        return [_piece_patch(piece) for piece in pieces]
+        # Shuffling face-down cards changes nothing anyone can see, so the
+        # shuffle itself is told, for the table to show. Who shuffled which
+        # pile is public; the order is not in it.
+        shuffled = Patch(
+            kind="table",
+            op="event",
+            entity_id=None,
+            fields={"type": "shuffle", "zone_id": self.zone_id, "by_seat": actor_seat},
+        )
+        return [*(_piece_patch(piece) for piece in pieces), shuffled]
 
 
 @dataclass(frozen=True)

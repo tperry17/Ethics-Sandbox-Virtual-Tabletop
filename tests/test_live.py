@@ -861,3 +861,41 @@ async def test_a_server_restart_restores_the_table_and_sends_clients_a_snapshot(
             await restarted.detach(runtime, connection, writer)
         finally:
             await restarted.shutdown()
+
+
+async def test_a_shuffle_is_told_to_everyone_in_words() -> None:
+    async with live_room() as room:
+        actor = await room.connect(SEAT_A, display_name="Ana")
+        watcher = await room.connect(SEAT_B, display_name="Ben")
+
+        await room.intent(actor, "shuffle", {"zone_id": DECK})
+        await room.settle()
+
+        for socket in (actor.socket, watcher.socket):
+            notices = [n["text"] for n in socket.of_type("notice")]
+            assert [text for text in notices if "shuffle" in text] == [
+                "Ana shuffled the Deck."
+            ]
+            events = [
+                patch["fields"]
+                for message in socket.of_type("patches")
+                for patch in message["patches"]
+                if patch["op"] == "event"
+            ]
+            assert events == [{"type": "shuffle", "zone_id": DECK, "by_seat": SEAT_A}]
+
+
+async def test_shuffling_an_empty_pile_says_so_to_the_one_who_tried() -> None:
+    async with live_room(deck_size=0) as room:
+        actor = await room.connect(SEAT_A, display_name="Ana")
+        watcher = await room.connect(SEAT_B, display_name="Ben")
+
+        await room.intent(actor, "shuffle", {"zone_id": DECK})
+        await room.settle()
+
+        def said(socket: FakeSocket) -> list[str]:
+            texts = [n["text"] for n in socket.of_type("notice")]
+            return [text for text in texts if "shuffle" in text]
+
+        assert said(actor.socket) == ["There is nothing in the Deck to shuffle."]
+        assert said(watcher.socket) == []

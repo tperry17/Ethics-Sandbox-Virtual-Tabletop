@@ -61,7 +61,11 @@ test("the deck's menu deals to everyone and shuffles", async ({ browser }) => {
 
   await deckCard(page).hover();
   await page.keyboard.press("s");
-  await expect(page.locator("[data-announcer]")).toContainText("Deck shuffled.");
+  // A shuffled pile of backs looks as it did, so the table says so, and the
+  // pile riffles.
+  await expect(page.locator(".tabletop__notices")).toContainText("Ines shuffled the Core deck.");
+  const riffling = await deckCard(page).evaluate((card) => card.getAnimations().length);
+  expect(riffling).toBeGreaterThan(0);
 });
 
 test("hovering a card says what the keys do; Space enlarges it and F turns it over", async ({

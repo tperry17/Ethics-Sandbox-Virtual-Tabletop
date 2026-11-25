@@ -1069,8 +1069,8 @@ export class InteractionController {
         this.table.notice("There is no deck here to shuffle.", "info");
         return;
       }
+      // The server says who shuffled it, to everyone, once it is done.
       this.table.chooseMenuItem(entry, pieceId);
-      this.table.announcer.announce("Deck shuffled.");
     });
   }
 

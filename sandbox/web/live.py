@@ -1469,6 +1469,11 @@ class RoomRuntime:
         if isinstance(operation, Release | MoveToZone | StackOnto):
             self._settle_piece(operation.piece_id)
 
+        shuffling = (
+            len(self.table.pieces_in_zone(operation.zone_id))
+            if isinstance(operation, Shuffle)
+            else 0
+        )
         outcome = self._apply(seat_id, operation, log=True)
         if not isinstance(outcome, Ok):
             self._reject(connection, message.client_id, outcome.reason)
@@ -1476,6 +1481,17 @@ class RoomRuntime:
         # Sent after the patches, so by the time the client hears "accepted"
         # it already holds the table that resulted.
         connection.send(AckMessage(client_id=message.client_id))
+        if isinstance(operation, Shuffle):
+            # A shuffled deck looks just as it did, so it is said in words,
+            # as a button's shuffle is.
+            label = self.table.zones[operation.zone_id].label
+            pile = label if label.lower().startswith("the ") else f"the {label}"
+            if shuffling > 1:
+                self._notice(f"{connection.display_name} shuffled {pile}.")
+            else:
+                connection.send(
+                    NoticeMessage(text=f"There is nothing in {pile} to shuffle.")
+                )
         if isinstance(operation, TakeFacilitator | ReleaseFacilitator):
             # The toolbar differs for the facilitator, so everyone is sent
             # their table again.
