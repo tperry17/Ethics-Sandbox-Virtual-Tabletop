@@ -300,6 +300,21 @@ test.describe("selecting", () => {
     });
   }
 
+  for (const key of ["Control", "Meta"] as const) {
+    test(`${key} with a left-drag on empty table adds a selection box to the selection`, async ({ page }) => {
+      await page.goto(PREVIEW);
+      await cameraSettled(page);
+      await page.mouse.click(...Object.values(await centre(piece(page, "die-1"))) as [number, number]);
+      await expect(piece(page, "die-1")).toHaveClass(/is-selected/);
+      await page.keyboard.down(key);
+      await drag(page, await onScreen(page, 120, 120), await onScreen(page, 300, 220));
+      await page.keyboard.up(key);
+      await expect(piece(page, "token-1")).toHaveClass(/is-selected/);
+      await expect(piece(page, "cube-1")).toHaveClass(/is-selected/);
+      await expect(piece(page, "die-1")).toHaveClass(/is-selected/);
+    });
+  }
+
   test("a click on empty table clears the selection", async ({ page }) => {
     await page.goto(PREVIEW);
     await page.mouse.click(...Object.values(await centre(piece(page, "token-1"))) as [number, number]);

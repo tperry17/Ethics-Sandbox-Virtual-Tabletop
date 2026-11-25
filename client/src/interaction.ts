@@ -71,6 +71,8 @@ type Gesture =
       additive: boolean;
       /** Shift was held: a click adds the piece to the selection or takes it out, and never turns it over. */
       shift: boolean;
+      /** Ctrl or Cmd was held: dragged across empty table, the box adds to the selection. */
+      ctrl: boolean;
       timer: number | null;
     }
   | { kind: "drag"; pointerId: number; pieces: Dragged[] }
@@ -314,6 +316,7 @@ export class InteractionController {
       // tapping empty table clears it.
       additive: event.shiftKey || (event.pointerType === "touch" && pieceId !== null),
       shift: event.shiftKey,
+      ctrl: event.ctrlKey || event.metaKey,
       timer: null,
     };
     if (pieceId !== null && fromTray) {
@@ -339,11 +342,13 @@ export class InteractionController {
       if (distance < DRAG_THRESHOLD_PX) return;
       if (gesture.timer !== null) window.clearTimeout(gesture.timer);
       if (gesture.pieceId !== null) this.beginDrag(gesture.pieceId, gesture, event);
-      // On empty table the mouse's main button draws a selection box; with
-      // Shift it pans instead, for a trackpad that has no middle button. A
-      // finger or a pen pans.
-      else if (gesture.pointerType === "mouse" && !gesture.shift) this.beginMarquee(gesture, event);
-      else this.beginPan(gesture, event);
+      // On empty table the mouse's main button draws a selection box, and
+      // with Ctrl or Cmd one that adds to the selection; with Shift alone it
+      // pans instead, for a trackpad that has no middle button. A finger or a
+      // pen pans.
+      else if (gesture.pointerType === "mouse" && (gesture.ctrl || !gesture.shift)) {
+        this.beginMarquee(gesture, event);
+      } else this.beginPan(gesture, event);
       return;
     }
     if (gesture.kind === "drag") this.continueDrag(gesture.pieces, event);
@@ -365,7 +370,8 @@ export class InteractionController {
         return;
       }
       this.lastTap = null;
-      this.click(gesture.pieceId, gesture.additive, gesture.shift);
+      // A Ctrl or Cmd click on empty table keeps the selection, as Shift does.
+      this.click(gesture.pieceId, gesture.additive || (gesture.pieceId === null && gesture.ctrl), gesture.shift);
       return;
     }
     if (gesture.kind === "drag") this.finishDrag(gesture.pieces, event);
@@ -732,8 +738,8 @@ export class InteractionController {
       startX: press.startX,
       startY: press.startY,
       box,
-      additive: press.additive,
-      base: press.additive ? new Set(this.table.selected) : new Set(),
+      additive: press.ctrl,
+      base: press.ctrl ? new Set(this.table.selected) : new Set(),
     };
     this.continueMarquee(this.gesture, event);
   }
@@ -977,7 +983,13 @@ export class InteractionController {
   private onContextMenu = (event: MouseEvent): void => {
     const node = (event.target as Element | null)?.closest<HTMLElement>("[data-piece-id]");
     const pieceId = node?.dataset.pieceId;
-    if (pieceId === undefined) return;
+    if (pieceId === undefined) {
+      // On a Mac, Ctrl with the main button asks for the browser's menu; on
+      // empty table it draws an adding selection box instead.
+      const onTable = event.target instanceof Node && this.table.surfaceElement.contains(event.target);
+      if (onTable && event.ctrlKey && event.button === 0) event.preventDefault();
+      return;
+    }
     event.preventDefault();
     if (this.gesture?.kind === "press" && this.gesture.timer !== null) {
       window.clearTimeout(this.gesture.timer);
