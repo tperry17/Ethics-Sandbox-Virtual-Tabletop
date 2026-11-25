@@ -211,3 +211,29 @@ test("Reset asks “Are you sure?” first, and lays the table out again only if
   await expect(cards).toHaveCount(36);
   await expect(page.locator(".toast")).toContainText("Ines reset the table.");
 });
+
+test("a message about a table button never covers the table's controls", async ({ browser }) => {
+  // A phone, where the row of controls spans the table and messages used to
+  // sit over the "Table buttons" menu, so it could not be closed.
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  const page = await context.newPage();
+  await openFromLanding(page, "Value Cards");
+  await page.getByLabel("Your name").fill("Ines");
+  await page.getByRole("button", { name: "Join table" }).click();
+  await page.waitForURL(/\/t\/[A-Z0-9]{6}$/);
+  await openTableButtons(page);
+  await page.getByRole("button", { name: "Collect cards" }).click();
+  const toast = page.locator(".toast", { hasText: "Ines collected every card" });
+  await expect(toast).toBeVisible();
+
+  // The message hangs below the whole row of controls.
+  const controls = (await page.locator(".tabletop__controls").boundingBox())!;
+  const box = (await toast.boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(controls.y + controls.height);
+  // And the menu still closes from its own button while the message shows.
+  await page.locator("details.table-buttons summary").click();
+  await expect(page.locator("details.table-buttons[open]")).toHaveCount(0);
+  // It goes after three seconds.
+  await expect(toast).toHaveCount(0, { timeout: 4_500 });
+  await context.close();
+});
