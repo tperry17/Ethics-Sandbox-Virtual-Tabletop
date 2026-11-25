@@ -42,7 +42,7 @@ import { type Bounds, type Viewport, screenToWorld, unionBounds } from "./viewpo
 /** Where a card's centre sits in the tray, so its top edge starts at the top. */
 const TRAY_BASELINE = 160;
 const MAX_NOTICES = 3;
-const NOTICE_MS = 6000;
+const NOTICE_MS = 3000;
 /** How long a piece that was sent back stays marked as having been sent back. */
 const ROLLBACK_MARK_MS = 700;
 /** More zone changes than this in one go are summarised, not listed. */
@@ -1567,6 +1567,13 @@ export class TableRenderer {
     };
     clearTray();
     new ResizeObserver(clearTray).observe(this.tray);
+    // Notices hang below the row of table controls, however many rows it
+    // wraps onto, so a notice never covers a control.
+    const clearControls = (): void => {
+      this.root.style.setProperty("--controls-size", `${this.controlsElement.offsetHeight}px`);
+    };
+    clearControls();
+    new ResizeObserver(clearControls).observe(this.controlsElement);
   }
 }
 
