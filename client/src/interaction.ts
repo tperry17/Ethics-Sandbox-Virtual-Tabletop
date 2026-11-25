@@ -269,8 +269,8 @@ export class InteractionController {
     const target = event.target;
     if (!(target instanceof Element)) return;
     // The table's own controls (its menus' summaries and panels included)
-    // are not the table: a press there never starts a drag, a stroke or a point.
-    if (target.closest("button, summary, .tabletop__controls, .table-menu, .reveals, .peek, input, a")) return;
+    // and its notices are not the table: a press there never starts a drag, a stroke or a point.
+    if (target.closest("button, summary, .tabletop__controls, .tabletop__notices, .table-menu, .reveals, .peek, input, a")) return;
     if (event.pointerType === "touch") {
       this.touches.add(event.pointerId);
       // A second finger means pan or pinch, which the camera owns.
