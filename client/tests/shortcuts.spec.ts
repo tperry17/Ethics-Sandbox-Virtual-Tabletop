@@ -216,7 +216,7 @@ test("Reset asks “Are you sure?” first, and lays the table out again only if
   await expect(page.locator(".toast")).toContainText("Ines reset the table.");
 });
 
-test("a message about a table button never covers the table's controls", async ({ browser }) => {
+test("a message about a table button never covers the table's controls, and a press puts it away", async ({ browser }) => {
   // A phone, where the row of controls spans the table and messages used to
   // sit over the "Table buttons" menu, so it could not be closed.
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
@@ -239,5 +239,15 @@ test("a message about a table button never covers the table's controls", async (
   await expect(page.locator("details.table-buttons[open]")).toHaveCount(0);
   // It goes after three seconds.
   await expect(toast).toHaveCount(0, { timeout: 4_500 });
+
+  // A press on a message puts it away at once, and starts nothing on the table.
+  await openTableButtons(page);
+  await page.getByRole("button", { name: "Collect cards" }).click();
+  await expect(toast).toBeVisible();
+  // An open menu lies over the message; closed, the message is there to press.
+  await page.locator("details.table-buttons summary").click();
+  await toast.click({ timeout: 1_000 });
+  await expect(toast).toHaveCount(0, { timeout: 1_000 });
+  await expect(page.locator(".tabletop__marquee:visible")).toHaveCount(0);
   await context.close();
 });

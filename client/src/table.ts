@@ -1144,7 +1144,14 @@ export class TableRenderer {
     toast.dataset.level = level;
     const message = element("p", "toast__message");
     message.textContent = text;
-    toast.append(message);
+    // A press anywhere on the notice puts it away; the cross only says so.
+    // It is not a button of its own, so the live region reads the sentence
+    // alone, and the announcer says it in words besides.
+    const cross = element("span", "toast__close", "×");
+    cross.setAttribute("aria-hidden", "true");
+    toast.title = "Dismiss";
+    toast.addEventListener("click", () => toast.remove());
+    toast.append(message, cross);
     this.notices.append(toast);
     while (this.notices.childElementCount > MAX_NOTICES) {
       this.notices.firstElementChild?.remove();
