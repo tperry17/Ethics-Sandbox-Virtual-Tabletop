@@ -71,8 +71,8 @@ type Gesture =
       additive: boolean;
       /** Shift was held: a click adds the piece to the selection or takes it out, and never turns it over. */
       shift: boolean;
-      /** Pressed with a mouse's middle button: a drag draws a selection box. */
-      middle: boolean;
+      /** Ctrl or Cmd was held: dragged across empty table, the box adds to the selection. */
+      ctrl: boolean;
       timer: number | null;
     }
   | { kind: "drag"; pointerId: number; pieces: Dragged[] }
@@ -279,31 +279,10 @@ export class InteractionController {
         return;
       }
     }
-    const middle = event.pointerType === "mouse" && event.button === 1;
-    if (event.pointerType === "mouse" && event.button !== 0 && !middle) return;
+    // The middle button pans the view, which the camera owns (viewport-input.ts).
+    if (event.pointerType === "mouse" && event.button !== 0) return;
     if (this.table.surfaceElement.classList.contains("is-pannable")) return;
     if (this.gesture !== null) return;
-
-    if (middle) {
-      // The middle button selects: dragged anywhere on the table, over pieces
-      // or not, it draws a selection box. Not the browser's autoscroll.
-      if (!this.table.surfaceElement.contains(target)) return;
-      event.preventDefault();
-      this.gesture = {
-        kind: "press",
-        pointerId: event.pointerId,
-        pointerType: event.pointerType,
-        startX: event.clientX,
-        startY: event.clientY,
-        pieceId: null,
-        fromTray: false,
-        additive: event.shiftKey,
-        shift: event.shiftKey,
-        middle: true,
-        timer: null,
-      };
-      return;
-    }
 
     const [x, y] = this.table.clientToWorld(event.clientX, event.clientY);
     if (this.tool === "point" || event.altKey) {
@@ -337,7 +316,7 @@ export class InteractionController {
       // tapping empty table clears it.
       additive: event.shiftKey || (event.pointerType === "touch" && pieceId !== null),
       shift: event.shiftKey,
-      middle: false,
+      ctrl: event.ctrlKey || event.metaKey,
       timer: null,
     };
     if (pieceId !== null && fromTray) {
@@ -363,10 +342,11 @@ export class InteractionController {
       if (distance < DRAG_THRESHOLD_PX) return;
       if (gesture.timer !== null) window.clearTimeout(gesture.timer);
       if (gesture.pieceId !== null) this.beginDrag(gesture.pieceId, gesture, event);
-      // Empty table pans, under a finger, a pen or the mouse's main button.
-      // The middle button draws a selection box, and so does Shift with the
-      // main button, for a trackpad that has no middle button.
-      else if (gesture.middle || (gesture.pointerType === "mouse" && gesture.additive)) {
+      // On empty table the mouse's main button draws a selection box, and
+      // with Ctrl or Cmd one that adds to the selection; with Shift alone it
+      // pans instead, for a trackpad that has no middle button. A finger or a
+      // pen pans.
+      else if (gesture.pointerType === "mouse" && (gesture.ctrl || !gesture.shift)) {
         this.beginMarquee(gesture, event);
       } else this.beginPan(gesture, event);
       return;
@@ -385,17 +365,17 @@ export class InteractionController {
 
     if (gesture.kind === "press") {
       if (gesture.timer !== null) window.clearTimeout(gesture.timer);
-      if (gesture.middle) return;
       if (gesture.pointerType === "touch" && gesture.pieceId !== null && gesture.fromTray) {
         this.trayTap(gesture.pieceId, event);
         return;
       }
       this.lastTap = null;
-      this.click(gesture.pieceId, gesture.additive, gesture.shift);
+      // A Ctrl or Cmd click on empty table keeps the selection, as Shift does.
+      this.click(gesture.pieceId, gesture.additive || (gesture.pieceId === null && gesture.ctrl), gesture.shift);
       return;
     }
     if (gesture.kind === "drag") this.finishDrag(gesture.pieces, event);
-    else if (gesture.kind === "marquee") gesture.box.remove();
+    else if (gesture.kind === "marquee") this.endMarquee(gesture);
     else if (gesture.kind === "pen") this.finishStroke(gesture);
     else if (gesture.kind === "peek") this.closePeek();
   };
@@ -411,7 +391,7 @@ export class InteractionController {
     this.gesture = null;
     if (gesture === null) return;
     if (gesture.kind === "press" && gesture.timer !== null) window.clearTimeout(gesture.timer);
-    if (gesture.kind === "marquee") gesture.box.remove();
+    if (gesture.kind === "marquee") this.endMarquee(gesture);
     if (gesture.kind === "peek") this.closePeek();
     if (gesture.kind === "pen") this.finishStroke(gesture);
     if (gesture.kind === "drag") {
@@ -724,8 +704,9 @@ export class InteractionController {
   // -- panning across empty table -----------------------------------------------------
 
   /**
-   * A finger, a pen or the mouse's main button dragged across empty table
-   * moves the view. The selection box is the middle button's (see above).
+   * A finger or a pen dragged across empty table moves the view, and so does
+   * the mouse's main button with Shift. Without Shift it draws a selection
+   * box (see above); the middle button pans in viewport-input.ts.
    */
   private beginPan(press: Extract<Gesture, { kind: "press" }>, event: PointerEvent): void {
     this.root.setPointerCapture?.(press.pointerId);
@@ -743,6 +724,11 @@ export class InteractionController {
 
   private beginMarquee(press: Extract<Gesture, { kind: "press" }>, event: PointerEvent): void {
     this.root.setPointerCapture?.(press.pointerId);
+    // The press was not prevented (a click must still reach its target), so
+    // the browser has begun selecting text: drop it, and select none while
+    // the box is drawn, so labels and buttons are not lit up under it.
+    window.getSelection()?.removeAllRanges();
+    document.documentElement.classList.add("is-drawing-marquee");
     const box = document.createElement("div");
     box.className = "tabletop__marquee";
     this.table.surfaceElement.append(box);
@@ -752,10 +738,15 @@ export class InteractionController {
       startX: press.startX,
       startY: press.startY,
       box,
-      additive: press.additive,
-      base: press.additive ? new Set(this.table.selected) : new Set(),
+      additive: press.ctrl,
+      base: press.ctrl ? new Set(this.table.selected) : new Set(),
     };
     this.continueMarquee(this.gesture, event);
+  }
+
+  private endMarquee(gesture: Extract<Gesture, { kind: "marquee" }>): void {
+    gesture.box.remove();
+    document.documentElement.classList.remove("is-drawing-marquee");
   }
 
   private continueMarquee(gesture: Extract<Gesture, { kind: "marquee" }>, event: PointerEvent): void {
@@ -992,7 +983,13 @@ export class InteractionController {
   private onContextMenu = (event: MouseEvent): void => {
     const node = (event.target as Element | null)?.closest<HTMLElement>("[data-piece-id]");
     const pieceId = node?.dataset.pieceId;
-    if (pieceId === undefined) return;
+    if (pieceId === undefined) {
+      // On a Mac, Ctrl with the main button asks for the browser's menu; on
+      // empty table it draws an adding selection box instead.
+      const onTable = event.target instanceof Node && this.table.surfaceElement.contains(event.target);
+      if (onTable && event.ctrlKey && event.button === 0) event.preventDefault();
+      return;
+    }
     event.preventDefault();
     if (this.gesture?.kind === "press" && this.gesture.timer !== null) {
       window.clearTimeout(this.gesture.timer);

@@ -262,8 +262,9 @@ token), except a card still in a deck, which a click never turns over.
 Shift-click only adds a piece to the selection or takes it out. A
 card in your hand, which is never selected, is turned over by a double
 tap or double-click instead. Mouse: the main button drags a
-piece or, on empty table, pans; the middle button draws a selection box anywhere on the table,
-and so does Shift with the main button, for a trackpad.
+piece or, on empty table, draws a selection box (with Ctrl or Cmd, one that adds to the
+selection); the middle button pans from anywhere on the table, and so does Shift with the
+main button on empty table, for a trackpad, and Space held with the main button.
 
 Keyboard: Tab reaches every piece; arrow keys move by a 20-unit step (Shift
 for five); X selects (Shift-X adds to the selection or takes from it); Enter turns over; R and Shift-R rotate; M, the context-menu key

@@ -259,12 +259,14 @@ test.describe("selecting", () => {
   test("marquee-selects pieces, which then rotate and move together", async ({ page }) => {
     await page.goto(PREVIEW);
     await cameraSettled(page);
-    // The middle button draws the selection box.
-    await drag(page, await onScreen(page, 120, 120), await onScreen(page, 300, 220), "middle");
+    // The main button on empty table draws the selection box.
+    await drag(page, await onScreen(page, 120, 120), await onScreen(page, 300, 220));
 
     await expect(piece(page, "token-1")).toHaveClass(/is-selected/);
     await expect(piece(page, "cube-1")).toHaveClass(/is-selected/);
     await expect(piece(page, "die-1")).not.toHaveClass(/is-selected/);
+    // The drag selected pieces, not the text of labels and buttons under it.
+    expect(await page.evaluate(() => window.getSelection()?.toString() ?? "")).toBe("");
 
     await page.keyboard.press("r");
     const rotated = (await intents(page)).filter((intent) => intent.op_type === "rotate");
@@ -283,26 +285,35 @@ test.describe("selecting", () => {
     expect(moved).toEqual(new Set(["token-1", "cube-1"]));
   });
 
-  test("a left-drag on empty table pans the view and selects nothing", async ({ page }) => {
-    await page.goto(PREVIEW);
-    await cameraSettled(page);
-    const world = page.locator(".tabletop__world");
-    const before = await world.evaluate((node) => getComputedStyle(node).transform);
-    await drag(page, await onScreen(page, 120, 120), await onScreen(page, 300, 220));
-    await expect(page.locator(".tabletop__marquee")).toHaveCount(0);
-    await expect(page.locator(".is-selected")).toHaveCount(0);
-    expect(await world.evaluate((node) => getComputedStyle(node).transform)).not.toBe(before);
-  });
+  for (const how of ["middle", "shift"] as const) {
+    test(`a ${how === "middle" ? "middle-drag" : "Shift-left-drag"} on empty table pans the view and selects nothing`, async ({ page }) => {
+      await page.goto(PREVIEW);
+      await cameraSettled(page);
+      const world = page.locator(".tabletop__world");
+      const before = await world.evaluate((node) => getComputedStyle(node).transform);
+      if (how === "shift") await page.keyboard.down("Shift");
+      await drag(page, await onScreen(page, 120, 120), await onScreen(page, 300, 220), how === "middle" ? "middle" : "left");
+      if (how === "shift") await page.keyboard.up("Shift");
+      await expect(page.locator(".tabletop__marquee")).toHaveCount(0);
+      await expect(page.locator(".is-selected")).toHaveCount(0);
+      expect(await world.evaluate((node) => getComputedStyle(node).transform)).not.toBe(before);
+    });
+  }
 
-  test("Shift with a left-drag draws a selection box, for a trackpad", async ({ page }) => {
-    await page.goto(PREVIEW);
-    await cameraSettled(page);
-    await page.keyboard.down("Shift");
-    await drag(page, await onScreen(page, 120, 120), await onScreen(page, 300, 220));
-    await page.keyboard.up("Shift");
-    await expect(piece(page, "token-1")).toHaveClass(/is-selected/);
-    await expect(piece(page, "cube-1")).toHaveClass(/is-selected/);
-  });
+  for (const key of ["Control", "Meta"] as const) {
+    test(`${key} with a left-drag on empty table adds a selection box to the selection`, async ({ page }) => {
+      await page.goto(PREVIEW);
+      await cameraSettled(page);
+      await page.mouse.click(...Object.values(await centre(piece(page, "die-1"))) as [number, number]);
+      await expect(piece(page, "die-1")).toHaveClass(/is-selected/);
+      await page.keyboard.down(key);
+      await drag(page, await onScreen(page, 120, 120), await onScreen(page, 300, 220));
+      await page.keyboard.up(key);
+      await expect(piece(page, "token-1")).toHaveClass(/is-selected/);
+      await expect(piece(page, "cube-1")).toHaveClass(/is-selected/);
+      await expect(piece(page, "die-1")).toHaveClass(/is-selected/);
+    });
+  }
 
   test("a click on empty table clears the selection", async ({ page }) => {
     await page.goto(PREVIEW);
