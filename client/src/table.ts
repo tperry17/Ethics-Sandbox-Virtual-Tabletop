@@ -517,6 +517,11 @@ export class TableRenderer {
         }
         continue;
       }
+      if (event.type === "shuffle") {
+        const zone = event.fields["zone_id"];
+        if (typeof zone === "string") this.showShuffle(zone);
+        continue;
+      }
       this.announceEvent(event.type, event.fields);
     }
     this.announceZoneChanges(diff);
@@ -1432,6 +1437,23 @@ export class TableRenderer {
 
   /** Set when "Look closely" was chosen, so the look opens once the server agrees. */
   lookingFromMenu: string | null = null;
+
+  /**
+   * Riffle the cards of a pile just shuffled. A shuffled deck of backs looks
+   * exactly as it did, so this is the only sign on the table that it
+   * happened; the words come from the server as a notice.
+   */
+  private showShuffle(zoneId: string): void {
+    if (this.reduceMotion) return;
+    const pieces = [...this.model.pieces.values()]
+      .filter((piece) => piece.zone_id === zoneId)
+      .sort((a, b) => a.z - b.z);
+    // From the top down, so the cards that can be seen move first: the pile
+    // splits into two halves, one to each side, and closes again.
+    pieces.reverse().forEach((piece, depth) => {
+      this.pieceNodes.get(piece.id)?.riffle(depth % 2 === 0 ? -1 : 1, Math.min(depth, 8) * 10);
+    });
+  }
 
   // -- announcing ------------------------------------------------------------------------
 

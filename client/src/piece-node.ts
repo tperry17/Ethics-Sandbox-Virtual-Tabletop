@@ -15,6 +15,9 @@ import type { LocalPiece } from "./model.js";
 /** Roughly how long another person's piece takes to travel to where it now is. */
 export const INTERPOLATION_MS = 120;
 
+/** How long a card takes to swing out and back when its pile is shuffled. */
+const RIFFLE_MS = 480;
+
 /**
  * Default piece sizes in world units, which are CSS pixels at 100% zoom.
  *
@@ -151,6 +154,25 @@ export class PieceNode {
     this.to = { x, y, rotation };
     this.duration = 0;
     this.writeTransform(x, y, rotation);
+  }
+
+  /**
+   * Swing out to one side and back, as a card does in a shuffle. The motion
+   * is added to the node's own transform rather than replacing it, so the
+   * piece stays where it is placed, and follows a hand that picks it up
+   * mid-swing.
+   */
+  riffle(side: -1 | 1, delay: number): void {
+    if (typeof this.element.animate !== "function") return;
+    this.element.animate(
+      [
+        { transform: "translate(0px, 0px) rotate(0deg)" },
+        { transform: `translate(${side * 44}px, -8px) rotate(${side * 5}deg)`, offset: 0.35 },
+        { transform: `translate(${-side * 8}px, 0px) rotate(${-side}deg)`, offset: 0.75 },
+        { transform: "translate(0px, 0px) rotate(0deg)" },
+      ],
+      { duration: RIFFLE_MS, easing: "ease-in-out", delay, composite: "add" },
+    );
   }
 
   private writeTransform(x: number, y: number, rotation: number): void {
